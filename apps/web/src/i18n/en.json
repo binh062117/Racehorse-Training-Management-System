@@ -168,11 +168,26 @@
 },
 
   "tab": {
+    "pedigree": "Pedigree",
     "sessions": "Sessions",
     "health": "Health"
   },
+  "pedigree": {
+    "horse": "Current horse",
+    "sire": "Sire",
+    "dam": "Dam",
+    "fitnessScore": "Fitness score",
+    "unknown": "Unknown",
+    "edit": "Edit pedigree",
+    "loading": "Loading pedigree…",
+    "retry": "Try again",
+    "saved": "Parent relationships saved.",
+    "clearHint": "Choose Unknown to clear this parent.",
+    "sameParent": "Sire and dam must be different horses.",
+    "unavailableParent": "Unavailable parent ({{id}}) — clear or replace"
+  },
   "session": {
-    "new": "New session",
+    "new": "Schedule training",
     "scheduledAt": "Scheduled at",
     "type": "Type",
     "notes": "Notes",
@@ -181,7 +196,31 @@
     "status": "Status",
     "resultMetric": "Result metric",
     "resultValue": "Result value",
-    "keepPlanned": "Keep planned"
+    "keepPlanned": "Keep planned",
+    "plan": "Training plan (optional)",
+    "noPlan": "No training plan",
+    "loadingPlans": "Loading training plans…",
+    "planLoadFailed": "Plans could not be loaded. Retry, or schedule without a plan.",
+    "retry": "Try again",
+    "saved": "Training session scheduled.",
+    "invalidDate": "Enter a valid date and time.",
+    "invalidFields": "Enter a training type (1–80 characters) and notes of at most 2,000 characters.",
+    "localTime": "Enter time in your device timezone ({{zone}}).",
+    "displayTime": "Session times are displayed in Vietnam time (Asia/Ho_Chi_Minh).",
+    "loading": "Loading sessions…",
+    "locked": "Training is locked. New sessions cannot be scheduled until the veterinarian unlocks this horse.",
+    "heading": "Training sessions",
+    "openSchedule": "Schedule a session",
+    "schedule": "Schedule",
+    "closeSchedule": "Close scheduling",
+    "planSummary": "Training plan",
+    "planUnavailable": "Attached plan unavailable",
+    "trainer": "Trainer",
+    "displayStatus": {
+      "PLANNED": "Scheduled",
+      "DONE": "Completed",
+      "CANCELLED": "Cancelled"
+    }
   },
   "health": {
     "new": "New health record",

@@ -168,11 +168,26 @@
 },
 
   "tab": {
+    "pedigree": "Phả hệ",
     "sessions": "Buổi tập",
     "health": "Y tế"
   },
+  "pedigree": {
+    "horse": "Ngựa hiện tại",
+    "sire": "Ngựa cha",
+    "dam": "Ngựa mẹ",
+    "fitnessScore": "Điểm thể trạng",
+    "unknown": "Chưa xác định",
+    "edit": "Chỉnh sửa phả hệ",
+    "loading": "Đang tải phả hệ…",
+    "retry": "Thử lại",
+    "saved": "Đã lưu thông tin ngựa cha, mẹ.",
+    "clearHint": "Chọn Chưa xác định để xoá liên kết với ngựa cha hoặc mẹ này.",
+    "sameParent": "Ngựa cha và ngựa mẹ phải là hai ngựa khác nhau.",
+    "unavailableParent": "Ngựa cha/mẹ không còn khả dụng ({{id}}) — xoá hoặc thay thế"
+  },
   "session": {
-    "new": "Buổi tập mới",
+    "new": "Lên lịch tập luyện",
     "scheduledAt": "Thời gian",
     "type": "Loại",
     "notes": "Ghi chú",
@@ -181,7 +196,31 @@
     "status": "Trạng thái",
     "resultMetric": "Chỉ số kết quả",
     "resultValue": "Giá trị kết quả",
-    "keepPlanned": "Giữ nguyên (PLANNED)"
+    "keepPlanned": "Giữ nguyên (PLANNED)",
+    "plan": "Giáo án huấn luyện (tùy chọn)",
+    "noPlan": "Không gắn giáo án",
+    "loadingPlans": "Đang tải giáo án…",
+    "planLoadFailed": "Không thể tải giáo án. Thử lại hoặc lên lịch không kèm giáo án.",
+    "retry": "Thử lại",
+    "saved": "Đã lên lịch buổi tập.",
+    "invalidDate": "Vui lòng nhập ngày giờ hợp lệ.",
+    "invalidFields": "Nhập loại bài tập (1–80 ký tự) và ghi chú tối đa 2.000 ký tự.",
+    "localTime": "Nhập giờ theo múi giờ thiết bị ({{zone}}).",
+    "displayTime": "Giờ buổi tập được hiển thị theo giờ Việt Nam (Asia/Ho_Chi_Minh).",
+    "loading": "Đang tải buổi tập…",
+    "locked": "Ngựa đang bị khóa tập luyện. Chỉ có thể lên lịch mới sau khi bác sĩ thú y mở khóa.",
+    "heading": "Buổi tập luyện",
+    "openSchedule": "Lên lịch buổi tập",
+    "schedule": "Lên lịch",
+    "closeSchedule": "Đóng lịch tập",
+    "planSummary": "Giáo án",
+    "planUnavailable": "Không tải được giáo án đã gắn",
+    "trainer": "Huấn luyện viên",
+    "displayStatus": {
+      "PLANNED": "Đã lên lịch",
+      "DONE": "Hoàn thành",
+      "CANCELLED": "Đã hủy"
+    }
   },
   "health": {
     "new": "Hồ sơ khám mới",
