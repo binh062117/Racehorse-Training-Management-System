@@ -5,12 +5,13 @@ import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { Field } from '../../components/Field';
 import { api } from '../../lib/api';
-import type { Horse, HorseStatus, Paginated, User } from '../../lib/types';
+import type { Horse, HorseGender, HorseStatus, Paginated, User } from '../../lib/types';
 
 const HORSE_STATUSES: HorseStatus[] = ['ACTIVE', 'RESTING', 'RETIRED'];
 
 type HorseFormState = {
   name: string;
+  gender: HorseGender | '';
   breed: string;
   birthDate: string;
   ownerId: string;
@@ -22,6 +23,7 @@ type HorseFormState = {
 
 const EMPTY_FORM: HorseFormState = {
   name: '',
+  gender: '',
   breed: '',
   birthDate: '',
   ownerId: '',
@@ -61,6 +63,7 @@ export function HorseFormPage() {
           const horse = detailResponse.data;
           setForm({
             name: horse.name,
+            gender: horse.gender ?? '',
             breed: horse.breed ?? '',
             birthDate: horse.birthDate?.slice(0, 10) ?? '',
             ownerId: horse.ownerId,
@@ -94,6 +97,7 @@ export function HorseFormPage() {
       const body = id
         ? {
             name: form.name.trim(),
+            gender: form.gender ? form.gender : null,
             breed: form.breed.trim() || null,
             birthDate: form.birthDate ? new Date(`${form.birthDate}T00:00:00`).toISOString() : null,
             ownerId: form.ownerId,
@@ -104,6 +108,7 @@ export function HorseFormPage() {
           }
         : {
             name: form.name.trim(),
+            gender: form.gender ? form.gender : undefined,
             breed: form.breed.trim() || undefined,
             birthDate: form.birthDate ? new Date(`${form.birthDate}T00:00:00`).toISOString() : undefined,
             ownerId: form.ownerId,
@@ -146,6 +151,17 @@ export function HorseFormPage() {
           <div className="horse-form-grid">
             <Field label={t('horse.name')}>
               <input className="input" value={form.name} onChange={(event) => setValue('name', event.target.value)} required maxLength={120} />
+            </Field>
+            <Field label={t('horse.gender')}>
+              <select
+                className="input"
+                value={form.gender}
+                onChange={(event) => setValue('gender', event.target.value as HorseGender | '')}
+              >
+                <option value="">— {t('horse.genderUnknown')} —</option>
+                <option value="MALE">{t('horse.genderMale')}</option>
+                <option value="FEMALE">{t('horse.genderFemale')}</option>
+              </select>
             </Field>
             <Field label={t('horse.breed')}>
               <input className="input" value={form.breed} onChange={(event) => setValue('breed', event.target.value)} maxLength={120} />

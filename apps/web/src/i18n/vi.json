@@ -66,6 +66,10 @@
   },
   "horse": {
     "name": "Tên",
+    "gender": "Giới tính",
+    "genderMale": "Đực",
+    "genderFemale": "Cái",
+    "genderUnknown": "Chưa rõ",
     "breed": "Giống",
     "birthDate": "Ngày sinh",
     "owner": "Chủ ngựa",

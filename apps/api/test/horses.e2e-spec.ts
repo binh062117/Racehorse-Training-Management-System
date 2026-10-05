@@ -224,6 +224,12 @@ describe('Horses (e2e)', () => {
       expect(res.headers['content-type']).toContain('image/png');
     });
 
+    it('owner of the horse can fetch the photo via query token (200)', async () => {
+      const res = await api().get(`${photoUrl}?token=${owner1Token}`);
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('image/png');
+    });
+
     it('another owner cannot fetch the photo (403)', async () => {
       const res = await api().get(photoUrl).set(auth(owner2Token));
       expect(res.status).toBe(403);

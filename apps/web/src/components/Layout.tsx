@@ -78,6 +78,7 @@ export function Layout() {
       if (role === 'TRAINER') return 'Giáo án huấn luyện';
       return t('nav.plans');
     }
+    if (path.startsWith('/health-records')) return 'Hồ sơ khám bệnh';
     if (path.startsWith('/admin/users')) return t('nav.users');
     return t('app.title');
   };
@@ -166,7 +167,16 @@ export function Layout() {
 
 
           {/* Health & Incidents: MANAGER, VET (medical records), GROOM (barn incident report), TRAINER (fatigue alerts) */}
-          {(role === 'MANAGER' || role === 'VET' || role === 'GROOM' || role === 'TRAINER') && (
+          {role === 'VET' && (
+            <NavLink
+              to="/health-records"
+              className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
+            >
+              <span className="ico"><HealthIcon /></span>
+              <span>Hồ sơ khám bệnh</span>
+            </NavLink>
+          )}
+          {(role === 'MANAGER' || role === 'GROOM' || role === 'TRAINER') && (
             <div
               className="rail-item"
               style={{ opacity: 0.65, cursor: 'default' }}
@@ -174,9 +184,7 @@ export function Layout() {
             >
               <span className="ico"><HealthIcon /></span>
               <span>
-                {role === 'VET'
-                  ? 'Hồ sơ khám bệnh'
-                  : role === 'GROOM'
+                {role === 'GROOM'
                   ? 'Báo cáo sự cố'
                   : t('nav.incidents')}
               </span>

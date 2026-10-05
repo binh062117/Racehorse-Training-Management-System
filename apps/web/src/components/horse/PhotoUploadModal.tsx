@@ -44,9 +44,7 @@ export function PhotoUploadModal({ horse, isOpen, onClose, onUploaded }: PhotoUp
     formData.append('file', file);
 
     try {
-      await api.post(`/horses/${horse.id}/photo`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post(`/horses/${horse.id}/photo`, formData);
       onUploaded();
       onClose();
     } catch (e2) {

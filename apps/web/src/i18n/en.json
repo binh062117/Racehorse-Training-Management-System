@@ -66,6 +66,10 @@
   },
   "horse": {
     "name": "Name",
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderUnknown": "Unknown",
     "breed": "Breed",
     "birthDate": "Birth date",
     "owner": "Owner",
