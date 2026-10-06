@@ -79,6 +79,17 @@ export class MailService implements OnModuleInit {
     );
   }
 
+  async sendAccountApproved(to: string, name: string): Promise<void> {
+    const link = this.webUrl('/login');
+    await this.send(
+      to,
+      'Your Racehorse Club account has been approved',
+      `<p>Hi ${name},</p>
+       <p>Good news — a manager has approved your account. You can log in now:</p>
+       <p><a href="${link}">${link}</a></p>`,
+    );
+  }
+
   async sendResetPassword(
     to: string,
     name: string,

@@ -31,12 +31,17 @@ describe('Auth & Users (e2e)', () => {
   const mail = {
     otpCodes: [] as string[],
     resetTokens: [] as string[],
+    approvedEmails: [] as string[],
     sendVerifyOtp: (_to: string, _name: string, code: string) => {
       mail.otpCodes.push(code);
       return Promise.resolve();
     },
     sendResetPassword: (_to: string, _name: string, token: string) => {
       mail.resetTokens.push(token);
+      return Promise.resolve();
+    },
+    sendAccountApproved: (to: string) => {
+      mail.approvedEmails.push(to);
       return Promise.resolve();
     },
   };
@@ -151,6 +156,28 @@ describe('Auth & Users (e2e)', () => {
     expect(res.status).toBe(200);
     expect(res.body.role).toBe('OWNER');
     expect(res.body.status).toBe('ACTIVE');
+    expect(mail.approvedEmails).toContain(email);
+  });
+
+  it('does not re-send the approval email when re-activating a DISABLED user', async () => {
+    const login = await api()
+      .post('/api/v1/auth/login')
+      .send({ email: 'manager@racehorse.local', password: 'Manager123!' });
+    const managerToken = login.body.accessToken as string;
+    const target = await prisma.user.findUnique({ where: { email } });
+
+    await api()
+      .patch(`/api/v1/users/${target!.id}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ status: 'DISABLED' });
+    const before = mail.approvedEmails.length;
+
+    const res = await api()
+      .patch(`/api/v1/users/${target!.id}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ status: 'ACTIVE' });
+    expect(res.status).toBe(200);
+    expect(mail.approvedEmails.length).toBe(before);
   });
 
   it('lets a MANAGER reject a PENDING registration, freeing the email', async () => {

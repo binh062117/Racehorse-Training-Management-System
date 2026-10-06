@@ -5,6 +5,17 @@ nhóm). Mới nhất lên đầu.
 
 ---
 
+## 2026-10-06 — Gửi email khi MANAGER duyệt tài khoản (PENDING → ACTIVE)
+
+**Nguồn:** yêu cầu người dùng.
+**Quyết định:** `UsersService.update()` — khi `status` chuyển từ `PENDING`
+sang `ACTIVE` (đúng lúc MANAGER bấm "Duyệt"), gửi email thông báo qua
+`MailService.sendAccountApproved()` (Brevo, cùng cơ chế với OTP/reset
+password). **Chỉ** kích hoạt cho đúng chuyển tiếp `PENDING → ACTIVE` —
+mở lại tài khoản bị khoá (`DISABLED → ACTIVE`) là hành động khác, không
+gửi lại email "đã được duyệt" (dễ gây hiểu nhầm). e2e: +2 test (gửi đúng
+khi duyệt lần đầu; không gửi khi re-enable từ DISABLED) — 157/157 xanh.
+
 ## 2026-10-01 — Chuẩn hóa Ngoại lệ Training Lock: Quyền hạn của Bác sĩ Thú y & Ràng buộc HLV Trưởng
 
 **Nguồn:** Yêu cầu người dùng (làm rõ thẩm quyền của Bác sĩ Thú y vs HLV Trưởng đối với ngoại lệ Khóa Huấn Luyện - Horse is locked).
