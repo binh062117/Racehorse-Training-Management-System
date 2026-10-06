@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppException } from '../common/app-exception';
 import { PublicUser } from '../auth/auth.service';
 import { TokenService } from '../auth/token.service';
+import { MailService } from '../mail/mail.service';
 import { ListUsersQueryDto, UpdateUserDto } from './dto/users.dto';
 
 const PUBLIC_SELECT = {
@@ -26,6 +27,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
+    private readonly mail: MailService,
   ) {}
 
   async list(q: ListUsersQueryDto): Promise<Paginated<PublicUser>> {
@@ -72,7 +74,7 @@ export class UsersService {
       }
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
@@ -81,6 +83,18 @@ export class UsersService {
       },
       select: PUBLIC_SELECT,
     });
+
+    // Notify the user when a MANAGER approves their registration
+    // (PENDING -> ACTIVE). Re-enabling a DISABLED account is a different
+    // action and doesn't send this "you're approved" email.
+    if (
+      user.status === UserStatus.PENDING &&
+      updated.status === UserStatus.ACTIVE
+    ) {
+      await this.mail.sendAccountApproved(updated.email, updated.name);
+    }
+
+    return updated;
   }
 
   /** Hard-deletes a still-PENDING registration so the email can be reused. */
