@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../../lib/api';
-import type { Paginated, User, HorseGender, HorseStatus } from '../../lib/types';
+import type { Horse, Paginated, User, HorseGender, HorseStatus } from '../../lib/types';
 import { Field } from '../Field';
 import { ErrorText } from '../ErrorText';
 
