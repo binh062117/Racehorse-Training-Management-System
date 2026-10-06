@@ -5,6 +5,26 @@ nhóm). Mới nhất lên đầu.
 
 ---
 
+## 2026-10-06 — Nối dây nút "Xoá" tài khoản đã duyệt ở Admin Dashboard
+
+**Nguồn:** yêu cầu người dùng.
+**Quyết định:** `DELETE /users/:id` đã có sẵn ở backend từ trước (soft
+delete — set `deletedAt` + `status=DISABLED`, giữ lịch sử, khác hẳn
+`POST /users/:id/reject` chỉ áp dụng user `PENDING` và xoá hẳn) nhưng
+**frontend chưa từng gọi tới** — không có nút nào. Thêm nút "Xoá" ở
+`AdminUsersPage.tsx` cho user đã duyệt (`ACTIVE` hoặc `DISABLED`), có
+confirm dialog, tự ẩn ở chính hàng của MANAGER đang đăng nhập (khớp rule
+backend "không tự xoá mình" — `CONFLICT`). Dùng lại y nguyên endpoint cũ,
+không đổi hành vi backend.
+**Vì sao soft delete (không xoá hẳn như reject):** user đã duyệt có thể
+đã sở hữu ngựa, buổi tập, hồ sơ khám... — xoá hẳn sẽ mồ côi dữ liệu liên
+quan hoặc vi phạm FK constraint. PENDING user mới đăng ký thì chắc chắn
+chưa có dữ liệu gì nên `reject` xoá hẳn được an toàn (xem quyết định
+2026-09-30).
+**e2e:** endpoint này trước đó **chưa có test nào** dù đã code — bổ sung
+3 test (MANAGER xoá user ACTIVE thành công + biến mất khỏi danh sách,
+MANAGER không tự xoá được mình, non-MANAGER bị chặn 403) — 160/160 xanh.
+
 ## 2026-10-06 — Gửi email khi MANAGER duyệt tài khoản (PENDING → ACTIVE)
 
 **Nguồn:** yêu cầu người dùng.

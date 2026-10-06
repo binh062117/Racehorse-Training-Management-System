@@ -273,7 +273,9 @@
     "reject": "Từ chối",
     "rejectConfirm": "Từ chối đăng ký này? Tài khoản sẽ bị xoá hẳn — người này phải đăng ký lại (kể cả bằng Google) nếu muốn có tài khoản.",
     "disable": "Khoá",
-    "enable": "Mở lại"
+    "enable": "Mở lại",
+    "delete": "Xoá",
+    "deleteConfirm": "Xoá tài khoản \"{{name}}\" khỏi hệ thống? Tài khoản sẽ bị khoá và không còn hiện trong danh sách (không huỷ được)."
   },
   "error": {
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",
