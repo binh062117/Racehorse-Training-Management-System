@@ -40,6 +40,29 @@ export function setTokens(
   write(REFRESH_TOKEN_KEY, tokens?.refreshToken ?? null);
 }
 
+/**
+ * Resolves a file path or URL to an absolute URL with token query param if needed.
+ * Used for authenticated media such as horse photos and incident photos.
+ */
+export function getFileUrl(pathOrUrl: string | null | undefined): string | null {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('data:') || pathOrUrl.startsWith('blob:')) {
+    return pathOrUrl;
+  }
+  const token = getAccessToken();
+  let fullUrl = pathOrUrl;
+  if (!pathOrUrl.startsWith('http://') && !pathOrUrl.startsWith('https://')) {
+    const urlObj = new URL(baseURL, window.location.origin);
+    const origin = urlObj.origin;
+    fullUrl = pathOrUrl.startsWith('/') ? `${origin}${pathOrUrl}` : `${origin}/${pathOrUrl}`;
+  }
+  if (token) {
+    const separator = fullUrl.includes('?') ? '&' : '?';
+    return `${fullUrl}${separator}token=${encodeURIComponent(token)}`;
+  }
+  return fullUrl;
+}
+
 /** Remembers the last email used to log in, so the login form can
  * pre-fill it once the ~2-day session expires and the user only has to
  * retype their password. */

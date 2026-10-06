@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../../lib/api';
-import type { Paginated, User, HorseStatus } from '../../lib/types';
+import type { Horse, Paginated, User, HorseGender, HorseStatus } from '../../lib/types';
 import { Field } from '../Field';
 import { ErrorText } from '../ErrorText';
 
@@ -13,11 +13,13 @@ interface CreateHorseModalProps {
 export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModalProps) {
   const [owners, setOwners] = useState<User[]>([]);
   const [name, setName] = useState('');
-  const [gender, setGender] = useState<'MALE' | 'FEMALE'>('MALE');
+  const [gender, setGender] = useState<HorseGender | ''>('MALE');
   const [breed, setBreed] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -40,20 +42,29 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
     setBusy(true);
 
     try {
-      await api.post('/horses', {
+      const created = await api.post<Horse>('/horses', {
         name: name.trim(),
         ownerId,
-        gender,
+        ...(gender ? { gender } : {}),
         ...(breed.trim() ? { breed: breed.trim() } : {}),
         ...(birthDate ? { birthDate: new Date(birthDate).toISOString() } : {}),
         status,
       });
+
+      if (photo) {
+        const formData = new FormData();
+        formData.append('file', photo);
+        await api.post(`/horses/${created.data.id}/photo`, formData);
+      }
+
       setName('');
       setGender('MALE');
       setBreed('');
       setBirthDate('');
       setOwnerId('');
       setStatus('ACTIVE');
+      setPhoto(null);
+      setPreview(null);
       onCreated();
       onClose();
     } catch (e2) {
@@ -107,10 +118,11 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
               <select
                 className="input"
                 value={gender}
-                onChange={(e) => setGender(e.target.value as 'MALE' | 'FEMALE')}
+                onChange={(e) => setGender(e.target.value as HorseGender | '')}
               >
                 <option value="MALE">Đực</option>
                 <option value="FEMALE">Cái</option>
+                <option value="">— Chưa rõ —</option>
               </select>
             </Field>
 
@@ -144,6 +156,43 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
                 <option value="RESTING">Nghỉ dưỡng (RESTING)</option>
                 <option value="RETIRED">Giải nghệ (RETIRED)</option>
               </select>
+            </Field>
+
+            <Field label="Ảnh đại diện (tùy chọn)" hint="Định dạng JPG, PNG, WEBP (tối đa 5MB)">
+              <input
+                className="input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) {
+                    setPhoto(null);
+                    setPreview(null);
+                    return;
+                  }
+                  if (file.size > 5 * 1024 * 1024) {
+                    setErr(new Error('Kích thước ảnh tối đa là 5MB'));
+                    return;
+                  }
+                  setPhoto(file);
+                  setErr(null);
+                  setPreview(URL.createObjectURL(file));
+                }}
+              />
+              {preview && (
+                <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    style={{
+                      maxHeight: '120px',
+                      borderRadius: '6px',
+                      objectFit: 'cover',
+                      border: '1px solid var(--border-default)',
+                    }}
+                  />
+                </div>
+              )}
             </Field>
 
             <ErrorText err={err} />

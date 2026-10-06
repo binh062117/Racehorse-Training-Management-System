@@ -158,7 +158,9 @@ export function HorseDetailPage() {
             </div>
 
             <p className="muted" style={{ margin: '6px 0 12px', fontSize: '13.5px' }}>
-              {horse.breed ?? 'Chưa rõ giống'} · {calculateAge(horse.birthDate)} · Chủ sở hữu:{' '}
+              {horse.breed ?? 'Chưa rõ giống'} ·{' '}
+              {horse.gender === 'MALE' ? 'Giới tính: Đực' : horse.gender === 'FEMALE' ? 'Giới tính: Cái' : 'Chưa rõ giới tính'} ·{' '}
+              {calculateAge(horse.birthDate)} · Chủ sở hữu:{' '}
               <strong style={{ color: 'var(--text-primary)' }}>{horse.owner.name}</strong>
             </p>
 
@@ -282,6 +284,12 @@ export function HorseDetailPage() {
               <dd>{horse.name}</dd>
             </div>
             <div>
+              <dt>Giới tính</dt>
+              <dd>
+                {horse.gender === 'MALE' ? 'Đực' : horse.gender === 'FEMALE' ? 'Cái' : 'Chưa xác định'}
+              </dd>
+            </div>
+            <div>
               <dt>Giống loài</dt>
               <dd>{horse.breed ?? '—'}</dd>
             </div>
@@ -332,7 +340,7 @@ export function HorseDetailPage() {
           lockReason={horse.lockReason}
         />
       )}
-      {tab === 'health' && <HealthTab horseId={horse.id} />}
+      {tab === 'health' && <HealthTab horse={horse} />}
 
       {/* Modals */}
       <EditHorseModal

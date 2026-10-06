@@ -18,6 +18,7 @@ import { AdminUsersPage } from './pages/AdminUsersPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TrainingPlansPage } from './pages/TrainingPlansPage';
 import { HealthSchedulePage } from './pages/HealthSchedulePage';
+import { HealthRecordsPage } from './pages/HealthRecordsPage';
 import {
   HorseFormPage,
   HorseOwnershipPage,
@@ -47,6 +48,14 @@ const router = createBrowserRouter([
         ),
       },
       { path: '/horses', element: <HorsesPage /> },
+      {
+        path: '/health-records',
+        element: (
+          <RequireAuth roles={['VET']}>
+            <HealthRecordsPage />
+          </RequireAuth>
+        ),
+      },
       {
         path: '/my-horses',
         element: (

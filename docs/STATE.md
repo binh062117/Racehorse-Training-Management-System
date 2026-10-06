@@ -16,6 +16,82 @@ remainder) **xong** — toàn bộ `CLAUDE_CODE_BACKEND_FULL.md` (Sprint 0-3) đ
 
 ---
 
+## Horse Gender Integration — Xem & Tạo ngựa - 2026-10-05
+
+Bổ sung hiển thị và nhập liệu **Giới tính ngựa (Horse Gender)** (`MALE` / `FEMALE`) trên toàn bộ các trang liên quan:
+
+### Thay đổi Frontend
+1. **`HorseFormPage.tsx`** (Trang tạo / sửa hồ sơ `/horses/new` & `/horses/:id/edit`):
+   - Thêm trường `gender: HorseGender | ''` vào `HorseFormState` và `EMPTY_FORM`.
+   - Nạp `gender` từ `detailResponse` khi sửa ngựa.
+   - Gửi `gender` trong payload khi tạo mới (`api.post`) và cập nhật (`api.patch`).
+   - Thêm dropdown `<Field label={t('horse.gender')}>` (Đực / Cái / Chưa rõ).
+2. **`CreateHorseModal.tsx`** (Modal tạo ngựa nhanh trên `HorsesPage`):
+   - Sử dụng type `HorseGender | ''`, thêm lựa chọn `— Chưa rõ —` và chỉ gửi trường `gender` khi được chọn.
+3. **`HorsesPage.tsx`** (Bảng danh sách ngựa):
+   - Thêm cột `<th>Giới tính</th>` và hiển thị badge trung tính (`Đực` / `Cái` / `Chưa rõ`).
+4. **`HorseDetailPage.tsx`** (Trang chi tiết ngựa):
+   - Hero header: Hiển thị giới tính trong dòng tóm tắt cạnh giống loài và tuổi.
+   - Tab Thông tin lý lịch (`tab === 'profile'`): Thêm dòng `dt/dd` hiển thị Giới tính (`Đực` / `Cái` / `Chưa xác định`).
+5. **`DashboardPage.tsx`** (Danh sách ngựa gần đây):
+   - Hiển thị giới tính trong dòng mô tả phụ của mỗi ngựa.
+6. **`HealthRecordsPage.tsx`** (Bảng sơ đồ sức khỏe ngựa):
+   - Thêm cột `<th>Giới tính</th>` hiển thị badge `Đực` / `Cái`.
+7. **`i18n/vi.json` & `i18n/en.json`**:
+   - Thêm các key `gender`, `genderMale`, `genderFemale`, `genderUnknown` trong section `horse`.
+
+### Build & Test
+- Frontend: `tsc -b && vite build` PASS (141 modules, 533.34 kB).
+- Linter: `oxlint` PASS (0 errors).
+
+---
+
+## Record Medical Examination — cải tiến giao diện VET - 2026-10-05
+
+Nâng cấp chức năng "Ghi nhận hồ sơ khám bệnh" cho role VET (Bác sĩ Thú y):
+
+### Thay đổi Frontend
+
+1. **`CreateHealthRecordModal.tsx`** (MỚI) — Modal ghi nhận hồ sơ khám theo
+   design system (modal-overlay, modal-content, modal-header, modal-footer).
+   Bổ sung trường **`healthStatus`** (FIT / MONITORING / INJURED / QUARANTINED)
+   để VET cập nhật trạng thái sức khỏe khi khám. Có cảnh báo khi chọn
+   INJURED/QUARANTINED (ảnh hưởng tới khóa tập/giải đua).
+
+2. **`HealthTab.tsx`** (REFACTOR) — Thay thế inline form bằng modal. Thêm:
+   - Toolbar với nút "Ghi nhận hồ sơ khám" (VET only).
+   - Summary card: trạng thái sức khỏe hiện tại, tổng số lần khám, lần khám
+     gần nhất.
+   - Cải thiện layout record list (date + vet header, diagnosis/treatment
+     sections, inline edit, attachment upload).
+   - Prop thay đổi: `{ horseId: string }` → `{ horse: Horse }`.
+
+3. **`HealthRecordsPage.tsx`** (MỚI) — Trang tổng quan "Hồ sơ khám bệnh"
+   toàn đàn cho VET tại route `/health-records`. Bao gồm:
+   - KPI tiles (tổng đàn, khỏe mạnh, cần theo dõi, chấn thương/cách ly,
+     khóa tập).
+   - Bảng sơ đồ trạng thái sức khỏe toàn đàn (tên, giống, trạng thái y tế,
+     khóa tập) với search và filter theo healthStatus.
+   - Nút "Khám" nhanh trên mỗi dòng → mở modal tạo hồ sơ khám.
+   - Danh sách hồ sơ khám gần đây (20 bản ghi mới nhất, click → chi tiết ngựa).
+
+4. **`Layout.tsx`** — Sidebar VET: link "Hồ sơ khám bệnh" kích hoạt
+   (thay placeholder "Sắp có"). Topbar title mapping cho `/health-records`.
+
+5. **`HorseDetailPage.tsx`** — `<HealthTab horse={horse} />` thay vì
+   `<HealthTab horseId={horse.id} />`.
+
+6. **`main.tsx`** — Route `/health-records` restricted `@Roles(['VET'])`.
+
+### Backend — không thay đổi
+API đã hỗ trợ đầy đủ từ trước (POST/GET/PATCH health-records, attachment, healthStatus).
+
+### Build & Test
+- Frontend: `tsc -b && vite build` PASS (141 modules, 531 kB).
+- Backend: `nest build` PASS.
+
+---
+
 ## UC-10 read-only schedule hierarchy - 2026-10-03
 
 Grouped already-loaded sessions by Vietnam calendar date; time uses the same

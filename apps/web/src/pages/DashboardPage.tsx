@@ -259,7 +259,9 @@ export function DashboardPage() {
                         )}
                       </div>
                       <div className="horse-mini-sub">
-                        {horse.breed || 'Không rõ giống'} · Chủ sở hữu: {horse.owner?.name || 'N/A'}
+                        {horse.breed || 'Không rõ giống'}
+                        {horse.gender ? ` · ${horse.gender === 'MALE' ? 'Đực' : 'Cái'}` : ''}
+                        {' '}· Chủ sở hữu: {horse.owner?.name || 'N/A'}
                       </div>
                     </div>
 

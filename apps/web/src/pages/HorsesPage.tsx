@@ -148,6 +148,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
             <thead>
               <tr>
                 <th>Ngựa &amp; Giống</th>
+                <th>Giới tính</th>
                 <th>Tuổi &amp; Ngày sinh</th>
                 <th>Chủ sở hữu</th>
                 <th>Thể trạng</th>
@@ -179,6 +180,15 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                         </div>
                       </div>
                     </div>
+                  </td>
+                  <td>
+                    {h.gender === 'MALE' ? (
+                      <span className="badge badge-neutral">Đực</span>
+                    ) : h.gender === 'FEMALE' ? (
+                      <span className="badge badge-neutral">Cái</span>
+                    ) : (
+                      <span className="muted" style={{ fontSize: '12px' }}>Chưa rõ</span>
+                    )}
                   </td>
                   <td>
                     <div>{calculateAge(h.birthDate)}</div>
