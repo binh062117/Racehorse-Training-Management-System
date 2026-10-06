@@ -273,7 +273,9 @@
     "reject": "Reject",
     "rejectConfirm": "Reject this registration? The account will be permanently deleted — this person must register again (including via Google) if they still want an account.",
     "disable": "Disable",
-    "enable": "Enable"
+    "enable": "Enable",
+    "delete": "Delete",
+    "deleteConfirm": "Delete \"{{name}}\" from the system? The account will be disabled and removed from the list (this cannot be undone)."
   },
   "error": {
     "VALIDATION_ERROR": "Invalid data",

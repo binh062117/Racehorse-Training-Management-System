@@ -225,6 +225,76 @@ describe('Auth & Users (e2e)', () => {
     expect(res.body.error.code).toBe('CONFLICT');
   });
 
+  it('lets a MANAGER delete an approved (ACTIVE) user', async () => {
+    const deleteEmail = `e2e_delete_${Date.now()}@racehorse.test`;
+    await api()
+      .post('/api/v1/auth/register')
+      .send({ name: 'Delete Me', email: deleteEmail, password });
+    const code = mail.otpCodes[mail.otpCodes.length - 1];
+    await api()
+      .post('/api/v1/auth/verify-otp')
+      .send({ email: deleteEmail, code });
+
+    const login = await api()
+      .post('/api/v1/auth/login')
+      .send({ email: 'manager@racehorse.local', password: 'Manager123!' });
+    const managerToken = login.body.accessToken as string;
+
+    const target = await prisma.user.findUnique({
+      where: { email: deleteEmail },
+    });
+    await api()
+      .patch(`/api/v1/users/${target!.id}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ role: 'OWNER', status: 'ACTIVE' });
+
+    const res = await api()
+      .delete(`/api/v1/users/${target!.id}`)
+      .set('Authorization', `Bearer ${managerToken}`);
+    expect(res.status).toBe(200);
+
+    const deleted = await prisma.user.findUnique({
+      where: { id: target!.id },
+    });
+    expect(deleted?.deletedAt).not.toBeNull();
+    expect(deleted?.status).toBe('DISABLED');
+
+    const list = await api()
+      .get('/api/v1/users')
+      .set('Authorization', `Bearer ${managerToken}`);
+    expect(
+      (list.body.data as { id: string }[]).some((u) => u.id === target!.id),
+    ).toBe(false);
+  });
+
+  it('a MANAGER cannot delete their own account (CONFLICT)', async () => {
+    const login = await api()
+      .post('/api/v1/auth/login')
+      .send({ email: 'manager@racehorse.local', password: 'Manager123!' });
+    const managerToken = login.body.accessToken as string;
+    const me = await api()
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    const res = await api()
+      .delete(`/api/v1/users/${me.body.id}`)
+      .set('Authorization', `Bearer ${managerToken}`);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('CONFLICT');
+  });
+
+  it('non-manager cannot delete a user (FORBIDDEN)', async () => {
+    const login = await api()
+      .post('/api/v1/auth/login')
+      .send({ email, password });
+    const target = await prisma.user.findUnique({ where: { email } });
+    const res = await api()
+      .delete(`/api/v1/users/${target!.id}`)
+      .set('Authorization', `Bearer ${login.body.accessToken}`);
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
   it('non-manager cannot list users (FORBIDDEN)', async () => {
     const login = await api()
       .post('/api/v1/auth/login')
