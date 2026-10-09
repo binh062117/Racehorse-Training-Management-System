@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useCachedResource } from '../lib/useCachedResource';
 import type { Paginated, TrainingPlan } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
@@ -14,10 +15,6 @@ export function TrainingPlansPage() {
 
   const role = user?.role;
   const canCreate = role === 'TRAINER';
-
-  const [plans, setPlans] = useState<TrainingPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadErr, setLoadErr] = useState<unknown>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -36,24 +33,17 @@ export function TrainingPlansPage() {
     }
   }, [searchParams, setSearchParams, canCreate]);
 
-  const loadPlans = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await api.get<Paginated<TrainingPlan>>('/training-plans', {
-        params: { limit: 100 },
-      });
-      setPlans(res.data.data ?? []);
-      setLoadErr(null);
-    } catch (e) {
-      setLoadErr(e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadPlans();
-  }, [loadPlans]);
+  const {
+    data,
+    loading,
+    error: loadErr,
+    reload: loadPlans,
+  } = useCachedResource('training-plans', () =>
+    api
+      .get<Paginated<TrainingPlan>>('/training-plans', { params: { limit: 100 } })
+      .then((r) => r.data),
+  );
+  const plans = data?.data ?? [];
 
   const now = new Date();
 

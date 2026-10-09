@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
+import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, Paginated, Notification, User, Role } from '../lib/types';
 import { HorseStatusBadge } from '../components/horse/HorseStatusBadge';
 import { formatDate } from '../lib/format';
@@ -24,68 +24,42 @@ export function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [horses, setHorses] = useState<Horse[]>([]);
-  const [totalHorses, setTotalHorses] = useState<number>(0);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [pendingUsersCount, setPendingUsersCount] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
-
   const role: Role | null = user?.role ?? null;
 
-  useEffect(() => {
-    let mounted = true;
+  const { data: horsesData, loading: horsesLoading } = useCachedResource(
+    'dashboard:horses',
+    async () => {
+      const res = await api.get<Paginated<Horse>>('/horses', { params: { limit: 6 } });
+      return {
+        items: res.data.data ?? [],
+        total: res.data.meta?.total ?? res.data.data.length,
+      };
+    },
+  );
+  const horses = horsesData?.items ?? [];
+  const totalHorses = horsesData?.total ?? 0;
 
-    async function loadDashboardData() {
-      try {
-        setLoading(true);
+  const { data: notificationsData, loading: notificationsLoading } = useCachedResource(
+    'dashboard:notifications',
+    () =>
+      api
+        .get<Paginated<Notification>>('/notifications', { params: { limit: 5 } })
+        .then((r) => r.data.data ?? [])
+        .catch(() => []),
+  );
+  const notifications = notificationsData ?? [];
 
-        // Fetch horses (top 6 recent)
-        const horsesRes = await api.get<Paginated<Horse>>('/horses', {
-          params: { limit: 6 },
-        });
+  const { data: pendingUsersData, loading: pendingUsersLoading } = useCachedResource(
+    role === 'MANAGER' ? 'dashboard:pending-users' : 'dashboard:pending-users:skip',
+    async () => {
+      if (role !== 'MANAGER') return 0;
+      const res = await api.get<User[]>('/users');
+      return res.data.filter((u) => u.status === 'PENDING').length;
+    },
+  );
+  const pendingUsersCount = pendingUsersData ?? 0;
 
-        if (mounted && horsesRes.data) {
-          setHorses(horsesRes.data.data || []);
-          setTotalHorses(horsesRes.data.meta?.total ?? horsesRes.data.data.length);
-        }
-
-        // Fetch notifications
-        try {
-          const notifsRes = await api.get<Paginated<Notification>>('/notifications', {
-            params: { limit: 5 },
-          });
-          if (mounted && notifsRes.data) {
-            setNotifications(notifsRes.data.data || []);
-          }
-        } catch {
-          // ignore notification error
-        }
-
-        // Fetch pending users if MANAGER
-        if (role === 'MANAGER') {
-          try {
-            const usersRes = await api.get<User[]>('/users');
-            if (mounted && usersRes.data) {
-              const pending = usersRes.data.filter((u) => u.status === 'PENDING').length;
-              setPendingUsersCount(pending);
-            }
-          } catch {
-            // ignore
-          }
-        }
-      } catch {
-        // error handling
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    loadDashboardData();
-
-    return () => {
-      mounted = false;
-    };
-  }, [role]);
+  const loading = horsesLoading || notificationsLoading || pendingUsersLoading;
 
   const lockedHorses = horses.filter((h) => h.locked);
   const activeHorses = horses.filter((h) => h.status === 'ACTIVE' && !h.locked);

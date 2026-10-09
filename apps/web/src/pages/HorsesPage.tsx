@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, HorseStatus, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
@@ -27,45 +28,39 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const isManager = user?.role === 'MANAGER';
   const isOwner = user?.role === 'OWNER';
 
-  const [horses, setHorses] = useState<Horse[]>([]);
-  const [loadErr, setLoadErr] = useState<unknown>(null);
-  const [loading, setLoading] = useState(true);
-
   // Filters & Search
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | HorseStatus>('ALL');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 200);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Modal States
   const [createOpen, setCreateOpen] = useState(false);
   const [editingHorse, setEditingHorse] = useState<Horse | null>(null);
   const [deletingHorse, setDeletingHorse] = useState<Horse | null>(null); 
 
-  const load = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await api.get<Paginated<Horse>>('/horses', {
-        params: {
-          limit: 100,
-          ...(search.trim() ? { q: search.trim() } : {}),
-          ...(statusFilter !== 'ALL' ? { status: statusFilter } : {}),
-          ...(personal && isOwner && user?.id ? { ownerId: user.id } : {}),
-        },
-      });
-      setHorses(res.data.data);
-      setLoadErr(null);
-    } catch (e) {
-      setLoadErr(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, statusFilter, personal, isOwner, user?.id]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void load();
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [load]);
+  const queryParams = {
+    limit: 100,
+    ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
+    ...(statusFilter !== 'ALL' ? { status: statusFilter } : {}),
+    ...(personal && isOwner && user?.id ? { ownerId: user.id } : {}),
+  };
+  const cacheKey = `horses:${JSON.stringify(queryParams)}`;
+  const {
+    data,
+    loading,
+    error: loadErr,
+    reload: load,
+  } = useCachedResource(cacheKey, () =>
+    api
+      .get<Paginated<Horse>>('/horses', { params: queryParams })
+      .then((r) => r.data),
+  );
+  const horses = data?.data ?? [];
 
   return (
     <div className="stack">

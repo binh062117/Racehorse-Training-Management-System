@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { Field } from '../components/Field';
 import { api } from '../lib/api';
+import { useCachedResource } from '../lib/useCachedResource';
 import { formatDate } from '../lib/format';
 import type { Horse, Paginated, Vaccination } from '../lib/types';
 
@@ -13,34 +14,25 @@ export function HealthSchedulePage() {
   const { user } = useAuth();
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [careType, setCareType] = useState<'ALL' | 'VACCINATION' | 'DEWORMING'>('ALL');
-  const [records, setRecords] = useState<Vaccination[] | null>(null);
-  const [error, setError] = useState<unknown>(null);
+
+  const vaccinationParams = {
+    limit: 100,
+    ...(upcomingOnly ? { upcoming: true } : {}),
+    ...(careType !== 'ALL' ? { careType } : {}),
+  };
+  const {
+    data: records,
+    error,
+    reload: load,
+  } = useCachedResource(`vaccinations:${JSON.stringify(vaccinationParams)}`, () =>
+    api
+      .get<Paginated<Vaccination>>('/vaccinations', { params: vaccinationParams })
+      .then((r) => r.data.data),
+  );
 
   const changeFilter = (nextUpcomingOnly: boolean) => {
-    setRecords(null);
-    setError(null);
     setUpcomingOnly(nextUpcomingOnly);
   };
-
-  const load = useCallback(async () => {
-    try {
-      const response = await api.get<Paginated<Vaccination>>('/vaccinations', {
-        params: {
-          limit: 100,
-          ...(upcomingOnly ? { upcoming: true } : {}),
-          ...(careType !== 'ALL' ? { careType } : {}),
-        },
-      });
-      setRecords(response.data.data);
-      setError(null);
-    } catch (reason) {
-      setError(reason);
-    }
-  }, [careType, upcomingOnly]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   return (
     <div className="horse-workspace health-schedule-page">
@@ -83,11 +75,7 @@ export function HealthSchedulePage() {
               type="button"
               className={careType === type ? 'active' : ''}
               aria-pressed={careType === type}
-              onClick={() => {
-                setRecords(null);
-                setError(null);
-                setCareType(type);
-              }}
+              onClick={() => setCareType(type)}
             >
               {t(`healthSchedule.kindOptions.${type}`)}
             </button>
