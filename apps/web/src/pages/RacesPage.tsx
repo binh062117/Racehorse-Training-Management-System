@@ -13,6 +13,45 @@ type RaceFilter = 'ALL' | 'UPCOMING' | 'PAST';
 const EMPTY_RACES: Race[] = [];
 const EMPTY_HORSES: Horse[] = [];
 
+function isUpcomingRace(race: Pick<Race, 'date'>, today: string): boolean {
+  return toDateInput(race.date) >= today;
+}
+
+function summarizeRaces(races: Race[], today: string) {
+  return races.reduce(
+    (summary, race) => {
+      if (isUpcomingRace(race, today)) summary.upcoming += 1;
+      else summary.past += 1;
+      if (race.venue) summary.withVenue += 1;
+      return summary;
+    },
+    { upcoming: 0, past: 0, withVenue: 0 },
+  );
+}
+
+function getVisibleRaces(
+  races: Race[],
+  filter: RaceFilter,
+  search: string,
+  today: string,
+): Race[] {
+  const query = search.trim().toLocaleLowerCase();
+
+  return races
+    .filter((race) => {
+      const isUpcoming = isUpcomingRace(race, today);
+      if (filter === 'UPCOMING' && !isUpcoming) return false;
+      if (filter === 'PAST' && isUpcoming) return false;
+      return !query ||
+        `${race.name} ${race.venue ?? ''}`.toLocaleLowerCase().includes(query);
+    })
+    .sort((left, right) => (
+      filter === 'PAST'
+        ? new Date(right.date).getTime() - new Date(left.date).getTime()
+        : new Date(left.date).getTime() - new Date(right.date).getTime()
+    ));
+}
+
 export function RacesPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -46,24 +85,11 @@ export function RacesPage() {
   const horses = raceData?.horses ?? EMPTY_HORSES;
 
   const today = toDateInput(new Date().toISOString());
-  const upcomingCount = races.filter((race) => toDateInput(race.date) >= today).length;
-  const pastCount = races.length - upcomingCount;
-  const racesWithVenue = races.filter((race) => race.venue).length;
-  const visibleRaces = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    return races
-      .filter((race) => {
-        const isUpcoming = toDateInput(race.date) >= today;
-        if (filter === 'UPCOMING' && !isUpcoming) return false;
-        if (filter === 'PAST' && isUpcoming) return false;
-        return !query || `${race.name} ${race.venue ?? ''}`.toLocaleLowerCase().includes(query);
-      })
-      .sort((a, b) => (
-        filter === 'PAST'
-          ? new Date(b.date).getTime() - new Date(a.date).getTime()
-          : new Date(a.date).getTime() - new Date(b.date).getTime()
-      ));
-  }, [filter, races, search, today]);
+  const summary = useMemo(() => summarizeRaces(races, today), [races, today]);
+  const visibleRaces = useMemo(
+    () => getVisibleRaces(races, filter, search, today),
+    [filter, races, search, today],
+  );
 
   const openRace = async (race: Race) => {
     setSelectedRace(null);
@@ -125,15 +151,15 @@ export function RacesPage() {
           <div className="k-label">{t('races.total')}</div>
         </div>
         <div className="kpi-tile ok">
-          <div className="k-num">{loading ? '…' : upcomingCount}</div>
+          <div className="k-num">{loading ? '…' : summary.upcoming}</div>
           <div className="k-label">{t('races.upcoming')}</div>
         </div>
         <div className="kpi-tile">
-          <div className="k-num">{loading ? '…' : pastCount}</div>
+          <div className="k-num">{loading ? '…' : summary.past}</div>
           <div className="k-label">{t('races.completed')}</div>
         </div>
         <div className="kpi-tile">
-          <div className="k-num">{loading ? '…' : racesWithVenue}</div>
+          <div className="k-num">{loading ? '…' : summary.withVenue}</div>
           <div className="k-label">{t('races.withVenue')}</div>
         </div>
       </section>
@@ -203,31 +229,40 @@ export function RacesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleRaces.map((race) => (
-                    <tr key={race.id} className={selectedRace?.id === race.id ? 'is-selected' : ''}>
-                      <td>
-                        <button className="races-link-button" type="button" onClick={() => void openRace(race)}>
-                          {race.name}
-                        </button>
-                        <span className="races-subline">
-                          {race.surface || t('races.surfaceNotSet')}
-                        </span>
-                      </td>
-                      <td className="races-data">{formatDate(race.date)}</td>
-                      <td>{race.venue || '—'}</td>
-                      <td className="races-data">{race.distance ? `${race.distance} ${t('races.meters')}` : '—'}</td>
-                      <td>
-                        <span className={`badge ${toDateInput(race.date) >= today ? 'badge-success' : 'badge-neutral'}`}>
-                          {toDateInput(race.date) >= today ? t('races.filters.UPCOMING') : t('races.filters.PAST')}
-                        </span>
-                      </td>
-                      <td>
-                        <button className="btn btn-sm btn-ghost" type="button" onClick={() => void openRace(race)}>
-                          {t('races.viewDetails')}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {visibleRaces.map((race) => {
+                    const isUpcoming = isUpcomingRace(race, today);
+                    return (
+                      <tr key={race.id} className={selectedRace?.id === race.id ? 'is-selected' : ''}>
+                        <td>
+                          <button className="races-link-button" type="button" onClick={() => void openRace(race)}>
+                            {race.name}
+                          </button>
+                          <span className="races-subline">
+                            {race.surface || t('races.surfaceNotSet')}
+                          </span>
+                        </td>
+                        <td className="races-data">{formatDate(race.date)}</td>
+                        <td>{race.venue || '—'}</td>
+                        <td className="races-data">
+                          {race.distance ? `${race.distance} ${t('races.meters')}` : '—'}
+                        </td>
+                        <td>
+                          <span className={`badge ${isUpcoming ? 'badge-success' : 'badge-neutral'}`}>
+                            {isUpcoming ? t('races.filters.UPCOMING') : t('races.filters.PAST')}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-sm btn-ghost"
+                            type="button"
+                            onClick={() => void openRace(race)}
+                          >
+                            {t('races.viewDetails')}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
