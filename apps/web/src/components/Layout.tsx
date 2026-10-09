@@ -37,11 +37,10 @@ export function Layout() {
     const fetchCounts = async () => {
       try {
         const notifRes = await api.get<Paginated<Notification>>('/notifications', {
-          params: { limit: 20 },
+          params: { unread: true, limit: 1 },
         });
-        if (mounted && notifRes.data?.data) {
-          const unread = notifRes.data.data.filter((n) => !n.read).length;
-          setUnreadCount(unread);
+        if (mounted && notifRes.data?.meta) {
+          setUnreadCount(notifRes.data.meta.total);
         }
       } catch {
         // silently ignore error if notifications fail to fetch
@@ -61,8 +60,13 @@ export function Layout() {
     };
 
     fetchCounts();
+    const refreshNotificationCount = () => {
+      void fetchCounts();
+    };
+    window.addEventListener('notifications:changed', refreshNotificationCount);
     return () => {
       mounted = false;
+      window.removeEventListener('notifications:changed', refreshNotificationCount);
     };
   }, [user?.role, location.pathname]);
 
@@ -80,6 +84,7 @@ export function Layout() {
     }
     if (path.startsWith('/races')) return t('nav.races');
     if (path.startsWith('/vaccinations')) return t('nav.vaccinations');
+    if (path.startsWith('/notifications')) return t('nav.notifications');
     if (path.startsWith('/health-records')) return t('nav.healthRecords');
     if (path.startsWith('/incidents')) return t('nav.incidents');
     if (path.startsWith('/admin/users')) return t('nav.users');
@@ -194,13 +199,14 @@ export function Layout() {
           )}
 
           {/* Notifications: All roles */}
-          {unreadCount > 0 && (
-            <div className="rail-item" style={{ opacity: 0.85 }}>
-              <span className="ico"><BellIcon /></span>
-              <span>{t('nav.notifications')}</span>
-              <span className="count">{unreadCount}</span>
-            </div>
-          )}
+          <NavLink
+            to="/notifications"
+            className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
+          >
+            <span className="ico"><BellIcon /></span>
+            <span>{t('nav.notifications')}</span>
+            {unreadCount > 0 && <span className="count">{unreadCount}</span>}
+          </NavLink>
 
           {/* User Management & RBAC: MANAGER only */}
           {role === 'MANAGER' && (

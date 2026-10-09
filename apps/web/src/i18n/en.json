@@ -69,6 +69,18 @@
     "healthTitle": "Health watch",
     "noHealthAlerts": "No horses need health follow-up."
   },
+  "notificationsPage": {
+    "title": "Notifications",
+    "description": "View your notifications. Select an unread notification to mark it as read.",
+    "loading": "Loading notifications...",
+    "empty": "You don't have any notifications yet.",
+    "unread": "Unread",
+    "read": "Notification already read",
+    "markRead": "Mark notification as read",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}} of {{pageCount}}"
+  },
   "auth": {
     "login": "Log in",
     "register": "Register",

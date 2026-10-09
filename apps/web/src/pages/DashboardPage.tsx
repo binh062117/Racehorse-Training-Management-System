@@ -450,8 +450,9 @@ export function DashboardPage() {
 
           {/* Notifications Panel */}
           <div className="panel">
-            <div className="panel-head">
+            <div className="panel-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3>Thông báo gần đây</h3>
+              <Link to="/notifications">{t('dashboard.viewAll')}</Link>
             </div>
             <div className="panel-body flush">
               {notifications.length === 0 ? (
@@ -461,12 +462,16 @@ export function DashboardPage() {
               ) : (
                 <div>
                   {notifications.map((n) => (
-                    <div
+                    <Link
                       key={n.id}
+                      to="/notifications"
                       style={{
+                        display: 'block',
                         padding: '10px 16px',
                         borderBottom: '1px solid var(--border-default)',
                         fontSize: 12.5,
+                        color: 'inherit',
+                        textDecoration: 'none',
                       }}
                     >
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -475,7 +480,7 @@ export function DashboardPage() {
                       <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
                         {formatDate(n.createdAt)}
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

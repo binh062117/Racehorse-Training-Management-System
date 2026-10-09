@@ -22,6 +22,7 @@ import { HealthSchedulePage } from './pages/HealthSchedulePage';
 import { HealthRecordsPage } from './pages/HealthRecordsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
 import { RacesPage } from './pages/RacesPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import {
   HorseFormPage,
   HorseOwnershipPage,
@@ -43,6 +44,7 @@ const router = createBrowserRouter([
       { path: '/', element: <Navigate to="/dashboard" replace /> },
       { path: '/dashboard', element: <DashboardPage /> },
       { path: '/overview', element: <OverviewPage /> },
+      { path: '/notifications', element: <NotificationsPage /> },
       {
         path: '/races',
         element: (
