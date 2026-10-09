@@ -71,14 +71,14 @@ export function Layout() {
     const path = location.pathname;
     if (path.startsWith('/dashboard') || path === '/') return t('nav.dashboard');
     if (path.startsWith('/horses')) {
-      if (role === 'OWNER') return 'Ngựa của tôi';
+      if (role === 'OWNER') return t('nav.horsesOwner');
       return t('nav.horses');
     }
     if (path.startsWith('/plans')) {
-      if (role === 'TRAINER') return 'Giáo án huấn luyện';
+      if (role === 'TRAINER') return t('nav.plansTrainer');
       return t('nav.plans');
     }
-    if (path.startsWith('/health-records')) return 'Hồ sơ khám bệnh';
+    if (path.startsWith('/health-records')) return t('nav.healthRecords');
     if (path.startsWith('/admin/users')) return t('nav.users');
     return t('app.title');
   };
@@ -97,13 +97,13 @@ export function Layout() {
       {/* Left Sidebar Rail */}
       <aside className="rail">
         <div className="rail-brand">
-          <p className="eyebrow">Racehorse Club</p>
-          <h1>Racehorse System</h1>
+          <p className="eyebrow">{t('nav.brandName')}</p>
+          <h1>{t('nav.brandSystem')}</h1>
           <p className="sub">{t('app.title')}</p>
         </div>
 
         <nav className="rail-nav">
-          <div className="rail-section">Menu</div>
+          <div className="rail-section">{t('nav.menu')}</div>
 
           {/* All authenticated roles have Dashboard */}
           <NavLink
@@ -122,11 +122,11 @@ export function Layout() {
             <span className="ico"><HorseIcon /></span>
             <span>
               {role === 'OWNER'
-                ? 'Ngựa của tôi'
+                ? t('nav.horsesOwner')
                 : role === 'VET'
-                ? 'Sơ đồ đàn ngựa'
+                ? t('nav.horsesVet')
                 : role === 'GROOM'
-                ? 'Chuồng & Khẩu phần'
+                ? t('nav.horsesGroom')
                 : t('nav.horses')}
             </span>
           </NavLink>
@@ -137,7 +137,7 @@ export function Layout() {
             className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
           >
             <span className="ico"><PlanIcon /></span>
-            <span>{role === 'TRAINER' ? 'Giáo án huấn luyện' : t('nav.plans')}</span>
+            <span>{role === 'TRAINER' ? t('nav.plansTrainer') : t('nav.plans')}</span>
           </NavLink>
 
           {/* Races: MANAGER, TRAINER (register race), OWNER (race history) */}
@@ -145,11 +145,11 @@ export function Layout() {
             <div
               className="rail-item"
               style={{ opacity: 0.65, cursor: 'default' }}
-              title="Phân hệ Giải đua"
+              title={t('nav.racesTooltip')}
             >
               <span className="ico"><RaceIcon /></span>
               <span>{t('nav.races')}</span>
-              <span className="badge-tag">Sắp có</span>
+              <span className="badge-tag">{t('nav.comingSoon')}</span>
             </div>
           )}
 
@@ -161,7 +161,7 @@ export function Layout() {
               className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
             >
               <span className="ico"><HealthIcon /></span>
-              <span>Tiêm phòng & Tẩy giun</span>
+              <span>{t('nav.vaccinations')}</span>
             </NavLink>
           )}
 
@@ -173,22 +173,22 @@ export function Layout() {
               className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
             >
               <span className="ico"><HealthIcon /></span>
-              <span>Hồ sơ khám bệnh</span>
+              <span>{t('nav.healthRecords')}</span>
             </NavLink>
           )}
           {(role === 'MANAGER' || role === 'GROOM' || role === 'TRAINER') && (
             <div
               className="rail-item"
               style={{ opacity: 0.65, cursor: 'default' }}
-              title="Phân hệ Y tế & Sự cố"
+              title={t('nav.incidentsTooltip')}
             >
               <span className="ico"><HealthIcon /></span>
               <span>
                 {role === 'GROOM'
-                  ? 'Báo cáo sự cố'
+                  ? t('nav.incidentsGroom')
                   : t('nav.incidents')}
               </span>
-              <span className="badge-tag">Sắp có</span>
+              <span className="badge-tag">{t('nav.comingSoon')}</span>
             </div>
           )}
 
@@ -205,14 +205,14 @@ export function Layout() {
           {role === 'MANAGER' && (
             <>
               <div className="rail-section" style={{ marginTop: 8 }}>
-                Quản trị hệ thống
+                {t('nav.admin')}
               </div>
               <NavLink
                 to="/admin/users"
                 className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
               >
                 <span className="ico"><UserIcon /></span>
-                <span>Phân quyền (RBAC)</span>
+                <span>{t('nav.rbac')}</span>
                 {pendingUsersCount > 0 && (
                   <span className="count">{pendingUsersCount}</span>
                 )}
@@ -223,10 +223,10 @@ export function Layout() {
 
         <div className="rail-foot">
           <div>
-            Đang đăng nhập: <strong>{user?.name}</strong>
+            {t('nav.loggedInAs')}: <strong>{user?.name}</strong>
           </div>
           <div style={{ color: 'rgba(243, 239, 230, 0.55)', marginTop: 2 }}>
-            Vai trò: {role ? t(`role.${role}`) : 'Chưa phân vai trò'}
+            {t('nav.roleLabel')}: {role ? t(`role.${role}`) : t('nav.noRole')}
           </div>
         </div>
       </aside>

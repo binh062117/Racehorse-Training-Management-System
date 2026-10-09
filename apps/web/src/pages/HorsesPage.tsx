@@ -132,8 +132,8 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
       ) : loadErr ? (
         <ErrorText err={loadErr} />
       ) : horses.length === 0 ? (
-        <div className="card center" style={{ padding: '40px 20px' }}>
-          <p className="muted" style={{ margin: 0, fontSize: '14px' }}>
+        <div className="card empty-state">
+          <p className="muted" style={{ margin: 0 }}>
             Không tìm thấy hồ sơ ngựa nào phù hợp với bộ lọc hiện tại.
           </p>
         </div>

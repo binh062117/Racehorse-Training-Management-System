@@ -118,8 +118,8 @@ export function PlansTab({ horse }: Props) {
       {loading && plans.length === 0 ? (
         <p className="muted small">Đang tải kế hoạch huấn luyện…</p>
       ) : plans.length === 0 ? (
-        <div className="card center" style={{ padding: '36px 20px' }}>
-          <div style={{ display: 'inline-flex', padding: 10, borderRadius: '50%', background: 'var(--surface-subtle)', marginBottom: 8 }}>
+        <div className="card empty-state">
+          <div className="empty-state-icon">
             <PlanIcon width="24" height="24" />
           </div>
           <p className="muted small" style={{ margin: 0 }}>

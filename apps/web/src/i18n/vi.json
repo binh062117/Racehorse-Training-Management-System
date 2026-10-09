@@ -5,11 +5,29 @@
   "nav": {
     "dashboard": "Tổng quan",
     "horses": "Ngựa đua",
+    "horsesOwner": "Ngựa của tôi",
+    "horsesVet": "Sơ đồ đàn ngựa",
+    "horsesGroom": "Chuồng & Khẩu phần",
     "plans": "Kế hoạch tập",
+    "plansTrainer": "Giáo án huấn luyện",
     "races": "Giải đua",
+    "racesTooltip": "Phân hệ Giải đua",
+    "comingSoon": "Sắp có",
+    "vaccinations": "Tiêm phòng & Tẩy giun",
+    "healthRecords": "Hồ sơ khám bệnh",
     "incidents": "Sự cố y tế",
+    "incidentsGroom": "Báo cáo sự cố",
+    "incidentsTooltip": "Phân hệ Y tế & Sự cố",
     "notifications": "Thông báo",
     "users": "Người dùng",
+    "rbac": "Phân quyền (RBAC)",
+    "admin": "Quản trị hệ thống",
+    "menu": "Menu",
+    "brandName": "Racehorse Club",
+    "brandSystem": "Racehorse System",
+    "loggedInAs": "Đang đăng nhập",
+    "roleLabel": "Vai trò",
+    "noRole": "Chưa phân vai trò",
     "logout": "Đăng xuất",
     "logoutConfirm": "Bạn chắc chắn muốn đăng xuất?"
   },
@@ -78,6 +96,16 @@
     "new": "Thêm ngựa"
   },
 
+  "horseStatusBadge": {
+    "ACTIVE": "● Hoạt động",
+    "RESTING": "● Nghỉ dưỡng",
+    "RETIRED": "● Giải nghệ",
+    "FIT": "Khỏe mạnh",
+    "MONITORING": "Cần theo dõi",
+    "QUARANTINED": "Cách ly",
+    "INJURED": "Chấn thương",
+    "locked": "🔒 Khóa tập"
+  },
   "horseFlow": {
   "directoryEyebrow": "HỒ SƠ CÂU LẠC BỘ",
   "directoryTitle": "Danh sách chiến mã",
@@ -275,7 +303,14 @@
     "disable": "Khoá",
     "enable": "Mở lại",
     "delete": "Xoá",
-    "deleteConfirm": "Xoá tài khoản \"{{name}}\" khỏi hệ thống? Tài khoản sẽ bị khoá và không còn hiện trong danh sách (không huỷ được)."
+    "deleteConfirm": "Xoá tài khoản \"{{name}}\" khỏi hệ thống? Tài khoản sẽ bị khoá và không còn hiện trong danh sách (không huỷ được).",
+    "statusLabel": {
+      "PENDING": "Chờ duyệt",
+      "ACTIVE": "Hoạt động",
+      "DISABLED": "Đã khoá"
+    },
+    "empty": "Chưa có người dùng nào.",
+    "loading": "Đang tải danh sách người dùng…"
   },
   "error": {
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",

@@ -59,7 +59,7 @@ export function LoginPage() {
         <p className="muted">
           <button
             type="button"
-            className="btn small-btn"
+            className="btn btn-sm"
             onClick={() => {
               setGoogleOtpEmail(null);
               setGoogleOtpDone(false);
