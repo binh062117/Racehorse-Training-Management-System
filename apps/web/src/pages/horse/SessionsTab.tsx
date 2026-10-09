@@ -417,7 +417,7 @@ function SessionItem({
       {editable && !editing && (
         <button
           type="button"
-          className="btn small-btn"
+          className="btn btn-sm"
           onClick={() => setEditing(true)}
         >
           {t('common.update')}

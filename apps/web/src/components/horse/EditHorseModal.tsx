@@ -138,7 +138,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
               </select>
             </Field>
 
-            <div className="row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="form-grid-2">
               <Field label="Giống loài">
                 <input
                   className="input"
@@ -159,7 +159,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
               </Field>
             </div>
 
-            <div className="row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="form-grid-2">
               <Field label="Trạng thái">
                 <select
                   className="input"
@@ -189,7 +189,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--brand-navy)', marginBottom: '8px' }}>
                 🧬 Phả hệ (Pedigree)
               </div>
-              <div className="row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2">
                 <Field label="Ngựa cha (Sire)">
                   <select
                     className="input"

@@ -162,11 +162,11 @@ export function TrainingPlansPage() {
       ) : loadErr ? (
         <ErrorText err={loadErr} />
       ) : filteredPlans.length === 0 ? (
-        <div className="card center" style={{ padding: '48px 20px' }}>
-          <div style={{ display: 'inline-flex', padding: 12, borderRadius: '50%', background: 'var(--surface-subtle)', marginBottom: 12 }}>
+        <div className="card empty-state">
+          <div className="empty-state-icon">
             <PlanIcon width="28" height="28" />
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '14px' }}>
+          <p className="muted" style={{ margin: 0 }}>
             {plans.length === 0
               ? 'Chưa có kế hoạch huấn luyện nào được thiết lập.'
               : 'Không tìm thấy giáo án nào phù hợp với bộ lọc.'}

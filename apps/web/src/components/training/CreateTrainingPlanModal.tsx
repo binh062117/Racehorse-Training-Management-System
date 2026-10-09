@@ -254,7 +254,7 @@ export function CreateTrainingPlanModal({
             </Field>
 
             {/* Date Range Inputs */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="form-grid-2">
               <Field label="Ngày bắt đầu">
                 <input
                   type="date"

@@ -5,11 +5,29 @@
   "nav": {
     "dashboard": "Dashboard",
     "horses": "Horses",
+    "horsesOwner": "My Horses",
+    "horsesVet": "Herd Health Map",
+    "horsesGroom": "Stables & Feed",
     "plans": "Training Plans",
+    "plansTrainer": "Training Plans",
     "races": "Races",
+    "racesTooltip": "Race Management",
+    "comingSoon": "Coming soon",
+    "vaccinations": "Vaccinations & Deworming",
+    "healthRecords": "Health Records",
     "incidents": "Health Incidents",
+    "incidentsGroom": "Incident Reports",
+    "incidentsTooltip": "Health & Incidents",
     "notifications": "Notifications",
     "users": "Users",
+    "rbac": "Access Control (RBAC)",
+    "admin": "System Admin",
+    "menu": "Menu",
+    "brandName": "Racehorse Club",
+    "brandSystem": "Racehorse System",
+    "loggedInAs": "Logged in as",
+    "roleLabel": "Role",
+    "noRole": "No role assigned",
     "logout": "Log out",
     "logoutConfirm": "Are you sure you want to log out?"
   },
@@ -78,6 +96,16 @@
     "new": "New horse"
   },
 
+  "horseStatusBadge": {
+    "ACTIVE": "● Active",
+    "RESTING": "● Resting",
+    "RETIRED": "● Retired",
+    "FIT": "Fit",
+    "MONITORING": "Needs monitoring",
+    "QUARANTINED": "Quarantined",
+    "INJURED": "Injured",
+    "locked": "🔒 Training locked"
+  },
   "horseFlow": {
   "directoryEyebrow": "CLUB REGISTRY",
   "directoryTitle": "Horse directory",
@@ -275,7 +303,14 @@
     "disable": "Disable",
     "enable": "Enable",
     "delete": "Delete",
-    "deleteConfirm": "Delete \"{{name}}\" from the system? The account will be disabled and removed from the list (this cannot be undone)."
+    "deleteConfirm": "Delete \"{{name}}\" from the system? The account will be disabled and removed from the list (this cannot be undone).",
+    "statusLabel": {
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "DISABLED": "Disabled"
+    },
+    "empty": "No users yet.",
+    "loading": "Loading users…"
   },
   "error": {
     "VALIDATION_ERROR": "Invalid data",

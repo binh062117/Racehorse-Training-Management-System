@@ -37,9 +37,13 @@ export function AdminUsersPage() {
     <div className="stack">
       <h1>{t('nav.users')}</h1>
       {loading ? (
-        <p className="muted">…</p>
+        <p className="muted">{t('user.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
+      ) : users.length === 0 ? (
+        <div className="card empty-state">
+          <p className="muted" style={{ margin: 0 }}>{t('user.empty')}</p>
+        </div>
       ) : (
         <table className="table">
           <thead>
@@ -147,7 +151,17 @@ function UserRow({
         )}
       </td>
       <td>
-        <span className="tag">{user.status}</span>
+        <span
+          className={`badge badge-${
+            user.status === 'ACTIVE'
+              ? 'success'
+              : user.status === 'PENDING'
+                ? 'warning'
+                : 'danger'
+          }`}
+        >
+          {t(`user.statusLabel.${user.status}`)}
+        </span>
       </td>
       <td>{formatDate(user.createdAt)}</td>
       <td>
@@ -155,7 +169,7 @@ function UserRow({
           <>
             <button
               type="button"
-              className="btn small-btn"
+              className="btn btn-sm"
               disabled={busy}
               onClick={() => patch({ role, status: 'ACTIVE' })}
             >
@@ -163,7 +177,7 @@ function UserRow({
             </button>
             <button
               type="button"
-              className="btn small-btn"
+              className="btn btn-sm"
               disabled={busy}
               onClick={reject}
             >
@@ -174,7 +188,7 @@ function UserRow({
         {user.status === 'ACTIVE' && (
           <button
             type="button"
-            className="btn small-btn"
+            className="btn btn-sm"
             disabled={busy}
             onClick={() => patch({ status: 'DISABLED' })}
           >
@@ -184,7 +198,7 @@ function UserRow({
         {user.status === 'DISABLED' && (
           <button
             type="button"
-            className="btn small-btn"
+            className="btn btn-sm"
             disabled={busy}
             onClick={() => patch({ status: 'ACTIVE' })}
           >
@@ -195,7 +209,7 @@ function UserRow({
           !isSelf && (
             <button
               type="button"
-              className="btn small-btn"
+              className="btn btn-sm"
               disabled={busy}
               onClick={remove}
             >
