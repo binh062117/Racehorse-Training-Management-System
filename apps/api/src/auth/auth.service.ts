@@ -187,6 +187,22 @@ export class AuthService {
           },
         });
       } else {
+        // email/googleId are unique across ALL rows (soft-deleted ones keep
+        // the row, see users.service.ts `remove`), so a deleted account's
+        // email still occupies the column — creating here would crash on
+        // the DB unique constraint. Check first and fail with a clear error.
+        const deletedCollision = await this.prisma.user.findFirst({
+          where: {
+            deletedAt: { not: null },
+            OR: [{ email }, { googleId: payload.sub }],
+          },
+        });
+        if (deletedCollision) {
+          throw new AppException(
+            'ACCOUNT_DISABLED',
+            'This account has been removed. Contact a manager.',
+          );
+        }
         user = await this.prisma.user.create({
           data: {
             name,
