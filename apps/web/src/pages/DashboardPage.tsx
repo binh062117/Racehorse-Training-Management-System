@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
-import { api } from '../lib/api';
+import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, Paginated, Notification, User, Role } from '../lib/types';
 import { HorseStatusBadge } from '../components/horse/HorseStatusBadge';
@@ -205,7 +205,7 @@ export function DashboardPage() {
                   >
                     <div className="horse-mini-avatar">
                       {horse.photoUrl ? (
-                        <img src={horse.photoUrl} alt={horse.name} />
+                        <img src={getFileUrl(horse.photoUrl) ?? undefined} alt={horse.name} />
                       ) : (
                         horse.name.slice(0, 2).toUpperCase()
                       )}

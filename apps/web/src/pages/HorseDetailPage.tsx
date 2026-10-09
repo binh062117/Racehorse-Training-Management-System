@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { api } from '../lib/api';
+import { api, getFileUrl } from '../lib/api';
 import type { Horse } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
@@ -137,7 +137,7 @@ export function HorseDetailPage() {
           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
             <div className="avatar avatar-lg">
               {horse.photoUrl ? (
-                <img src={horse.photoUrl} alt={horse.name} />
+                <img src={getFileUrl(horse.photoUrl) ?? undefined} alt={horse.name} />
               ) : (
                 horse.name.slice(0, 1).toUpperCase()
               )}
