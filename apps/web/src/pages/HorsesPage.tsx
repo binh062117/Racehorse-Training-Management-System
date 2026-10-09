@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../lib/api';
+import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, HorseStatus, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
@@ -158,7 +158,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div className="avatar">
                         {h.photoUrl ? (
-                          <img src={h.photoUrl} alt={h.name} />
+                          <img src={getFileUrl(h.photoUrl) ?? undefined} alt={h.name} />
                         ) : (
                           h.name.slice(0, 1).toUpperCase()
                         )}
