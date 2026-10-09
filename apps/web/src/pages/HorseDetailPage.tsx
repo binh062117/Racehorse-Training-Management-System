@@ -63,6 +63,14 @@ export function HorseDetailPage() {
     setParams(nextParams, { replace: true });
   };
 
+  // Mỗi tab chỉ fetch dữ liệu đúng 1 lần (lúc lần đầu được mở) — sau đó giữ
+  // mounted, chỉ ẩn/hiện bằng CSS, để chuyển qua lại các tab không phải gọi
+  // lại API mỗi lần.
+  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(() => new Set([tab]));
+  useEffect(() => {
+    setVisitedTabs((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
+  }, [tab]);
+
   const loadHorse = useCallback(async () => {
     try {
       setLoading(true);
@@ -274,9 +282,11 @@ export function HorseDetailPage() {
         </button>
       </div>
 
-      {/* Tab Contents */}
-      {tab === 'profile' && (
-        <div className="card">
+      {/* Tab Contents — mỗi tab chỉ mount sau khi đã ghé qua ít nhất 1 lần
+          (visitedTabs), rồi giữ mounted luôn (ẩn bằng `hidden`) để tránh
+          fetch lại API mỗi lần chuyển tab. */}
+      {visitedTabs.has('profile') && (
+        <div className="card" hidden={tab !== 'profile'}>
           <h2>Thông tin lý lịch</h2>
           <dl className="kv">
             <div>
@@ -325,22 +335,34 @@ export function HorseDetailPage() {
         </div>
       )}
 
-      {tab === 'pedigree' && (
-        <PedigreeTab
-          key={horse.id + ':' + pedigreeVersion}
-          horseId={horse.id}
-          onUpdated={loadHorse}
-        />
+      {visitedTabs.has('pedigree') && (
+        <div hidden={tab !== 'pedigree'}>
+          <PedigreeTab
+            key={horse.id + ':' + pedigreeVersion}
+            horseId={horse.id}
+            onUpdated={loadHorse}
+          />
+        </div>
       )}
-      {tab === 'plans' && <PlansTab horse={horse} />}
-      {tab === 'sessions' && (
-        <SessionsTab
-          horseId={horse.id}
-          isLocked={horse.locked}
-          lockReason={horse.lockReason}
-        />
+      {visitedTabs.has('plans') && (
+        <div hidden={tab !== 'plans'}>
+          <PlansTab horse={horse} />
+        </div>
       )}
-      {tab === 'health' && <HealthTab horse={horse} />}
+      {visitedTabs.has('sessions') && (
+        <div hidden={tab !== 'sessions'}>
+          <SessionsTab
+            horseId={horse.id}
+            isLocked={horse.locked}
+            lockReason={horse.lockReason}
+          />
+        </div>
+      )}
+      {visitedTabs.has('health') && (
+        <div hidden={tab !== 'health'}>
+          <HealthTab horse={horse} />
+        </div>
+      )}
 
       {/* Modals */}
       <EditHorseModal
