@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileStorageService } from '../files/file-storage.service';
+import { HorsesService } from '../horses/horses.service';
 import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import {
@@ -36,6 +37,7 @@ export class HealthRecordsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: FileStorageService,
+    private readonly horses: HorsesService,
   ) {}
 
   private toView(record: RecordWithRelations): HealthRecordView {
@@ -108,6 +110,10 @@ export class HealthRecordsService {
         data: { healthStatus: dto.healthStatus },
       });
     }
+
+    // Proactive AI risk check — never blocks/fails this response (see
+    // HorsesService.checkRiskAndNotify).
+    await this.horses.checkRiskAndNotify(horseId);
 
     return this.toView(record);
   }

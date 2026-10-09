@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FilesModule } from '../files/files.module';
+import { HorsesModule } from '../horses/horses.module';
 import { HorseOwnershipGuard } from '../common/guards/horse-ownership.guard';
 import {
   HealthFilesController,
@@ -14,7 +15,7 @@ import {
 import { TreatmentPlansService } from './treatment-plans.service';
 
 @Module({
-  imports: [FilesModule],
+  imports: [FilesModule, HorsesModule],
   controllers: [
     HorseHealthRecordsController,
     HealthRecordsController,

@@ -177,10 +177,10 @@ export function Layout() {
               <span>{t('nav.healthRecords')}</span>
             </NavLink>
           )}
-          {(role === 'MANAGER' || role === 'GROOM' || role === 'TRAINER') && (
-            <div
-              className="rail-item"
-              style={{ opacity: 0.65, cursor: 'default' }}
+          {(role === 'MANAGER' || role === 'GROOM' || role === 'TRAINER' || role === 'VET') && (
+            <NavLink
+              to="/incidents"
+              className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
               title={t('nav.incidentsTooltip')}
             >
               <span className="ico"><HealthIcon /></span>
@@ -189,8 +189,7 @@ export function Layout() {
                   ? t('nav.incidentsGroom')
                   : t('nav.incidents')}
               </span>
-              <span className="badge-tag">{t('nav.comingSoon')}</span>
-            </div>
+            </NavLink>
           )}
 
           {/* Notifications: All roles */}

@@ -109,6 +109,12 @@ export class IncidentsService {
       `Sự cố mới (${dto.severity}) cho ${incident.horse.name}: ${incident.description}`,
     );
 
+    // Proactive AI risk check — skip LOW severity to save API calls on
+    // routine entries. Never blocks/fails this response (see HorsesService).
+    if (dto.severity !== IncidentSeverity.LOW) {
+      await this.horses.checkRiskAndNotify(horseId);
+    }
+
     return this.toView(incident);
   }
 

@@ -85,6 +85,7 @@ enum NotificationType {
   TRAINING_UNLOCKED
   INCIDENT_REPORTED
   FITNESS_WARNING
+  AI_RISK_ALERT
 }
 
 model User {
