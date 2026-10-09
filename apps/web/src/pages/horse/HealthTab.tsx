@@ -12,6 +12,7 @@ import { useAuth } from '../../auth/useAuth';
 import { Field } from '../../components/Field';
 import { ErrorText } from '../../components/ErrorText';
 import { CreateHealthRecordModal } from '../../components/health/CreateHealthRecordModal';
+import { AiInsightCard } from '../../components/horse/AiInsightCard';
 import { PlusIcon } from '../../components/Icons';
 import { formatDate } from '../../lib/format';
 
@@ -35,6 +36,7 @@ export function HealthTab({ horse }: { horse: Horse }) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isVet = user?.role === 'VET';
+  const canUseAi = user?.role === 'VET' || user?.role === 'MANAGER';
 
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [err, setErr] = useState<unknown>(null);
@@ -83,6 +85,8 @@ export function HealthTab({ horse }: { horse: Horse }) {
           </button>
         )}
       </div>
+
+      {canUseAi && <AiInsightCard horseId={horse.id} />}
 
       {/* Current health summary card */}
       <div
