@@ -68,7 +68,12 @@ export function HealthSchedulePage() {
           </div>
           <span className="health-schedule-count">{records?.length ?? 0}</span>
         </div>
-        <div className="health-schedule-tabs" role="group" aria-label={t('healthSchedule.kind')}>
+        <div
+          className="health-schedule-tabs"
+          role="group"
+          aria-label={t('healthSchedule.kind')}
+          style={{ marginTop: '12px' }}
+        >
           {(['ALL', 'VACCINATION', 'DEWORMING'] as const).map((type) => (
             <button
               key={type}
@@ -110,8 +115,12 @@ export function HealthSchedulePage() {
                       ) : '—'}
                     </td>
                     <td>
-                      <strong>{record.vaccineName}</strong>
-                      <small className="muted">{t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}</small>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                        <strong>{record.vaccineName}</strong>
+                        <span className="health-schedule-badge neutral">
+                          {t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}
+                        </span>
+                      </div>
                     </td>
                     <td>{formatDate(record.date)}</td>
                     <td>{record.nextDueDate ? formatDate(record.nextDueDate) : t('healthSchedule.noDueDate')}</td>
