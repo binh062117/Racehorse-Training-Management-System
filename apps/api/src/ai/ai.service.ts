@@ -40,6 +40,13 @@ export interface HorseInsightInput {
     resultMetric: string | null;
     resultValue: number | null;
   }[];
+  raceEntries: {
+    raceDate: Date;
+    raceName: string;
+    distance: number | null;
+    position: number | null;
+    time: string | null;
+  }[];
 }
 
 export interface HorseInsightResult {
@@ -64,6 +71,7 @@ GIẢI THÍCH DỮ LIỆU:
 - status của buổi tập: PLANNED = đã lên lịch, DONE = đã hoàn thành, CANCELLED = đã hủy.
 - fitnessScore: điểm thể trạng 0-100, null nghĩa là chưa đánh giá.
 - locked = true nghĩa là bác sĩ thú y đang khóa, cấm con ngựa tập luyện.
+- position trong kết quả đua: thứ hạng về đích (1 = nhất), null nghĩa là chưa có kết quả (đua chưa diễn ra hoặc chưa cập nhật). Phong độ đi xuống rõ rệt (thứ hạng tụt dần qua các giải gần đây) có thể là dấu hiệu sớm của vấn đề sức khỏe, hãy cân nhắc khi đánh giá rủi ro.
 
 ĐẦU RA: luôn trả lời bằng tiếng Việt, dưới dạng JSON với đúng các khóa: summary (chuỗi, 2-4 câu), riskLevel ("LOW" | "MEDIUM" | "HIGH"), riskReasons (mảng chuỗi, tối đa 4 mục, chỉ nêu lý do có cơ sở từ dữ liệu), recommendations (mảng chuỗi, tối đa 4 mục, gợi ý hành động cụ thể và thực tế). Đây chỉ là gợi ý tham khảo, không thay thế chẩn đoán của bác sĩ thú y.`;
 
@@ -139,6 +147,14 @@ export class AiService implements OnModuleInit {
     for (const s of input.sessions) {
       lines.push(
         `- ${this.fmtDate(s.scheduledAt)}: ${s.type}, trạng thái ${s.status}${s.resultMetric ? `, kết quả ${s.resultMetric}=${s.resultValue}` : ''}`,
+      );
+    }
+
+    lines.push('\nKết quả thi đấu gần đây (mới nhất trước):');
+    if (input.raceEntries.length === 0) lines.push('- (không có)');
+    for (const r of input.raceEntries) {
+      lines.push(
+        `- ${this.fmtDate(r.raceDate)}: giải "${r.raceName}"${r.distance ? ` (${r.distance}m)` : ''} — về vị trí ${r.position ?? 'chưa có kết quả'}${r.time ? `, thời gian ${r.time}` : ''}`,
       );
     }
 
