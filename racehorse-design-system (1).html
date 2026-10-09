@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Racehorse Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root[data-theme="light"] {
+    --surface-page: #f5f4f1; --surface-card: #ffffff; --surface-subtle: #fafaf8;
+    --border-default: #e2e0db; --border-strong: #cdc9c3;
+    --text-primary: #1a1f2e; --text-secondary: #6b7280; --text-on-brand: #ffffff;
+    --brand-navy: #1c2b3a; --action-primary: #1c2b3a; --action-primary-hover: #243447;
+    --brand-blue: #1a4b8a;
+    --status-success: #3a6b4a; --status-success-bg: #edf7f0;
+    --status-warning: #8a6218; --status-warning-bg: #fdf6e8;
+    --status-danger: #8a2020; --status-danger-bg: #fdf0f0;
+    --status-info: #1a4b8a; --status-info-bg: #eef3fb;
+    --status-neutral: #6b7280; --status-neutral-bg: #f5f4f1;
+    --shadow-card: none;
+  }
+  :root[data-theme="dark"] {
+    --surface-page: #12181f; --surface-card: #1c2532; --surface-subtle: #232e3d;
+    --border-default: #2a3441; --border-strong: #3a4657;
+    --text-primary: #f5f4f1; --text-secondary: #9aa3af; --text-on-brand: #ffffff;
+    --brand-navy: #1c2b3a; --action-primary: #1c2b3a; --action-primary-hover: #2c3d52;
+    --brand-blue: #5b9bd5;
+    --status-success: #4ade80; --status-success-bg: #16341f;
+    --status-warning: #facc15; --status-warning-bg: #3a2e0d;
+    --status-danger: #f87171; --status-danger-bg: #3a1414;
+    --status-info: #5b9bd5; --status-info-bg: #122236;
+    --status-neutral: #9aa3af; --status-neutral-bg: #232e3d;
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    background: var(--surface-page); color: var(--text-primary);
+    transition: background .15s, color .15s;
+  }
+  code { font-family: 'Inter', monospace; font-size: 12px; background: var(--surface-subtle); padding: 2px 6px; border-radius: 4px; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 40px; background: var(--surface-card); border-bottom: 1px solid var(--border-default);
+  }
+  .topbar .title { font-size: 15px; font-weight: 600; }
+  .topbar .spacer { flex-grow: 1; }
+  .theme-btn {
+    height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border-default);
+    background: var(--surface-page); color: var(--text-primary); font-size: 13px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+  }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 40px; display: flex; flex-direction: column; gap: 56px; }
+
+  .cover {
+    background: var(--brand-navy); color: #ffffff; border-radius: 10px;
+    padding: 56px 40px; text-align: center;
+  }
+  .cover h1 { font-size: 32px; font-weight: 700; margin: 0 0 8px; }
+  .cover p { margin: 0 0 20px; color: rgba(255,255,255,.65); font-size: 13px; }
+  .cover .swatches { display: flex; gap: 10px; justify-content: center; }
+  .cover .sw { width: 28px; height: 28px; border-radius: 6px; }
+
+  section h2 {
+    font-size: 18px; font-weight: 600; margin: 0 0 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border-default);
+  }
+  section .lede { color: var(--text-secondary); font-size: 13px; margin: 10px 0 20px; max-width: 640px; }
+
+  .callout {
+    background: color-mix(in srgb, var(--brand-navy) 6%, var(--surface-card));
+    border: 1px solid var(--border-default); border-left: 3px solid var(--brand-navy); border-radius: 8px;
+    padding: 14px 16px; font-size: 13px; margin-bottom: 20px;
+  }
+  .callout strong { color: var(--brand-navy); }
+  :root[data-theme="dark"] .callout strong { color: var(--text-primary); }
+
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .swatch { border: 1px solid var(--border-default); border-radius: 10px; overflow: hidden; background: var(--surface-card); box-shadow: var(--shadow-card); }
+  .swatch .fill { height: 56px; }
+  .swatch .info { padding: 10px 12px; }
+  .swatch .name { font-size: 12.5px; font-weight: 600; }
+  .swatch .hex { font-size: 11px; color: var(--text-secondary); }
+  .swatch .usage { font-size: 11px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4; }
+
+  .type-row { display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--border-default); }
+  .type-row:last-child { border-bottom: none; }
+  .type-row .sample { flex-grow: 1; }
+  .type-row .meta { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+
+  .scale-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  .scale-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .scale-item .box { background: var(--brand-navy); }
+  .scale-item .lab { font-size: 11px; color: var(--text-secondary); }
+
+  .comp-block { margin-bottom: 32px; }
+  .comp-block h3 { font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+  .comp-demo {
+    background: var(--surface-page); border: 1px dashed var(--border-strong); border-radius: 10px;
+    padding: 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+
+  .btn { border: none; font-family: inherit; font-weight: 600; font-size: 13px; padding: 9px 16px; border-radius: 8px; cursor: pointer; }
+  .btn-primary { background: var(--action-primary); color: var(--text-on-brand); }
+  .btn-ghost { background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); }
+  .btn-danger { background: var(--status-danger); color: #ffffff; }
+
+  .demo-card { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 10px; padding: 20px 20px 16px; width: 240px; box-shadow: var(--shadow-card); }
+  .demo-card .t { font-weight: 600; font-size: 15px; }
+  .demo-card .d { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  .badge { display: inline-flex; align-items: center; border-radius: 4px; padding: 2px 8px; font-size: 11.5px; font-weight: 500; }
+
+  .metric { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 10px; padding: 16px 20px; width: 150px; box-shadow: var(--shadow-card); }
+  .metric .l { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--text-secondary); margin-bottom: 8px; }
+  .metric .v { font-size: 28px; font-weight: 600; line-height: 1; }
+
+  .nav-demo { width: 220px; background: var(--brand-navy); border-radius: 10px; padding: 8px; }
+  .nav-demo .item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,.55); margin-bottom: 2px; }
+  .nav-demo .item.active { background: rgba(255,255,255,.15); color: #ffffff; font-weight: 600; }
+  .nav-demo .item.disabled { opacity: .5; }
+  .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+  footer { text-align: center; font-size: 12px; color: var(--text-secondary); padding: 24px 0 40px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="title">Racehorse Design System</div>
+  <div class="spacer"></div>
+  <button class="theme-btn" id="themeToggle">● Dark mode</button>
+</div>
+
+<div class="wrap">
+
+  <div class="cover">
+    <h1>Racehorse Design System</h1>
+    <p>Navy (chính) · Cream · Blue accent — theo code thật "Horsetrack" · v3</p>
+    <div class="swatches">
+      <div class="sw" style="background:#f5f4f1"></div>
+      <div class="sw" style="background:#1c2b3a; box-shadow:0 0 0 2px #f5f4f1 inset;"></div>
+      <div class="sw" style="background:#1a4b8a"></div>
+      <div class="sw" style="background:#3a6b4a"></div>
+      <div class="sw" style="background:#8a6218"></div>
+      <div class="sw" style="background:#8a2020"></div>
+      <div class="sw" style="background:#6b7280"></div>
+    </div>
+  </div>
+
+  <section>
+    <h2>1. Màu sắc</h2>
+    <p class="lede">Bấm nút "Dark mode" ở góc trên để xem trang đổi theme — mọi khối màu đọc trực tiếp từ CSS variable, đúng cách team nên implement trong code thật.</p>
+
+    <div class="callout"><strong>Navy là màu thương hiệu chính</strong> — giữ NGUYÊN 1 giá trị <code>#1c2b3a</code> ở cả 2 theme (không đổi theo dark/light, đúng code gốc). Dùng cho sidebar, avatar, nút hành động chính. <code>brand-blue</code> là accent phụ cho link/trạng thái đang hoạt động.</div>
+
+    <div class="swatch-grid">
+      <div class="swatch"><div class="fill" style="background:var(--surface-page)"></div><div class="info"><div class="name">surface-page</div><div class="hex">nền trang</div><div class="usage">Nền chính của trang / app shell.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--surface-card)"></div><div class="info"><div class="name">surface-card</div><div class="hex">nền card</div><div class="usage">Nền card, panel, header — không shadow, chỉ viền.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--surface-subtle)"></div><div class="info"><div class="name">surface-subtle</div><div class="hex">nền hover</div><div class="usage">Hover hàng bảng, notification chưa đọc.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--brand-navy)"></div><div class="info"><div class="name">brand-navy</div><div class="hex">#1c2b3a — cố định</div><div class="usage"><strong>MÀU CHÍNH.</strong> Sidebar, avatar, nút chính.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--brand-blue)"></div><div class="info"><div class="name">brand-blue</div><div class="hex">#1a4b8a / #5b9bd5</div><div class="usage">Accent phụ — link, Published/In Training.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--action-primary-hover)"></div><div class="info"><div class="name">action-primary-hover</div><div class="hex">hover</div><div class="usage">Nền nút chính / menu item khi hover.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--status-success)"></div><div class="info"><div class="name">status-success</div><div class="hex">+ status-success-bg</div><div class="usage">Healthy, fitness ≥ 80.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--status-warning)"></div><div class="info"><div class="name">status-warning</div><div class="hex">+ status-warning-bg</div><div class="usage">Needs Monitoring, fitness 65–79.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--status-danger)"></div><div class="info"><div class="name">status-danger</div><div class="hex">+ status-danger-bg</div><div class="usage">Injured, Training Locked, fitness &lt; 65.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--status-info)"></div><div class="info"><div class="name">status-info</div><div class="hex">= brand-blue</div><div class="usage">Published, In Training.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--status-neutral)"></div><div class="info"><div class="name">status-neutral</div><div class="hex">+ status-neutral-bg</div><div class="usage">Completed, Resting.</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--text-primary)"></div><div class="info"><div class="name">text-primary</div><div class="hex" style="color:var(--surface-card)">trên nền tối ở đây</div><div class="usage">Chữ chính, tiêu đề, giá trị KPI.</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Typography</h2>
+    <p class="lede">Chỉ 1 font — <strong>Inter</strong> — cho toàn bộ UI (tiêu đề, body, số liệu). Phân biệt cấp bậc bằng size + weight, không đổi font-family.</p>
+    <div class="type-row"><div class="sample" style="font-size:32px; font-weight:600;">Display H1 — Aa Racehorse</div><div class="meta">display-h1 · 32/38 · 600</div></div>
+    <div class="type-row"><div class="sample" style="font-size:16px; font-weight:600;">Display H2 — Dashboard</div><div class="meta">display-h2 · 16/22 · 600</div></div>
+    <div class="type-row"><div class="sample" style="font-size:15px; font-weight:600;">Display H3 — Horse Roster</div><div class="meta">display-h3 · 15/20 · 600</div></div>
+    <div class="type-row"><div class="sample" style="font-size:13.5px; font-weight:600;">Body strong — Thunder King</div><div class="meta">body-strong · 13.5/19 · 600</div></div>
+    <div class="type-row"><div class="sample" style="font-size:13px;">Body — Nội dung mô tả bình thường trong toàn bộ UI.</div><div class="meta">body · 13/19 · 400</div></div>
+    <div class="type-row"><div class="sample" style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary);">Label — HORSE · HEALTH</div><div class="meta">label · 11/16 · 600 uppercase</div></div>
+    <div class="type-row"><div class="sample" style="font-size:11.5px; color:var(--text-secondary);">Caption — cập nhật 2 phút trước</div><div class="meta">caption · 11.5/16 · 400</div></div>
+  </section>
+
+  <section>
+    <h2>3. Spacing &amp; Radius</h2>
+    <p class="lede">Padding card chuẩn 20px (space-5), padding trang 32px (space-6). Bo góc: sm cho badge, md cho button/input, lg cho card.</p>
+    <div class="scale-grid">
+      <div class="scale-item"><div class="box" style="width:4px;height:24px;border-radius:2px;"></div><div class="lab">space-1 · 4px</div></div>
+      <div class="scale-item"><div class="box" style="width:8px;height:24px;border-radius:2px;"></div><div class="lab">space-2 · 8px</div></div>
+      <div class="scale-item"><div class="box" style="width:12px;height:24px;border-radius:2px;"></div><div class="lab">space-3 · 12px</div></div>
+      <div class="scale-item"><div class="box" style="width:16px;height:24px;border-radius:2px;"></div><div class="lab">space-4 · 16px</div></div>
+      <div class="scale-item"><div class="box" style="width:20px;height:24px;border-radius:2px;"></div><div class="lab">space-5 · 20px</div></div>
+      <div class="scale-item"><div class="box" style="width:32px;height:24px;border-radius:2px;"></div><div class="lab">space-6 · 32px</div></div>
+      <div class="scale-item"><div class="box" style="width:48px;height:24px;border-radius:2px;"></div><div class="lab">space-7 · 48px</div></div>
+    </div>
+    <div class="scale-grid" style="margin-top:20px;">
+      <div class="scale-item"><div class="box" style="width:48px;height:48px;border-radius:4px;"></div><div class="lab">radius-sm · 4px</div></div>
+      <div class="scale-item"><div class="box" style="width:48px;height:48px;border-radius:8px;"></div><div class="lab">radius-md · 8px</div></div>
+      <div class="scale-item"><div class="box" style="width:48px;height:48px;border-radius:10px;"></div><div class="lab">radius-lg · 10px</div></div>
+      <div class="scale-item"><div class="box" style="width:48px;height:48px;border-radius:999px;"></div><div class="lab">radius-full</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Components</h2>
+    <p class="lede">5 component nền tảng — tái dùng đúng token, không tự chế biến thể khác cho cùng 1 loại UI element.</p>
+
+    <div class="comp-block">
+      <h3>Button</h3>
+      <div class="comp-demo">
+        <button class="btn btn-primary">＋ Create Training Plan</button>
+        <button class="btn btn-ghost">Cancel</button>
+        <button class="btn btn-danger">Lock Training</button>
+      </div>
+    </div>
+
+    <div class="comp-block">
+      <h3>Card</h3>
+      <div class="comp-demo">
+        <div class="demo-card"><div class="t">Thunder King</div><div class="d">Thoroughbred · 5yr · 518kg</div></div>
+      </div>
+    </div>
+
+    <div class="comp-block">
+      <h3>StatusBadge — chữ đậm trên nền tint nhạt</h3>
+      <div class="comp-demo">
+        <span class="badge" style="background:var(--status-success-bg); color:var(--status-success);">Healthy</span>
+        <span class="badge" style="background:var(--status-warning-bg); color:var(--status-warning);">Needs Monitoring</span>
+        <span class="badge" style="background:var(--status-danger-bg); color:var(--status-danger);">Injured</span>
+        <span class="badge" style="background:var(--status-info-bg); color:var(--status-info);">Published</span>
+        <span class="badge" style="background:var(--status-neutral-bg); color:var(--status-neutral);">Completed</span>
+      </div>
+    </div>
+
+    <div class="comp-block">
+      <h3>MetricCard</h3>
+      <div class="comp-demo">
+        <div class="metric"><div class="l">Total Horses</div><div class="v" style="color:var(--brand-navy)">4</div></div>
+        <div class="metric"><div class="l">Active Plans</div><div class="v" style="color:var(--status-success)">3</div></div>
+        <div class="metric"><div class="l">Unread Alerts</div><div class="v" style="color:var(--status-danger)">2</div></div>
+      </div>
+    </div>
+
+    <div class="comp-block">
+      <h3>SidebarNavItem — nền navy cố định, overlay trắng cho active</h3>
+      <div class="comp-demo">
+        <div class="nav-demo">
+          <div class="item active"><span class="dot"></span>Dashboard</div>
+          <div class="item"><span class="dot"></span>Horses</div>
+          <div class="item"><span class="dot"></span>Training Plans</div>
+          <div class="item disabled"><span class="dot"></span>Reports</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Racehorse Design System · v3 — Navy / Cream / Blue (theo code thật Horsetrack) · nguồn: tokens.json trong artifact Design System của project</footer>
+</div>
+
+<script>
+  var btn = document.getElementById('themeToggle');
+  var root = document.documentElement;
+  btn.addEventListener('click', function () {
+    var isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    btn.textContent = isDark ? '● Dark mode' : '☀ Light mode';
+  });
+</script>
+
+</body>
+</html>

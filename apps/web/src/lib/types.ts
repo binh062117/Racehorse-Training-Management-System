@@ -83,6 +83,10 @@ export interface RaceEntry {
   time: string | null;
 }
 
+export interface RaceDetail extends Race {
+  entries: Array<RaceEntry & { horse: Pick<Horse, 'id' | 'name' | 'ownerId'> }>;
+}
+
 export interface Vaccination {
   id: string;
   horseId: string;

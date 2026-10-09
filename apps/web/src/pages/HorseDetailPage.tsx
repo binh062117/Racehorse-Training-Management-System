@@ -15,6 +15,7 @@ import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
 import { PhotoUploadModal } from '../components/horse/PhotoUploadModal';
 import { CameraIcon, LockIcon, UnlockIcon, EditIcon, TrashIcon } from '../components/Icons';
 import { PedigreeTab } from './horse/PedigreeTab';
+import { HorseRecordNav } from './horse/HorseRecordNav';
 
 type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'health';
 
@@ -242,6 +243,8 @@ export function HorseDetailPage() {
           </div>
         </div>
       )}
+
+      <HorseRecordNav horseId={horse.id} />
 
       {/* Tab Navigation */}
       <div className="tabs">

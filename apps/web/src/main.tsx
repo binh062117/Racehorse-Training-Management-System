@@ -10,6 +10,7 @@ import './i18n';
 import { AuthProvider } from './auth/AuthProvider';
 import { RequireAuth } from './auth/RequireAuth';
 import { Layout } from './components/Layout';
+import { OverviewPage } from './pages/OverviewPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HorsesPage } from './pages/HorsesPage';
@@ -20,6 +21,7 @@ import { TrainingPlansPage } from './pages/TrainingPlansPage';
 import { HealthSchedulePage } from './pages/HealthSchedulePage';
 import { HealthRecordsPage } from './pages/HealthRecordsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
+import { RacesPage } from './pages/RacesPage';
 import {
   HorseFormPage,
   HorseOwnershipPage,
@@ -40,6 +42,15 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Navigate to="/dashboard" replace /> },
       { path: '/dashboard', element: <DashboardPage /> },
+      { path: '/overview', element: <OverviewPage /> },
+      {
+        path: '/races',
+        element: (
+          <RequireAuth roles={['MANAGER', 'TRAINER', 'OWNER']}>
+            <RacesPage />
+          </RequireAuth>
+        ),
+      },
       {
         path: '/vaccinations',
         element: (

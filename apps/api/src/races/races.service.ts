@@ -146,15 +146,28 @@ export class RacesService {
       );
     }
 
-    return this.prisma.raceEntry.create({
-      data: {
-        raceId,
-        horseId: dto.horseId,
-        position: dto.position ?? null,
-        time: dto.time ?? null,
-      },
-      include: { horse: { select: ENTRY_HORSE_SELECT } },
-    });
+    try {
+      return await this.prisma.raceEntry.create({
+        data: {
+          raceId,
+          horseId: dto.horseId,
+          position: dto.position ?? null,
+          time: dto.time ?? null,
+        },
+        include: { horse: { select: ENTRY_HORSE_SELECT } },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new AppException(
+          'CONFLICT',
+          'This horse is already entered in this race',
+        );
+      }
+      throw error;
+    }
   }
 
   async listByHorse(

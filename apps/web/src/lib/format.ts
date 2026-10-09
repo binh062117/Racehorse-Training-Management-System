@@ -28,10 +28,16 @@ export function formatDateTime(iso: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? '—' : dateTimeFmt.format(d);
 }
 
-/** ISO date (yyyy-mm-dd) → value for <input type="date">; also accepts full ISO. */
+/** Format an ISO date for <input type="date"> in Vietnam's display timezone. */
 export function toDateInput(iso: string | null | undefined): string {
   if (!iso) return '';
-  return iso.slice(0, 10);
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = dateFmt.formatToParts(date);
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+  return year && month && day ? `${year}-${month}-${day}` : '';
 }
 
 /** <input type="datetime-local"> value → ISO string. */
