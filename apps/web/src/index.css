@@ -1226,10 +1226,6 @@ textarea.input {
 .health-schedule-tabs {
   display: inline-flex;
   gap: 4px;
-  padding: 3px;
-  border: 1px solid var(--schedule-line);
-  border-radius: 6px;
-  background: var(--schedule-ground);
 }
 
 .health-schedule-tabs button {

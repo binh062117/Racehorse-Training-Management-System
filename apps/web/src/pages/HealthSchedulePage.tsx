@@ -68,7 +68,12 @@ export function HealthSchedulePage() {
           </div>
           <span className="health-schedule-count">{records?.length ?? 0}</span>
         </div>
-        <div className="health-schedule-tabs" role="group" aria-label={t('healthSchedule.kind')}>
+        <div
+          className="health-schedule-tabs"
+          role="group"
+          aria-label={t('healthSchedule.kind')}
+          style={{ marginTop: '12px' }}
+        >
           {(['ALL', 'VACCINATION', 'DEWORMING'] as const).map((type) => (
             <button
               key={type}
