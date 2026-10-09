@@ -445,4 +445,35 @@ describe('Auth & Users (e2e)', () => {
     expect(res.body.accessToken).toBeDefined();
     expect(res.body.user.email).toBe(googleEmail);
   });
+
+  it('fails cleanly (not a 500) on a repeat Google login after the account was deleted', async () => {
+    const login = await api()
+      .post('/api/v1/auth/login')
+      .send({ email: 'manager@racehorse.local', password: 'Manager123!' });
+    const managerToken = login.body.accessToken as string;
+    const target = await prisma.user.findUnique({
+      where: { email: googleEmail },
+    });
+    await api()
+      .delete(`/api/v1/users/${target!.id}`)
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    // email/googleId are unique across ALL rows (soft-deleted rows keep
+    // them), so the fallback "no matching user -> create" branch in
+    // googleLogin() used to crash on the DB unique constraint instead of
+    // returning a clean error.
+    mockVerifyIdToken.mockResolvedValueOnce({
+      getPayload: () => ({
+        sub: googleSub,
+        email: googleEmail,
+        email_verified: true,
+        name: 'Google User',
+      }),
+    });
+    const res = await api()
+      .post('/api/v1/auth/google')
+      .send({ idToken: 'good' });
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('ACCOUNT_DISABLED');
+  });
 });
