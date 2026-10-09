@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Horse, NotificationType, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileStorageService } from '../files/file-storage.service';
@@ -33,6 +33,8 @@ const API_PREFIX = '/api/v1';
 
 @Injectable()
 export class HorsesService {
+  private readonly logger = new Logger('Horses');
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: FileStorageService,
@@ -291,12 +293,10 @@ export class HorsesService {
     return this.toView(horse);
   }
 
-  /**
-   * AI-generated health/injury-risk summary (VET/MANAGER only, checked by
-   * @Roles on the route). Pulls recent health/incident/vaccination/training
-   * history and calls Groq live — no caching, no persistence (demo-scoped).
-   */
-  async aiInsight(id: string): Promise<HorseInsightResult> {
+  /** Shared by `aiInsight` (on-demand) and `checkRiskAndNotify` (background). */
+  private async gatherInsightInput(
+    id: string,
+  ): Promise<Parameters<AiService['analyzeHorse']>[0] | null> {
     const horse = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
       select: {
@@ -311,9 +311,9 @@ export class HorsesService {
         lockReason: true,
       },
     });
-    if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
+    if (!horse) return null;
 
-    const [healthRecords, incidents, vaccinations, sessions] =
+    const [healthRecords, incidents, vaccinations, sessions, raceEntries] =
       await this.prisma.$transaction([
         this.prisma.healthRecord.findMany({
           where: { horseId: id },
@@ -350,15 +350,76 @@ export class HorsesService {
           orderBy: { scheduledAt: 'desc' },
           take: 15,
         }),
+        this.prisma.raceEntry.findMany({
+          where: { horseId: id },
+          select: {
+            position: true,
+            time: true,
+            race: { select: { name: true, date: true, distance: true } },
+          },
+          orderBy: { race: { date: 'desc' } },
+          take: 10,
+        }),
       ]);
 
-    return this.ai.analyzeHorse({
+    return {
       horse,
       healthRecords,
       incidents,
       vaccinations,
       sessions,
-    });
+      raceEntries: raceEntries.map((r) => ({
+        raceDate: r.race.date,
+        raceName: r.race.name,
+        distance: r.race.distance,
+        position: r.position,
+        time: r.time,
+      })),
+    };
+  }
+
+  /**
+   * AI-generated health/injury-risk summary (VET/MANAGER only, checked by
+   * @Roles on the route). Pulls recent health/incident/vaccination/training/
+   * race history and calls Groq live — no caching, no persistence (demo-scoped).
+   */
+  async aiInsight(id: string): Promise<HorseInsightResult> {
+    const input = await this.gatherInsightInput(id);
+    if (!input) throw new AppException('NOT_FOUND', 'Horse not found');
+    return this.ai.analyzeHorse(input);
+  }
+
+  /**
+   * Proactive risk check — fired in the background after a VET logs a new
+   * incident or health record (see IncidentsService/HealthRecordsService).
+   * Never throws: a failed/unconfigured AI call must not break the write
+   * that triggered it. Only notifies MANAGER + owner when risk is HIGH, so
+   * routine/low-risk entries don't spam notifications.
+   */
+  async checkRiskAndNotify(id: string): Promise<void> {
+    try {
+      const input = await this.gatherInsightInput(id);
+      if (!input) return;
+      const insight = await this.ai.analyzeHorse(input);
+      if (insight.riskLevel !== 'HIGH') return;
+
+      const horse = await this.prisma.horse.findFirst({
+        where: { id, deletedAt: null },
+        select: { name: true, ownerId: true },
+      });
+      if (!horse) return;
+
+      const managerIds = await this.notifications.managerIds();
+      await this.notifications.notifyUsers(
+        [horse.ownerId, ...managerIds],
+        NotificationType.AI_RISK_ALERT,
+        `⚠ AI phát hiện rủi ro sức khỏe CAO cho ${horse.name}: ${insight.summary}`,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `checkRiskAndNotify(${id}) failed, skipping: ${(err as Error).message}`,
+      );
+    }
   }
 
   async findByPhotoPath(photoPath: string): Promise<Horse | null> {
