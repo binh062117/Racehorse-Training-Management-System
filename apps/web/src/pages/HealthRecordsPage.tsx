@@ -45,7 +45,7 @@ export function HealthRecordsPage() {
   /* Load all horses for the VET overview */
   const loadHorses = useCallback(async () => {
     try {
-      const res = await api.get<Paginated<Horse>>('/horses', { params: { limit: 200 } });
+      const res = await api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } });
       setHorses(res.data.data ?? []);
     } catch (e) {
       setErr(e);
