@@ -69,6 +69,18 @@
     "healthTitle": "Theo dõi sức khỏe",
     "noHealthAlerts": "Chưa có hồ sơ cần theo dõi."
   },
+  "notificationsPage": {
+    "title": "Thông báo",
+    "description": "Xem các thông báo của bạn. Nhấn vào thông báo chưa đọc để đánh dấu đã đọc.",
+    "loading": "Đang tải thông báo...",
+    "empty": "Bạn chưa có thông báo nào.",
+    "unread": "Chưa đọc",
+    "read": "Thông báo đã đọc",
+    "markRead": "Đánh dấu thông báo đã đọc",
+    "previous": "Trước",
+    "next": "Tiếp",
+    "page": "Trang {{page}} / {{pageCount}}"
+  },
   "auth": {
     "login": "Đăng nhập",
     "register": "Đăng ký",

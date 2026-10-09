@@ -19,6 +19,7 @@ type IncidentData = { horses: Horse[]; incidents: Incident[]; errors: unknown[] 
 
 const EMPTY_INCIDENT_DATA: IncidentData = { horses: [], incidents: [], errors: [] };
 const FILTERS: IncidentFilter[] = ['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'];
+const INCIDENTS_PAGE_SIZE = 100;
 
 const NEXT_STATUS: Record<IncidentStatus, IncidentStatus | null> = {
   OPEN: 'IN_PROGRESS',
@@ -38,6 +39,51 @@ const STATUS_BADGE: Record<IncidentStatus, string> = {
   RESOLVED: 'badge-success',
 };
 
+async function loadIncidentsForHorse(horseId: string): Promise<Incident[]> {
+  const incidents: Incident[] = [];
+  let page = 1;
+
+  while (true) {
+    const response = await api.get<Paginated<Incident>>(
+      `/horses/${horseId}/incidents`,
+      { params: { page, limit: INCIDENTS_PAGE_SIZE } },
+    );
+    incidents.push(...response.data.data);
+
+    if (page * response.data.meta.limit >= response.data.meta.total) break;
+    page += 1;
+  }
+
+  return incidents;
+}
+
+async function loadIncidentData(): Promise<IncidentData> {
+  const horseResponse = await api.get<Paginated<Horse>>('/horses', {
+    params: { limit: 100 },
+  });
+  const horses = horseResponse.data.data;
+  const results = await Promise.all(
+    horses.map(async (horse) => {
+      try {
+        return { incidents: await loadIncidentsForHorse(horse.id), error: null };
+      } catch (error) {
+        return { incidents: [], error };
+      }
+    }),
+  );
+  const incidents = results.flatMap((result) => result.incidents);
+  incidents.sort(
+    (left, right) =>
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+  );
+
+  return {
+    horses,
+    incidents,
+    errors: results.flatMap((result) => result.error ? [result.error] : []),
+  };
+}
+
 export function IncidentsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -51,35 +97,10 @@ export function IncidentsPage() {
     loading,
     error,
     reload,
-  } = useCachedResource(`health-incidents-${user?.id ?? 'anonymous'}`, async () => {
-    const horseResponse = await api.get<Paginated<Horse>>('/horses', {
-      params: { limit: 100 },
-    });
-    const horses = horseResponse.data.data;
-    const results = await Promise.all(
-      horses.map(async (horse) => {
-        try {
-          const response = await api.get<Paginated<Incident>>(
-            `/horses/${horse.id}/incidents`,
-            { params: { limit: 10 } },
-          );
-          return { incidents: response.data.data, error: null };
-        } catch (reason) {
-          return { incidents: [], error: reason };
-        }
-      }),
-    );
-    const incidents = results.flatMap((result) => result.incidents);
-    incidents.sort(
-      (left, right) =>
-        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
-    );
-    return {
-      horses,
-      incidents,
-      errors: results.flatMap((result) => result.error ? [result.error] : []),
-    };
-  });
+  } = useCachedResource(
+    `health-incidents-${user?.id ?? 'anonymous'}`,
+    loadIncidentData,
+  );
   const incidentData = data ?? EMPTY_INCIDENT_DATA;
   const filteredIncidents = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -92,15 +113,26 @@ export function IncidentsPage() {
     });
   }, [filter, incidentData.incidents, search]);
 
-  const counts: Record<IncidentFilter, number> = {
-    ALL: incidentData.incidents.length,
-    OPEN: incidentData.incidents.filter((incident) => incident.status === 'OPEN').length,
-    IN_PROGRESS: incidentData.incidents.filter((incident) => incident.status === 'IN_PROGRESS').length,
-    RESOLVED: incidentData.incidents.filter((incident) => incident.status === 'RESOLVED').length,
-  };
-  const highSeverityCount = incidentData.incidents.filter(
-    (incident) => incident.severity === 'HIGH' && incident.status !== 'RESOLVED',
-  ).length;
+  const { counts, highSeverityCount } = useMemo(() => {
+    const summary = {
+      counts: {
+        ALL: incidentData.incidents.length,
+        OPEN: 0,
+        IN_PROGRESS: 0,
+        RESOLVED: 0,
+      } satisfies Record<IncidentFilter, number>,
+      highSeverityCount: 0,
+    };
+
+    for (const incident of incidentData.incidents) {
+      summary.counts[incident.status] += 1;
+      if (incident.severity === 'HIGH' && incident.status !== 'RESOLVED') {
+        summary.highSeverityCount += 1;
+      }
+    }
+
+    return summary;
+  }, [incidentData.incidents]);
 
   return (
     <div className="stack incidents-standard-page">
