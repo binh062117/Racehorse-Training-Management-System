@@ -78,8 +78,10 @@ export function Layout() {
       if (role === 'TRAINER') return t('nav.plansTrainer');
       return t('nav.plans');
     }
+    if (path.startsWith('/races')) return t('nav.races');
     if (path.startsWith('/vaccinations')) return t('nav.vaccinations');
     if (path.startsWith('/health-records')) return t('nav.healthRecords');
+    if (path.startsWith('/incidents')) return t('nav.incidents');
     if (path.startsWith('/admin/users')) return t('nav.users');
     return t('app.title');
   };
@@ -141,17 +143,16 @@ export function Layout() {
             <span>{role === 'TRAINER' ? t('nav.plansTrainer') : t('nav.plans')}</span>
           </NavLink>
 
-          {/* Races: MANAGER, TRAINER (register race), OWNER (race history) */}
+          {/* Race management: read access for owners/trainers; writes are manager-only. */}
           {(role === 'MANAGER' || role === 'TRAINER' || role === 'OWNER') && (
-            <div
-              className="rail-item"
-              style={{ opacity: 0.65, cursor: 'default' }}
+            <NavLink
+              to="/races"
+              className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
               title={t('nav.racesTooltip')}
             >
               <span className="ico"><RaceIcon /></span>
               <span>{t('nav.races')}</span>
-              <span className="badge-tag">{t('nav.comingSoon')}</span>
-            </div>
+            </NavLink>
           )}
 
 
