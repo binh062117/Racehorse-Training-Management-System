@@ -178,3 +178,13 @@ export function EyeOffIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function SparkleIcon(props: IconProps) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+      <path d="M8 8l-2-2M18 18l-2-2M16 8l2-2M6 18l2-2" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  );
+}
