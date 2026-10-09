@@ -3,6 +3,7 @@ import { Horse, NotificationType, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileStorageService } from '../files/file-storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AiService, HorseInsightResult } from '../ai/ai.service';
 import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import {
@@ -36,6 +37,7 @@ export class HorsesService {
     private readonly prisma: PrismaService,
     private readonly storage: FileStorageService,
     private readonly notifications: NotificationsService,
+    private readonly ai: AiService,
   ) {}
 
   private toView(horse: HorseWithOwner): HorseView {
@@ -131,6 +133,7 @@ export class HorsesService {
       data: {
         name: dto.name.trim(),
         ownerId: dto.ownerId,
+        gender: dto.gender ?? null,
         breed: dto.breed?.trim() ?? null,
         birthDate: this.parseBirthDate(dto.birthDate) ?? null,
         ...(dto.status ? { status: dto.status } : {}),
@@ -195,6 +198,7 @@ export class HorsesService {
 
     const data: Prisma.HorseUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name.trim();
+    if (dto.gender !== undefined) data.gender = dto.gender;
     if (dto.breed !== undefined) data.breed = dto.breed?.trim() ?? null;
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.ownerId !== undefined)
@@ -285,6 +289,76 @@ export class HorsesService {
       this.storage.removeQuietly(current.photoPath);
     }
     return this.toView(horse);
+  }
+
+  /**
+   * AI-generated health/injury-risk summary (VET/MANAGER only, checked by
+   * @Roles on the route). Pulls recent health/incident/vaccination/training
+   * history and calls Groq live — no caching, no persistence (demo-scoped).
+   */
+  async aiInsight(id: string): Promise<HorseInsightResult> {
+    const horse = await this.prisma.horse.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        name: true,
+        gender: true,
+        breed: true,
+        birthDate: true,
+        status: true,
+        healthStatus: true,
+        fitnessScore: true,
+        locked: true,
+        lockReason: true,
+      },
+    });
+    if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
+
+    const [healthRecords, incidents, vaccinations, sessions] =
+      await this.prisma.$transaction([
+        this.prisma.healthRecord.findMany({
+          where: { horseId: id },
+          select: { examDate: true, diagnosis: true, treatment: true },
+          orderBy: { examDate: 'desc' },
+          take: 10,
+        }),
+        this.prisma.incidentReport.findMany({
+          where: { horseId: id },
+          select: {
+            createdAt: true,
+            description: true,
+            severity: true,
+            status: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        }),
+        this.prisma.vaccination.findMany({
+          where: { horseId: id },
+          select: { date: true, vaccineName: true, nextDueDate: true },
+          orderBy: { date: 'desc' },
+          take: 10,
+        }),
+        this.prisma.trainingSession.findMany({
+          where: { horseId: id },
+          select: {
+            scheduledAt: true,
+            type: true,
+            status: true,
+            resultMetric: true,
+            resultValue: true,
+          },
+          orderBy: { scheduledAt: 'desc' },
+          take: 15,
+        }),
+      ]);
+
+    return this.ai.analyzeHorse({
+      horse,
+      healthRecords,
+      incidents,
+      vaccinations,
+      sessions,
+    });
   }
 
   async findByPhotoPath(photoPath: string): Promise<Horse | null> {

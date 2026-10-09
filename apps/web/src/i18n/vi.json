@@ -2,8 +2,55 @@
   "app": {
     "title": "Quản lý Huấn luyện Ngựa đua"
   },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "horses": "Ngựa đua",
+    "horsesOwner": "Ngựa của tôi",
+    "horsesVet": "Sơ đồ đàn ngựa",
+    "horsesGroom": "Chuồng & Khẩu phần",
+    "plans": "Kế hoạch tập",
+    "plansTrainer": "Giáo án huấn luyện",
+    "races": "Giải đua",
+    "racesTooltip": "Phân hệ Giải đua",
+    "comingSoon": "Sắp có",
+    "vaccinations": "Tiêm phòng & Tẩy giun",
+    "healthRecords": "Hồ sơ khám bệnh",
+    "incidents": "Sự cố y tế",
+    "incidentsGroom": "Báo cáo sự cố",
+    "incidentsTooltip": "Phân hệ Y tế & Sự cố",
+    "notifications": "Thông báo",
+    "users": "Người dùng",
+    "rbac": "Phân quyền (RBAC)",
+    "admin": "Quản trị hệ thống",
+    "menu": "Menu",
+    "brandName": "Racehorse Club",
+    "brandSystem": "Racehorse System",
+    "loggedInAs": "Đang đăng nhập",
+    "roleLabel": "Vai trò",
+    "noRole": "Chưa phân vai trò",
+    "logout": "Đăng xuất",
+    "logoutConfirm": "Bạn chắc chắn muốn đăng xuất?"
+  },
   "dashboard": {
-    "subtitle": "Điều hành câu lạc bộ",
+    "title": "Tổng quan Hệ thống",
+    "welcome": "Chào mừng trở lại,",
+    "subtitle": "Theo dõi trạng thái đội ngựa đua và tiến độ huấn luyện hôm nay.",
+    "kpi": {
+      "totalHorses": "Tổng số ngựa",
+      "lockedHorses": "Đang bị khoá tập",
+      "activeHorses": "Sẵn sàng thi đấu",
+      "pendingUsers": "Tài khoản chờ duyệt"
+    },
+    "recentHorses": "Danh sách ngựa đua gần đây",
+    "viewAll": "Xem tất cả",
+    "quickActions": "Thao tác nhanh",
+    "newHorse": "Thêm ngựa mới",
+    "manageUsers": "Duyệt thành viên",
+    "viewRecords": "Xem hồ sơ ngựa",
+    "systemAlerts": "Cảnh báo & Tình trạng",
+    "noAlerts": "Tất cả các cá thể ngựa đều đang trong điều kiện an toàn và hoạt động bình thường.",
+    "recentNotifs": "Thông báo gần nhất",
+    "noNotifs": "Chưa có thông báo nào.",
     "navigation": "Điều hướng chính",
     "overview": "Tổng quan",
     "signedInAs": "Đang đăng nhập với vai trò",
@@ -21,11 +68,6 @@
     "scheduled": "Đã lên lịch",
     "healthTitle": "Theo dõi sức khỏe",
     "noHealthAlerts": "Chưa có hồ sơ cần theo dõi."
-  },
-  "nav": {
-    "horses": "Ngựa",
-    "users": "Người dùng",
-    "logout": "Đăng xuất"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -59,12 +101,26 @@
   },
   "horse": {
     "name": "Tên",
+    "gender": "Giới tính",
+    "genderMale": "Đực",
+    "genderFemale": "Cái",
+    "genderUnknown": "Chưa rõ",
     "breed": "Giống",
     "birthDate": "Ngày sinh",
     "owner": "Chủ ngựa",
     "status": "Trạng thái",
     "empty": "Chưa có ngựa nào.",
     "new": "Thêm ngựa"
+  },
+  "horseStatusBadge": {
+    "ACTIVE": "● Hoạt động",
+    "RESTING": "● Nghỉ dưỡng",
+    "RETIRED": "● Giải nghệ",
+    "FIT": "Khỏe mạnh",
+    "MONITORING": "Cần theo dõi",
+    "QUARANTINED": "Cách ly",
+    "INJURED": "Chấn thương",
+    "locked": "🔒 Khóa tập"
   },
   "horseFlow": {
     "directoryEyebrow": "HỒ SƠ CÂU LẠC BỘ",
@@ -74,7 +130,11 @@
     "filters": "Bộ lọc ngựa",
     "searchPlaceholder": "Tìm theo tên ngựa",
     "allStatuses": "Tất cả trạng thái",
-    "status": { "ACTIVE": "Đang hoạt động", "RESTING": "Đang nghỉ", "RETIRED": "Đã nghỉ thi đấu" },
+    "status": {
+      "ACTIVE": "Đang hoạt động",
+      "RESTING": "Đang nghỉ",
+      "RETIRED": "Đã nghỉ thi đấu"
+    },
     "horsesFound": "chiến mã",
     "loading": "Đang tải hồ sơ...",
     "noHorsesDescription": "Thử thay đổi bộ lọc hoặc tạo hồ sơ ngựa mới.",
@@ -89,7 +149,12 @@
     "profileSummary": "Tóm tắt tình trạng ngựa",
     "fitnessScore": "Điểm thể lực",
     "healthCondition": "Tình trạng sức khỏe",
-    "health": { "FIT": "Đủ điều kiện", "MONITORING": "Cần theo dõi", "QUARANTINED": "Cách ly", "INJURED": "Chấn thương" },
+    "health": {
+      "FIT": "Đủ điều kiện",
+      "MONITORING": "Cần theo dõi",
+      "QUARANTINED": "Cách ly",
+      "INJURED": "Chấn thương"
+    },
     "trainingLock": "Khóa huấn luyện",
     "locked": "Đang khóa",
     "unlocked": "Không khóa",
@@ -150,11 +215,26 @@
     "transferHistoryExplanation": "Hệ thống hiện chỉ lưu chủ sở hữu hiện tại; API chưa ghi lại các lần đổi chủ hoặc thời điểm chuyển giao. Vì vậy màn hình này không hiển thị lịch sử suy đoán."
   },
   "tab": {
+    "pedigree": "Phả hệ",
     "sessions": "Buổi tập",
     "health": "Y tế"
   },
+  "pedigree": {
+    "horse": "Ngựa hiện tại",
+    "sire": "Ngựa cha",
+    "dam": "Ngựa mẹ",
+    "fitnessScore": "Điểm thể trạng",
+    "unknown": "Chưa xác định",
+    "edit": "Chỉnh sửa phả hệ",
+    "loading": "Đang tải phả hệ…",
+    "retry": "Thử lại",
+    "saved": "Đã lưu thông tin ngựa cha, mẹ.",
+    "clearHint": "Chọn Chưa xác định để xoá liên kết với ngựa cha hoặc mẹ này.",
+    "sameParent": "Ngựa cha và ngựa mẹ phải là hai ngựa khác nhau.",
+    "unavailableParent": "Ngựa cha/mẹ không còn khả dụng ({{id}}) — xoá hoặc thay thế"
+  },
   "session": {
-    "new": "Buổi tập mới",
+    "new": "Lên lịch tập luyện",
     "scheduledAt": "Thời gian",
     "type": "Loại",
     "notes": "Ghi chú",
@@ -163,7 +243,31 @@
     "status": "Trạng thái",
     "resultMetric": "Chỉ số kết quả",
     "resultValue": "Giá trị kết quả",
-    "keepPlanned": "Giữ nguyên (PLANNED)"
+    "keepPlanned": "Giữ nguyên (PLANNED)",
+    "plan": "Giáo án huấn luyện (tùy chọn)",
+    "noPlan": "Không gắn giáo án",
+    "loadingPlans": "Đang tải giáo án…",
+    "planLoadFailed": "Không thể tải giáo án. Thử lại hoặc lên lịch không kèm giáo án.",
+    "retry": "Thử lại",
+    "saved": "Đã lên lịch buổi tập.",
+    "invalidDate": "Vui lòng nhập ngày giờ hợp lệ.",
+    "invalidFields": "Nhập loại bài tập (1–80 ký tự) và ghi chú tối đa 2.000 ký tự.",
+    "localTime": "Nhập giờ theo múi giờ thiết bị ({{zone}}).",
+    "displayTime": "Giờ buổi tập được hiển thị theo giờ Việt Nam (Asia/Ho_Chi_Minh).",
+    "loading": "Đang tải buổi tập…",
+    "locked": "Ngựa đang bị khóa tập luyện. Chỉ có thể lên lịch mới sau khi bác sĩ thú y mở khóa.",
+    "heading": "Buổi tập luyện",
+    "openSchedule": "Lên lịch buổi tập",
+    "schedule": "Lên lịch",
+    "closeSchedule": "Đóng lịch tập",
+    "planSummary": "Giáo án",
+    "planUnavailable": "Không tải được giáo án đã gắn",
+    "trainer": "Huấn luyện viên",
+    "displayStatus": {
+      "PLANNED": "Đã lên lịch",
+      "DONE": "Hoàn thành",
+      "CANCELLED": "Đã hủy"
+    }
   },
   "health": {
     "new": "Hồ sơ khám mới",
@@ -210,7 +314,16 @@
     "reject": "Từ chối",
     "rejectConfirm": "Từ chối đăng ký này? Tài khoản sẽ bị xoá hẳn — người này phải đăng ký lại (kể cả bằng Google) nếu muốn có tài khoản.",
     "disable": "Khoá",
-    "enable": "Mở lại"
+    "enable": "Mở lại",
+    "delete": "Xoá",
+    "deleteConfirm": "Xoá tài khoản \"{{name}}\" khỏi hệ thống? Tài khoản sẽ bị khoá và không còn hiện trong danh sách (không huỷ được).",
+    "statusLabel": {
+      "PENDING": "Chờ duyệt",
+      "ACTIVE": "Hoạt động",
+      "DISABLED": "Đã khoá"
+    },
+    "empty": "Chưa có người dùng nào.",
+    "loading": "Đang tải danh sách người dùng…"
   },
   "error": {
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",

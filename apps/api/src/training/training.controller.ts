@@ -105,6 +105,11 @@ export class HorseTrainingPlansController {
 export class TrainingPlansController {
   constructor(private readonly training: TrainingService) {}
 
+  @Get()
+  list(@Query() q: ListTrainingPlansQueryDto, @CurrentUser() user: AuthUser) {
+    return this.training.listAllPlans(q, user);
+  }
+
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     return this.training.getPlan(id, user);

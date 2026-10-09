@@ -103,9 +103,37 @@ export class RacesService {
 
     const horse = await this.prisma.horse.findFirst({
       where: { id: dto.horseId, deletedAt: null },
-      select: { id: true },
+      select: {
+        id: true,
+        name: true,
+        locked: true,
+        lockReason: true,
+        status: true,
+        healthStatus: true,
+      },
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
+
+    if (horse.locked) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `Chiến mã ${horse.name} đang bị khóa huấn luyện/thi đấu (${horse.lockReason ?? 'theo chỉ định y tế'}), không thể đăng ký giải đua.`,
+      );
+    }
+
+    if (horse.status === 'RETIRED') {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `Chiến mã ${horse.name} đã giải nghệ (RETIRED), không thể đăng ký giải đua.`,
+      );
+    }
+
+    if (horse.healthStatus === 'QUARANTINED') {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `Chiến mã ${horse.name} đang cách ly y tế (QUARANTINED), không thể đăng ký giải đua.`,
+      );
+    }
 
     const dupe = await this.prisma.raceEntry.findUnique({
       where: { raceId_horseId: { raceId, horseId: dto.horseId } },

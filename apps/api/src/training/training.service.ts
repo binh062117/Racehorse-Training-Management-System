@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { NotificationType, Prisma, Role, SessionStatus } from '@prisma/client';
+import { HealthStatus, HorseStatus, NotificationType, Prisma, Role, SessionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AppException } from '../common/app-exception';
@@ -22,6 +22,7 @@ const FITNESS_METRIC_KEY = 'heart_rate_max';
 
 const PLAN_INCLUDE = {
   trainer: { select: { id: true, name: true, email: true } },
+  horse: { select: { id: true, name: true, breed: true, ownerId: true } },
 } satisfies Prisma.TrainingPlanInclude;
 
 type PlanView = Prisma.TrainingPlanGetPayload<{ include: typeof PLAN_INCLUDE }>;
@@ -304,9 +305,31 @@ export class TrainingService {
   ): Promise<PlanView> {
     const horse = await this.prisma.horse.findFirst({
       where: { id: horseId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, name: true, status: true, healthStatus: true, locked: true },
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
+
+    // BR-1: Cannot create training plan for a retired horse — no point in
+    // planning training for a horse that will never compete again.
+    if (horse.status === HorseStatus.RETIRED) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `${horse.name} đã giải nghệ (RETIRED), không thể lập giáo án huấn luyện mới.`,
+      );
+    }
+
+    // BR-2: Cannot create training plan for a quarantined horse — the horse
+    // must clear quarantine before any training activity can be planned.
+    if (horse.healthStatus === HealthStatus.QUARANTINED) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `${horse.name} đang trong trạng thái cách ly (QUARANTINED), cần chờ Bác sĩ thú y cho phép trước khi lập giáo án.`,
+      );
+    }
+
+    // Note: locked horses (Training Lock) are allowed to have plans created —
+    // a plan is a strategic document, not an active session. The lock only
+    // prevents scheduling concrete training sessions (see createSession).
 
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : null;
@@ -342,12 +365,34 @@ export class TrainingService {
     return { data, meta: { page: q.page, limit: q.limit, total } };
   }
 
+  async listAllPlans(
+    q: ListTrainingPlansQueryDto,
+    user: AuthUser,
+  ): Promise<Paginated<PlanView>> {
+    const where: Prisma.TrainingPlanWhereInput = {
+      horse: {
+        deletedAt: null,
+        ...(user.role === Role.OWNER ? { ownerId: user.id } : {}),
+      },
+    };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.trainingPlan.findMany({
+        where,
+        include: PLAN_INCLUDE,
+        orderBy: { startDate: 'desc' },
+        skip: (q.page - 1) * q.limit,
+        take: q.limit,
+      }),
+      this.prisma.trainingPlan.count({ where }),
+    ]);
+    return { data, meta: { page: q.page, limit: q.limit, total } };
+  }
+
   async getPlan(id: string, user: AuthUser) {
     const plan = await this.prisma.trainingPlan.findUnique({
       where: { id },
       include: {
         ...PLAN_INCLUDE,
-        horse: { select: { ownerId: true } },
         sessions: {
           select: { id: true, scheduledAt: true, type: true, status: true },
           orderBy: { scheduledAt: 'asc' },

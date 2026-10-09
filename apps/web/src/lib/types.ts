@@ -19,20 +19,24 @@ export interface UserRef {
   email: string;
 }
 
+export type HealthStatus = 'FIT' | 'MONITORING' | 'QUARANTINED' | 'INJURED';
+export type HorseGender = 'MALE' | 'FEMALE';
+
 export interface Horse {
   id: string;
   name: string;
+  gender: HorseGender | null;
   breed: string | null;
   birthDate: string | null;
   ownerId: string;
   owner: UserRef;
   status: HorseStatus;
-  sireId?: string | null;
-  damId?: string | null;
-  fitnessScore?: number | null;
-  healthStatus?: 'FIT' | 'MONITORING' | 'QUARANTINED' | 'INJURED';
-  locked?: boolean;
-  lockReason?: string | null;
+  healthStatus: HealthStatus;
+  fitnessScore: number | null;
+  sireId: string | null;
+  damId: string | null;
+  locked: boolean;
+  lockReason: string | null;
   photoPath: string | null;
   photoUrl: string | null;
   createdAt: string;
@@ -90,6 +94,21 @@ export interface Vaccination {
   createdAt: string;
 }
 
+
+export interface TrainingPlan {
+  id: string;
+  horseId: string;
+  horse: { id: string; name: string; breed?: string | null; ownerId: string };
+  trainerId: string;
+  trainer: UserRef;
+  goal: string;
+  startDate: string;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sessions?: TrainingSession[];
+}
+
 export interface TrainingSession {
   id: string;
   horseId: string;
@@ -117,6 +136,15 @@ export interface HealthRecord {
   treatment: string | null;
   attachmentPath: string | null;
   attachmentUrl: string | null;
+  createdAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: string;
+  message: string;
+  read: boolean;
   createdAt: string;
 }
 

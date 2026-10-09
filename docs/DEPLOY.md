@@ -159,7 +159,16 @@ trước khi cho tạo Client ID.
    ⚠️ Nếu quên bước này, lúc bấm nút "Đăng nhập bằng Google" trên web sẽ
    hiện lỗi "Access blocked: app has not completed verification" — quay
    lại đây thêm email là hết lỗi ngay, không cần đợi duyệt.
-6. Trang **Summary** → **Back to Dashboard**. Xong phần consent screen.
+
+   > **Giao diện Google Cloud gần đây đổi khác** — nếu không thấy trang
+   > "Test users" nối tiếp như trên (chỉ thấy 1 trang **OAuth consent
+   > screen** với các tab ngang `Overview` / `Branding` / `Audience` /
+   > `Clients` / `Data Access`): mục **Test users** giờ nằm trong tab
+   > **Audience**, kéo xuống sẽ thấy nút **+ Add users** ở đó. Cách làm
+   > (điền email, Save) không đổi, chỉ đổi chỗ tìm.
+6. Trang **Summary** → **Back to Dashboard** (hoặc nếu là giao diện mới,
+   không có nút này — cứ để vậy, cấu hình tự lưu). Xong phần consent
+   screen.
 
 ### 3. Tạo OAuth Client ID
 

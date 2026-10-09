@@ -5,6 +5,107 @@ nhóm). Mới nhất lên đầu.
 
 ---
 
+## 2026-10-06 — Nối dây nút "Xoá" tài khoản đã duyệt ở Admin Dashboard
+
+**Nguồn:** yêu cầu người dùng.
+**Quyết định:** `DELETE /users/:id` đã có sẵn ở backend từ trước (soft
+delete — set `deletedAt` + `status=DISABLED`, giữ lịch sử, khác hẳn
+`POST /users/:id/reject` chỉ áp dụng user `PENDING` và xoá hẳn) nhưng
+**frontend chưa từng gọi tới** — không có nút nào. Thêm nút "Xoá" ở
+`AdminUsersPage.tsx` cho user đã duyệt (`ACTIVE` hoặc `DISABLED`), có
+confirm dialog, tự ẩn ở chính hàng của MANAGER đang đăng nhập (khớp rule
+backend "không tự xoá mình" — `CONFLICT`). Dùng lại y nguyên endpoint cũ,
+không đổi hành vi backend.
+**Vì sao soft delete (không xoá hẳn như reject):** user đã duyệt có thể
+đã sở hữu ngựa, buổi tập, hồ sơ khám... — xoá hẳn sẽ mồ côi dữ liệu liên
+quan hoặc vi phạm FK constraint. PENDING user mới đăng ký thì chắc chắn
+chưa có dữ liệu gì nên `reject` xoá hẳn được an toàn (xem quyết định
+2026-09-30).
+**e2e:** endpoint này trước đó **chưa có test nào** dù đã code — bổ sung
+3 test (MANAGER xoá user ACTIVE thành công + biến mất khỏi danh sách,
+MANAGER không tự xoá được mình, non-MANAGER bị chặn 403) — 160/160 xanh.
+
+## 2026-10-06 — Gửi email khi MANAGER duyệt tài khoản (PENDING → ACTIVE)
+
+**Nguồn:** yêu cầu người dùng.
+**Quyết định:** `UsersService.update()` — khi `status` chuyển từ `PENDING`
+sang `ACTIVE` (đúng lúc MANAGER bấm "Duyệt"), gửi email thông báo qua
+`MailService.sendAccountApproved()` (Brevo, cùng cơ chế với OTP/reset
+password). **Chỉ** kích hoạt cho đúng chuyển tiếp `PENDING → ACTIVE` —
+mở lại tài khoản bị khoá (`DISABLED → ACTIVE`) là hành động khác, không
+gửi lại email "đã được duyệt" (dễ gây hiểu nhầm). e2e: +2 test (gửi đúng
+khi duyệt lần đầu; không gửi khi re-enable từ DISABLED) — 157/157 xanh.
+
+## 2026-10-01 — Chuẩn hóa Ngoại lệ Training Lock: Quyền hạn của Bác sĩ Thú y & Ràng buộc HLV Trưởng
+
+**Nguồn:** Yêu cầu người dùng (làm rõ thẩm quyền của Bác sĩ Thú y vs HLV Trưởng đối với ngoại lệ Khóa Huấn Luyện - Horse is locked).
+**Quyết định:**
+- **Veterinarian (Bác sĩ Thú y)**: Sở hữu thẩm quyền **độc quyền** ra quyết định y khoa: Đặt lệnh "Khóa huấn luyện" khẩn cấp (`PATCH /horses/:id/lock` với `locked: true` + lý do chẩn đoán) và gỡ lệnh khóa (`locked: false`). Không ai khác (kể cả Manager hay Trainer) có quyền can thiệp vào cờ y tế này.
+- **Head Trainer (HLV Trưởng)**: Là đối tượng **chịu ràng buộc trực tiếp** bởi lệnh khóa:
+  - Khi ngựa bị khóa: Bị chặn hoàn toàn việc lên lịch các buổi tập thực tế (`POST /horses/:id/sessions`), hệ thống ném ngoại lệ `400 VALIDATION_ERROR: Horse training is locked: [Lý do]`.
+  - Bị chặn không thể đăng ký thi đấu giải đua (`POST /races/:id/entries`).
+  - Được phép soạn khung giáo án lý thuyết dài hạn (`POST /horses/:id/training-plans`), nhưng giao diện hiển thị cảnh báo rõ ràng con ngựa đang bị phong tỏa tập luyện thực địa.
+- **Frontend Sync**:
+  - Giao diện `SessionsTab.tsx` tự động ẩn form xếp lịch tập và hiển thị dải thông báo đỏ nêu rõ lý do bị Bác sĩ thú y khóa huấn luyện.
+
+## 2026-10-01 — Triển khai Phân hệ Giáo án & Chức năng Create Training Plan cho Head Trainer
+
+**Nguồn:** Yêu cầu người dùng (chức năng Create training plan của role trainer, chỉ TRAINER được tạo, MANAGER chỉ xem).
+**Quyết định:**
+- **Backend API & Quy tắc nghiệp vụ (Business Rules)**:
+  - Phân quyền RBAC nghiêm ngặt: Chỉ `Role.TRAINER` có quyền tạo giáo án; các vai trò `MANAGER`, `VET`, `GROOM`, `OWNER` bị chặn 403 Forbidden (được kiểm chứng bằng E2E test).
+  - Quy tắc chuyên môn đua ngựa:
+    + BR-1: Không cho phép lập giáo án mới cho ngựa đã giải nghệ (`status === 'RETIRED'`).
+    + BR-2: Không cho phép lập giáo án cho ngựa đang cách ly kiểm dịch (`healthStatus === 'QUARANTINED'`).
+    + BR-3: Cho phép lập kế hoạch chiến lược cho ngựa bị khóa tập luyện (`locked === true`), nhưng không thể lên lịch buổi tập thực tế cho đến khi mở khóa.
+  - Bổ sung `GET /api/v1/training-plans` có scoping: Trainer/Manager thấy toàn bộ CLB, Owner chỉ thấy ngựa của mình.
+  - Mở rộng `PLAN_INCLUDE` trả về thêm thông tin chi tiết ngựa (`name`, `breed`, `ownerId`).
+- **Frontend**:
+  - Chuẩn hóa quyền: Chỉ `role === 'TRAINER'` mới render các nút `+ Tạo giáo án mới`. Manager và Owner chỉ có quyền xem (Read-only).
+  - Modal `CreateTrainingPlanModal.tsx`:
+    + Tự động lọc các ngựa giải nghệ/cách ly khỏi dropdown.
+    + Bổ sung 4 mẫu giáo án chuyên môn nhanh (Quick Templates: Cự ly 1400m sân cát, Cự ly 1600m sân cỏ, Nước rút 1200m, Bài tập nhẹ phục hồi).
+    + Cảnh báo phân biệt ngựa bị khóa tập luyện vs ngựa bị chấn thương (`INJURED`).
+  - Trang `/plans`: Giao diện hiển thị phụ đề tương ứng theo vai trò, thống kê KPI, bộ lọc trạng thái.
+  - Trang `/horses/:id`: Tab `PlansTab` hiển thị cảnh báo nghiệp vụ nếu ngựa giải nghệ/cách ly và điểm thể lực hiện tại.
+
+## 2026-09-30 — Thiết kế Giao diện Dashboard & Shell Rail + Phân quyền RBAC & Icon đơn sắc
+
+**Nguồn:** Yêu cầu người dùng (cấu trúc Dashboard dạng demo, phân quyền nghiêm ngặt theo 5 vai trò nghiệp vụ, loại bỏ 100% emoji và dùng icon tối giản đơn sắc, giữ nguyên trang login).
+**Quyết định:** 
+- **Phân quyền thanh điều hướng (Sidebar Rail)**:
+  - `Head Trainer`: Dashboard, Ngựa đua (toàn bộ chiến mã CLB), Giáo án huấn luyện (Lập giáo án chi tiết), Giải đua (Đăng ký giải đua), Cảnh báo thể lực & sự cố.
+  - `Veterinarian`: Dashboard, Sơ đồ đàn ngựa, Hồ sơ khám bệnh & Phác đồ điều trị, Lịch tiêm phòng & móng định kỳ.
+  - `Groom / Stable Hand`: Dashboard, Chuồng & Khẩu phần dinh dưỡng, Báo cáo sự cố chuồng.
+  - `Horse Owner`: Dashboard, Ngựa của tôi (phạm vi sở hữu), Lịch tập & Nhật ký HLV, Lịch sử giải đua.
+  - `Club Manager`: Toàn quyền tất cả các phân hệ, bao gồm Quản trị hệ thống & Phân quyền thành viên (`/admin/users`).
+- **Cá nhân hóa DashboardPage (`/dashboard`)**:
+  - Từng vai trò có hệ thống thẻ KPI riêng (ví dụ: Vet theo dõi 4 trạng thái FIT/MONITORING/INJURED/QUARANTINED; Trainer theo dõi thể lực và giáo án; Groom theo dõi việc chăm sóc; Owner theo dõi ngựa sở hữu; Manager theo dõi danh mục tổng).
+  - Khối Thao tác nhanh (Quick Actions) hiển thị chính xác các tác vụ được phép làm theo nghiệp vụ của vai trò đó.
+
+## 2026-10-02 — Chốt `testing` làm nền FE chuẩn (Flow 1 — Horse Profile)
+
+**Nguồn:** phát hiện trong lúc kiểm tra các nhánh team — nhiều thành viên
+tạo nhánh FE độc lập từ cùng 1 điểm (`cbf1f7e`) mà không dựa trên việc của
+nhau: `Flow01_HorseProfile` (hồ sơ ngựa), `Hai-work` (thêm tab phả hệ),
+`feat/flow-race-training-health` (viết lại gần như toàn bộ `HorsesPage`/
+`HorseDetailPage`/`Layout` theo cấu trúc khác). Cả 3 cùng sửa chung những
+file lõi theo cách không tương thích nhau — merge thẳng cả 3 vào `main`
+sẽ conflict nặng.
+**Quyết định:** Người dùng chọn `testing` (nhánh nối dài từ
+`Flow01_HorseProfile`, hoá ra khi kiểm tra lại đã tự tích hợp thêm phần
+lớn công việc của `feat/flow-race-training-health` — `HorseFormPage`,
+`HorseOwnershipPage`, `HorsePedigreePage`, `HorseRaceHistoryPage`,
+`HorseRecordNav`, `HealthSchedulePage` đều đã có mặt) làm **nền FE
+chuẩn**, merge PR #14 vào `main`. Kèm migration mới
+`preventive_care_type` (+enum `PreventiveCareType`, +`Vaccination.careType`).
+**Chưa xử lý:** nhánh `Hai-work` (tab phả hệ kiểu riêng của thành viên đó)
+**chưa merge** — theo quyết định người dùng, để nhóm tự xem lại có gì
+đáng giữ/gộp thêm vào nền `testing` này hay không, Claude Code không tự ý
+đụng vào.
+**Đã verify trên `main` sau merge:** `npm run build` ✅ (api+web) ·
+`npm run test:e2e` **154/154** ✅.
+
 ## 2026-09-30 — Nhớ email lần đăng nhập trước (giữ nguyên phiên 7 ngày)
 
 **Nguồn:** yêu cầu người dùng — ban đầu định rút phiên đăng nhập xuống 2
@@ -600,7 +701,30 @@ Tiếp theo: Phase 1 (Auth & Users) — còn chờ chốt cách trả refresh to
 
 ---
 
+## 2026-09-30 — Flow 1: Thiết kế & Triển khai Giao diện Quản lý Hồ sơ Ngựa (Horse Profile Management)
+
+**Nguồn:** Yêu cầu người dùng (SWP391 Team RHTMS).
+**Quyết định:**
+1. Áp dụng chuẩn **Racehorse Design System** từ `racehorse-design-system.html`:
+   - Màu thương hiệu chính: Navy `#1c2b3a` (Header, Buttons chính, Avatars).
+   - Màu nền: Cream `#f5f4f1`, Card nền trắng `#ffffff`.
+   - Màu phụ: Blue accent `#1a4b8a`.
+   - Typography: Font Inter đồng nhất; huy hiệu StatusBadges (FIT, MONITORING, INJURED, LOCKED, ACTIVE, RESTING, RETIRED).
+2. Hoàn thiện 2 use case chính của Flow 1 trên Frontend:
+   - **Use Case 1 (View horse list & detail)**:
+     - `HorsesPage`: Metric cards tóm tắt (Tổng số, Đang hoạt động, Nghỉ dưỡng, Cần chú ý), tìm kiếm theo tên, bộ lọc chip trạng thái, bảng danh sách có avatar và status badges.
+     - `HorseDetailPage`: Hero banner, avatar lớn, nút đổi ảnh, trạng thái kết hợp, banner cảnh báo khóa tập luyện (Training Lock), tab Hồ sơ chi tiết (key-value grid), tab Cây phả hệ 3 đời (PedigreeTree).
+   - **Use Case 2 (Add / Edit / Delete horse profile)**:
+     - `CreateHorseModal`: Thêm mới ngựa (chọn chủ từ role OWNER, validate ngày sinh không vượt quá hiện tại).
+     - `EditHorseModal`: Sửa thông tin, gán ngựa cha (sireId), ngựa mẹ (damId), điểm thể trạng (fitnessScore), trạng thái, đổi chủ.
+     - `DeleteHorseModal`: Xác nhận xóa mềm an toàn (soft-delete bảo lưu lịch sử buổi tập và y tế).
+     - `PhotoUploadModal`: Tải ảnh đại diện lên (multipart file, tối đa 5MB).
+3. Tài liệu thiết kế chi tiết: Lưu tại `docs/FLOW1_HORSE_PROFILE_DESIGN.md`.
+
+---
+
 ## Mẫu ghi quyết định mới
+
 
 ```
 ## YYYY-MM-DD — <tiêu đề ngắn>

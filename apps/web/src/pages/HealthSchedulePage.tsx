@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { Field } from '../components/Field';
 import { api } from '../lib/api';
+import { useCachedResource } from '../lib/useCachedResource';
 import { formatDate } from '../lib/format';
 import type { Horse, Paginated, Vaccination } from '../lib/types';
 
@@ -13,34 +14,25 @@ export function HealthSchedulePage() {
   const { user } = useAuth();
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [careType, setCareType] = useState<'ALL' | 'VACCINATION' | 'DEWORMING'>('ALL');
-  const [records, setRecords] = useState<Vaccination[] | null>(null);
-  const [error, setError] = useState<unknown>(null);
+
+  const vaccinationParams = {
+    limit: 100,
+    ...(upcomingOnly ? { upcoming: true } : {}),
+    ...(careType !== 'ALL' ? { careType } : {}),
+  };
+  const {
+    data: records,
+    error,
+    reload: load,
+  } = useCachedResource(`vaccinations:${JSON.stringify(vaccinationParams)}`, () =>
+    api
+      .get<Paginated<Vaccination>>('/vaccinations', { params: vaccinationParams })
+      .then((r) => r.data.data),
+  );
 
   const changeFilter = (nextUpcomingOnly: boolean) => {
-    setRecords(null);
-    setError(null);
     setUpcomingOnly(nextUpcomingOnly);
   };
-
-  const load = useCallback(async () => {
-    try {
-      const response = await api.get<Paginated<Vaccination>>('/vaccinations', {
-        params: {
-          limit: 100,
-          ...(upcomingOnly ? { upcoming: true } : {}),
-          ...(careType !== 'ALL' ? { careType } : {}),
-        },
-      });
-      setRecords(response.data.data);
-      setError(null);
-    } catch (reason) {
-      setError(reason);
-    }
-  }, [careType, upcomingOnly]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   return (
     <div className="horse-workspace health-schedule-page">
@@ -76,18 +68,19 @@ export function HealthSchedulePage() {
           </div>
           <span className="health-schedule-count">{records?.length ?? 0}</span>
         </div>
-        <div className="health-schedule-tabs" role="group" aria-label={t('healthSchedule.kind')}>
+        <div
+          className="health-schedule-tabs"
+          role="group"
+          aria-label={t('healthSchedule.kind')}
+          style={{ marginTop: '12px' }}
+        >
           {(['ALL', 'VACCINATION', 'DEWORMING'] as const).map((type) => (
             <button
               key={type}
               type="button"
               className={careType === type ? 'active' : ''}
               aria-pressed={careType === type}
-              onClick={() => {
-                setRecords(null);
-                setError(null);
-                setCareType(type);
-              }}
+              onClick={() => setCareType(type)}
             >
               {t(`healthSchedule.kindOptions.${type}`)}
             </button>
@@ -122,8 +115,12 @@ export function HealthSchedulePage() {
                       ) : '—'}
                     </td>
                     <td>
-                      <strong>{record.vaccineName}</strong>
-                      <small className="muted">{t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}</small>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                        <strong>{record.vaccineName}</strong>
+                        <span className="health-schedule-badge neutral">
+                          {t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}
+                        </span>
+                      </div>
                     </td>
                     <td>{formatDate(record.date)}</td>
                     <td>{record.nextDueDate ? formatDate(record.nextDueDate) : t('healthSchedule.noDueDate')}</td>

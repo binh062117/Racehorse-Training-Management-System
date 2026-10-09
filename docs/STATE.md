@@ -4,7 +4,10 @@
 > mới tới [PLAN.md](PLAN.md) và [DECISIONS.md](DECISIONS.md).
 > Cập nhật file này mỗi khi kết thúc một mảng việc.
 
-Cập nhật lần cuối: **2026-09-25** — kết thúc Phase 10 (Health & Injury
+> Historical testing-branch claim (2026-09-30; not validation of this merge): Cập nhật lần cuối: **2026-09-30** — hoàn thành thiết kế và triển khai **Flow 1 Frontend (Horse Profile Management)** theo chuẩn `racehorse-design-system.html` (Tone Navy `#1c2b3a` / Cream `#f5f4f1` / Blue accent `#1a4b8a`, font Inter, status badges, metric cards, modal CRUD, phả hệ 3 đời, upload ảnh). Toàn bộ 149 test E2E backend + frontend build/lint đều PASS 100%.
+Latest review: **2026-10-02** ? committed testing/Hai-work merge; see review below.
+
+Tổng kết backend (lịch sử): **2026-09-25** — kết thúc Phase 10 (Health & Injury
 extensions), hoàn tất Sprint 3 theo `CLAUDE_CODE_BACKEND_FULL.md` (xem
 [DECISIONS.md](DECISIONS.md)). **MVP (Phase 0-5) vẫn DONE**; 3 luồng mở rộng
 (Phase 6-8) xong phần API; Phase 9 (Sprint 2 remainder) + Phase 10 (Sprint 3
@@ -12,6 +15,445 @@ remainder) **xong** — toàn bộ `CLAUDE_CODE_BACKEND_FULL.md` (Sprint 0-3) đ
 được đối chiếu/hoàn thành phía API. Còn lại chủ yếu là **frontend** — xem §4.
 
 ---
+
+## Horse Gender Integration — Xem & Tạo ngựa - 2026-10-05
+
+Bổ sung hiển thị và nhập liệu **Giới tính ngựa (Horse Gender)** (`MALE` / `FEMALE`) trên toàn bộ các trang liên quan:
+
+### Thay đổi Frontend
+1. **`HorseFormPage.tsx`** (Trang tạo / sửa hồ sơ `/horses/new` & `/horses/:id/edit`):
+   - Thêm trường `gender: HorseGender | ''` vào `HorseFormState` và `EMPTY_FORM`.
+   - Nạp `gender` từ `detailResponse` khi sửa ngựa.
+   - Gửi `gender` trong payload khi tạo mới (`api.post`) và cập nhật (`api.patch`).
+   - Thêm dropdown `<Field label={t('horse.gender')}>` (Đực / Cái / Chưa rõ).
+2. **`CreateHorseModal.tsx`** (Modal tạo ngựa nhanh trên `HorsesPage`):
+   - Sử dụng type `HorseGender | ''`, thêm lựa chọn `— Chưa rõ —` và chỉ gửi trường `gender` khi được chọn.
+3. **`HorsesPage.tsx`** (Bảng danh sách ngựa):
+   - Thêm cột `<th>Giới tính</th>` và hiển thị badge trung tính (`Đực` / `Cái` / `Chưa rõ`).
+4. **`HorseDetailPage.tsx`** (Trang chi tiết ngựa):
+   - Hero header: Hiển thị giới tính trong dòng tóm tắt cạnh giống loài và tuổi.
+   - Tab Thông tin lý lịch (`tab === 'profile'`): Thêm dòng `dt/dd` hiển thị Giới tính (`Đực` / `Cái` / `Chưa xác định`).
+5. **`DashboardPage.tsx`** (Danh sách ngựa gần đây):
+   - Hiển thị giới tính trong dòng mô tả phụ của mỗi ngựa.
+6. **`HealthRecordsPage.tsx`** (Bảng sơ đồ sức khỏe ngựa):
+   - Thêm cột `<th>Giới tính</th>` hiển thị badge `Đực` / `Cái`.
+7. **`i18n/vi.json` & `i18n/en.json`**:
+   - Thêm các key `gender`, `genderMale`, `genderFemale`, `genderUnknown` trong section `horse`.
+
+### Build & Test
+- Frontend: `tsc -b && vite build` PASS (141 modules, 533.34 kB).
+- Linter: `oxlint` PASS (0 errors).
+
+---
+
+## Record Medical Examination — cải tiến giao diện VET - 2026-10-05
+
+Nâng cấp chức năng "Ghi nhận hồ sơ khám bệnh" cho role VET (Bác sĩ Thú y):
+
+### Thay đổi Frontend
+
+1. **`CreateHealthRecordModal.tsx`** (MỚI) — Modal ghi nhận hồ sơ khám theo
+   design system (modal-overlay, modal-content, modal-header, modal-footer).
+   Bổ sung trường **`healthStatus`** (FIT / MONITORING / INJURED / QUARANTINED)
+   để VET cập nhật trạng thái sức khỏe khi khám. Có cảnh báo khi chọn
+   INJURED/QUARANTINED (ảnh hưởng tới khóa tập/giải đua).
+
+2. **`HealthTab.tsx`** (REFACTOR) — Thay thế inline form bằng modal. Thêm:
+   - Toolbar với nút "Ghi nhận hồ sơ khám" (VET only).
+   - Summary card: trạng thái sức khỏe hiện tại, tổng số lần khám, lần khám
+     gần nhất.
+   - Cải thiện layout record list (date + vet header, diagnosis/treatment
+     sections, inline edit, attachment upload).
+   - Prop thay đổi: `{ horseId: string }` → `{ horse: Horse }`.
+
+3. **`HealthRecordsPage.tsx`** (MỚI) — Trang tổng quan "Hồ sơ khám bệnh"
+   toàn đàn cho VET tại route `/health-records`. Bao gồm:
+   - KPI tiles (tổng đàn, khỏe mạnh, cần theo dõi, chấn thương/cách ly,
+     khóa tập).
+   - Bảng sơ đồ trạng thái sức khỏe toàn đàn (tên, giống, trạng thái y tế,
+     khóa tập) với search và filter theo healthStatus.
+   - Nút "Khám" nhanh trên mỗi dòng → mở modal tạo hồ sơ khám.
+   - Danh sách hồ sơ khám gần đây (20 bản ghi mới nhất, click → chi tiết ngựa).
+
+4. **`Layout.tsx`** — Sidebar VET: link "Hồ sơ khám bệnh" kích hoạt
+   (thay placeholder "Sắp có"). Topbar title mapping cho `/health-records`.
+
+5. **`HorseDetailPage.tsx`** — `<HealthTab horse={horse} />` thay vì
+   `<HealthTab horseId={horse.id} />`.
+
+6. **`main.tsx`** — Route `/health-records` restricted `@Roles(['VET'])`.
+
+### Backend — không thay đổi
+API đã hỗ trợ đầy đủ từ trước (POST/GET/PATCH health-records, attachment, healthStatus).
+
+### Build & Test
+- Frontend: `tsc -b && vite build` PASS (141 modules, 531 kB).
+- Backend: `nest build` PASS.
+
+---
+
+## UC-10 read-only schedule hierarchy - 2026-10-03
+
+Grouped already-loaded sessions by Vietnam calendar date; time uses the same
+Asia/Ho_Chi_Minh display zone. Scoped CSS emphasizes time, uppercase type and
+adjacent status badge, plan title, secondary trainer and notes, with a subtle
+navy summary border. Success notice is compact; its existing clearing behavior
+is unchanged. No extra requests, business-rule or serialization changes.
+Creation modal and protected UC-11 state/handler/result/update JSX were verified
+byte-identical to the pre-refinement snapshot. Browser mocks passed UTC-midnight
+date grouping, EN/VI, 320px summary containment, modal create/refresh and result
+save. Desktop screenshot inspected. Build passed (138 modules, 516.02 kB bundle
+warning); lint passed with 13 existing warnings; diff check passed. No backend,
+DB, staging, commit or push operations.
+
+## UC-10 scheduling presentation refinement - 2026-10-03
+
+Scheduling now opens from a Trainer-only action in the shared modal style, with
+Cancel/X and compact footer actions. Successful creation closes the modal and
+refreshes sessions. Read-only summaries separate date/type/status badge and show
+plan goal (or no-plan/unavailable fallback), trainer and secondary notes. Shared
+same-horse plan pagination feeds both summaries and modal; no per-session reads.
+No scheduling contract, validation, time serialization, role or lock rule changes.
+UC-11 state/save handler and entire update button/form JSX verified byte-identical
+to the pre-refinement file; protected translations also unchanged. Backend untouched.
+Mock browser checks passed collapse/open/Cancel/X, with/without-plan saves,
+validation, conflict/lock detail, status/plan summaries, OWNER controls, EN/VI,
+390px modal and 320px summary containment, and existing result-save behavior.
+Build passed (137 modules, 515.60 kB JS); lint passed with existing warnings.
+No conflict markers; git diff --check passed. No DB writes, staging, commit or push.
+
+## UC-10 daily session scheduling - 2026-10-03
+
+Audit started from clean Hai-work HEAD 631f04e. Classification C: frontend
+partial, backend complete for the current contract. SessionsTab already creates
+sessions and separately edits results; no calendar/daily schedule route exists.
+Missing UI: optional same-horse plan selection, scheduling-specific validation
+and backend error detail. Its first-100 session limit can hide a newly created
+session. Implementation will extend this form/list, not create a competing UI.
+
+Contract: POST /horses/:id/sessions (TRAINER) accepts scheduledAt, type (1..80),
+notes (optional, <=2000), planId (optional UUID, same horse). trainerId is the
+caller; status defaults PLANNED. GET horse sessions and GET /sessions/:id allow
+all authenticated roles with OWNER horse scoping. PATCH permits TRAINER fields
+or GROOM status/result only; terminal sessions cannot change; DONE needs results.
+Plan POST/PATCH are TRAINER-only; plan reads are authenticated/OWNER-scoped.
+Plan dates must be ordered; plan creation blocks RETIRED/QUARANTINED, not locked.
+Session creation checks lock, then plan, then schedule conflicts; past/future
+ISO dates allowed, no plan-date-bound constraint. No duration/distance/surface/
+groom-assignment fields exist; only type and notes describe the scheduled work.
+Training lock is Horse.locked/lockReason, not a separate model.
+
+Evidence: training controller/service/DTOs/schema; specs phase-3-training,
+phase-7-training-plan-lock, phase-9-training-safety; API/DATA_MODEL/DECISIONS.
+Discrepancies retained: phase-9 prose says under 60 minutes, service uses inclusive
++/-60; DATA_MODEL claims timestamptz but schema has plain Prisma DateTime (no
+native timezone annotation). Historical API Phase 3 says plans are missing;
+Phase 7 supersedes that statement. No backend behavior/schema changes planned.
+Existing input conversion is browser-local -> UTC ISO; display is explicitly
+Asia/Ho_Chi_Minh. Keep the helper and label these conventions. No duplicate
+training routes, creation forms, DTO fields or TrainingSession declarations found.
+
+Implementation complete: extended the existing SessionsTab form with optional
+same-horse plan selection (all pages), retry on plan load failure, local required/
+length validation, backend scheduling error details, and a save confirmation.
+No-plan scheduling remains available if optional plan loading fails. Session
+refresh now reads all pages so later sessions are visible. Initial reads abort
+on unmount; horse-keyed content resets form/list state across horses. Reused
+shared controls and time helper; EN/VI labels explain device input and Vietnam
+display time. No CSS, routes, UC-05, UC-09/11 editor, schema or API source changes.
+
+Verification (2026-10-03): web npm run build passed (137 modules, JS 512.66 kB,
+existing >500 kB warning); npm run lint passed with the same 13 warnings. API
+npx --no-install prisma validate, npx --no-install prisma generate (6.19.3), and
+npm run build passed; existing package.json Prisma config deprecation warning.
+JSON AST checks found no duplicate keys; session EN/VI keys match. TypeScript AST
+checks found no duplicate type/interface declarations or training DTO fields.
+No conflict markers; no duplicate scheduling routes/forms; git diff --check passed.
+
+Temporary headless Edge against built Vite preview with all API calls mocked:
+Trainer form, required fields/trim validation, >100 plans and sessions, save with
+page-two plan and without plan, created session visibility, known/stale locks,
+backend date/conflict detail, plan-loading retry, OWNER denial and other role
+controls, UC-09 plan create/list, UC-11 Groom results, EN/VI passed. Browser-local
+09:30 serialized to 02:30Z in Bangkok and 14:30Z in New York (December fixture).
+Final harness run had no uncaught exceptions. These tests validate frontend
+behavior; backend role/ownership rules were source-reviewed, not live-tested.
+
+Limitations: no calendar/recurrence, duration/distance/surface fields or explicit
+groom/trainer assignment controls; current trainer is assigned by the server.
+All-page loading favors correctness for current club scale and can be costly for
+large histories. Existing UC-09 Vietnamese-only text and its list limits remain.
+No change to inclusive conflict boundary, input/display timezone conventions,
+backend state machine or authorization. No migration, seed, E2E, live DB mutation,
+staging, commit or push. Ready for human review.
+
+## UC-05 ancestor navigation - 2026-10-02
+
+Known sire/dam/grandparent names now use React Router Link to
+/horses/<id>?tab=pedigree. Root and Unknown nodes remain
+plain text. Existing shared link styling is reused; no CSS or business-logic
+changes. Mocked browser checks passed ancestor navigation, browser Back, direct
+Pedigree URLs, manager edit/save and synchronization, pagination, null branches,
+non-manager roles, five tabs/one panel and EN/VI. Build and lint passed (existing
+bundle-size warning and 13 lint warnings); no conflict markers or duplicate
+types/fields; git diff --check passed. No backend/DB commands, commit or push.
+
+## UC-05 visual integration and regression review - 2026-10-02
+
+Continued on Hai-work at merge commit 94fe7a3, preserving all five unstaged
+post-merge corrections below. Per the explicit task direction, UC-05 now follows
+the CURRENT merged application (navy/Inter), superseding the earlier isolated
+Burgundy treatment for this task; this is not a global design-system rewrite.
+
+- Removed feature-local fonts, palette declarations, colored heading and special
+  tab styling. Reused shared card, button, input and underline-tab treatments.
+- Kept the three-generation tree, stronger root, medium parents, lighter
+  grandparents and subdued unknowns. CSS container queries stack narrow panels;
+  the compact editor uses two columns where space permits. Every custom selector
+  remains scoped beneath .pedigree. No global CSS or translation changes.
+- Styling inherits application tokens for future application-level themes;
+  there is no local switch or independent dark palette/global theme system.
+- No business logic or backend changes in this visual pass. Existing pagination,
+  raw parent initialization, validation, null clearing/termination, abort/retry,
+  role checks, save refresh and profile/editor synchronization remain intact.
+
+Verification rerun on this working tree:
+- Web npm run build: passed (137 modules, JS 509.08 kB); existing >500 kB warning.
+- Web npm run lint: exit 0, same 13 existing warnings; no autofix.
+- API npx --no-install prisma validate, npx --no-install prisma generate, and
+  npm run build: all passed. Generated client 6.19.3; existing package.json Prisma
+  configuration deprecation warning. No database migration, seed or E2E run.
+- git grep conflict-marker check: no matches; git diff --check: passed.
+- TypeScript AST review: unique interface/type declarations and Horse fields;
+  Horse fields from both merge parents retained, including healthStatus/locks.
+- JSON AST review: no duplicate EN/VI keys, both parents' keys retained, matching
+  EN/VI structures. Horse Detail retains five tabs, one UC-05 panel, profile
+  actions, query preservation and synchronized parent edits. PedigreeTree remains
+  unused; HorsePedigreePage retains the separate read-only route/navigation.
+- Temporary headless Edge harness against production preview, all API requests
+  mocked: pagination, both editor synchronization directions, null clearing and
+  termination, query preservation across all tabs, single sessions/health GET,
+  four non-manager read-only roles, EN/VI, native font/tab/shared surface, no local
+  toggle, standalone route and no CSS leakage passed; no uncaught exceptions.
+  A 320px-wide panel stacked with no tree overflow. Visually inspected profile,
+  plans, sessions, pedigree read/edit and standalone screenshots using UC05-Child,
+  UC05-Sire and UC05-Dam fixtures. These are mocked UI checks, not live persistence
+  or database authorization verification. No real API/database requests.
+
+Remaining limits: existing lint/bundle warnings, profile modal's 100-candidate
+limit, Vietnamese-only portions of merged screens, sparse styling on standalone
+HorsePedigreePage, and the prior review's backend documentation discrepancies
+remain outside this task. Application-wide mobile shell and dark theming were
+not redesigned; only the pedigree panel's responsive layout was checked.
+Live database/migration state is unverified. No staging, commit, push, pull,
+reset or new merge. Stop for human review.
+
+## Merge review ? 2026-10-02
+
+Actual state: merge already committed as `94fe7a3`, parents `a0dace8`
+(Hai-work) and `4d26ae0` (testing). Initial working tree clean; no MERGE_HEAD
+or staged changes. Reviewed HEAD against both parents without altering history.
+No tracked conflict markers found. Both parents' STATE content was retained;
+older validation/design claims below remain historical, not current evidence.
+
+Before correction: web build failed with 16 TypeScript errors; lint failed with
+three duplicate declarations. Horse repeated sireId/damId/fitnessScore and the
+PedigreeNode interface; Horse Detail combined both tab implementations, referenced
+undefined t/showing, and duplicated pedigree/session/health renders.
+
+Minimum corrections completed (unstaged):
+- Deduplicate types, preserving healthStatus, lock fields and all testing types.
+- Keep testing's profile/plans/sessions/health actions and profile default, one
+  translated pedigree tab using UC-05, and unrelated query parameters. Existing
+  session URLs with ?tab=sessions still work; no-tab URL uses testing's profile.
+- Synchronize Horse Detail/profile modal after UC-05 saves; refresh the pedigree
+  component after profile-modal writes to prevent stale competing editor values.
+- Scope UC-05 node CSS beneath .pedigree so it cannot style testing's standalone
+  HorsePedigreePage. Its /horses/:id/pedigree route and HorseRecordNav remain.
+  This standalone page is read-only; ?tab=pedigree is the editable manager view.
+  PedigreeTree is retained as an unused legacy component, no longer rendered in
+  Horse Detail. No route-path collision; two separate presentations remain.
+- EN/VI JSON keys are unique and contain all keys from both parents; no changes.
+
+Backend review: merged apps/api matches testing exactly. PreventiveCareType SQL
+adds the enum and non-null careType with VACCINATION default, matching schema,
+DTO and service. Training-plan list scopes OWNER through horse.ownerId and skips
+deleted horses; race-entry restrictions use existing horse fields. Prisma
+validate, Prisma generate (6.19.3), and npm run build passed. No migrations,
+seed, backend E2E, database inspection/write, pull, reset, commit or push.
+Live migration application is unverified. Existing STATE race-entry prose says
+TRAINER/injured-horse blocking, but the controller permits MANAGER and service
+checks locked/RETIRED/QUARANTINED, not INJURED alone; not changed in this review.
+Testing's wider navy/Inter styling and Vietnamese-only screens remain existing
+scope; workspace Markdown design rules still govern UC-05. Profile modal horse
+candidates still stop at 100 (testing behavior); UC-05 pagination is unchanged.
+
+Post-correction verification:
+- Web `npm run build`: passed, 137 modules; existing combined bundle exceeds
+  Vite's 500 kB warning threshold (509.08 kB). No dependency/bundling changes.
+- Web `npm run lint`: exit 0, 13 warnings in merged testing-side code (state
+  effects and memoization). No autofix or unrelated warning cleanup.
+- `git diff --check` and `git diff --cached --check`: passed; cached diff is
+  empty because the merge had already been committed.
+- Temporary headless Edge harness against the built Vite preview, with all API
+  requests intercepted/mocked: five tabs/one pedigree panel, parent pagination,
+  UC-05 save -> profile editor values, profile save -> tree refresh, null branch
+  termination, query preservation, single session/health GET, four read-only
+  roles, EN/VI labels, ancestor dark tokens/no local toggle, standalone route
+  and navigation without CSS leakage; no uncaught browser exceptions.
+  Command: `node "$env:TEMP/uc05-merge-review/merge-smoke.mjs" "$env:TEMP/uc05-merge-review"`
+  with `node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4175 --strictPort`
+  in apps/web and an isolated Edge CDP profile on 9335. No real API/DB calls.
+  An initial fixture choosing a page-2 parent exposed testing's existing modal
+  candidate limit: the raw ID survives but its selected option is absent. The
+  two-editor synchronization check then passed with a page-1 candidate; that
+  modal limit remains a separate finding, not fixed or concealed here.
+
+No source changes in apps/api, schema/migrations, package files, translations,
+or routes. Corrections remain unstaged; no in-progress merge to complete.
+
+---
+
+## UC-05 frontend — 2026-10-01
+
+Status: **UC-05 frontend implementation complete; ready for review.** Build, lint
+and mocked browser checks passed. The user subsequently confirmed live GET,
+MANAGER editing/PATCH, save-refresh and PostgreSQL parent-ID persistence.
+This is user-reported live verification, not a new agent database check.
+Scope: primary React SPA pedigree viewing and MANAGER sire/dam editing only.
+This dated entry supersedes older statements that the pedigree frontend is absent;
+other Phase 6-10 frontend scope is unchanged. Historical phase/spec results below
+are not checks run in this task.
+
+### Incremental milestones
+
+1. **Types implemented and checked:** `Horse` now includes nullable `sireId`,
+   `damId`, `fitnessScore`; recursive `PedigreeNode` matches the API.
+   `npm --prefix apps/web exec -- tsc -b apps/web/tsconfig.json` passed.
+2. **Read component implemented and type-checked:** `PedigreeTab.tsx` calls the
+   existing pedigree API, renders three nested generations including unknown
+   relationships and nullable fitness scores, and handles loading/error/retry.
+   Scoped CSS implements the normative light/dark tokens (light default).
+   The initial local toggle was removed in review; see correction below.
+   TypeScript check above passed again. Browser behavior
+   was not yet verified at this milestone; mounting/translations were pending.
+3. **MANAGER editor implemented and type-checked:** raw IDs load from Horse;
+   candidate loading follows all `/horses` pages and excludes the current horse.
+   Selectors disable the opposite parent, offer explicit unknown/null clearing,
+   preserve unavailable current IDs, and send only `sireId`/`damId` together via
+   `PATCH /horses/:id`. Successful saves trigger pedigree re-fetch; errors stay
+   visible and cancel is available. Non-manager UI has no editor. The same
+   TypeScript check passed. Runtime browser checks, integration/i18n and final
+   verification were pending at this milestone; no live database writes made.
+4. **Tab and i18n integrated:** Horse Detail now parses/renders all three tabs,
+   supports `?tab=pedigree`, defaults unknown tabs to Sessions, and preserves
+   unrelated query parameters. English/Vietnamese pedigree labels and existing
+   common Save/Cancel keys are wired. JSON parsing and the TypeScript check
+   passed.
+5. **Initial final checks:** `npm run build` in `apps/web` passed (TypeScript +
+   Vite, 119 modules). `npm run lint` exited 0 with five set-state-in-effect
+   warnings: four existing files and one new pedigree loading reset to address.
+   The new warning was fixed by resetting loading in user/save handlers.
+   Re-ran `npm run build`: passed (119 modules). Re-ran `npm run lint`: exit 0,
+   only the four pre-existing warnings in AdminUsersPage, HorsesPage, SessionsTab,
+   HealthTab; none in UC-05. `git diff --check` passed.
+   Headless Edge against the built Vite preview, with every API request mocked,
+   verified loading, seven ancestry slots, zero/null fitness, all five roles,
+   candidate pagination beyond 100, self/duplicate exclusion, independent sire
+   and dam changes/clears, exact two-field PATCH bodies, selector synchronization,
+   no reload, validation errors, candidate retry and post-save refresh retry.
+   Also checked raw IDs when traversal suppresses a branch, unavailable parents,
+   existing duplicate parents, query preservation, Sessions/Health navigation,
+   unknown-tab fallback, mocked OWNER forbidden response, Vietnamese labels,
+   375px mobile/editor overflow and no uncaught browser exceptions. The mocked
+   forbidden case does not prove live backend authorization. Official fonts loaded;
+   light/dark and Vietnamese mobile/editor screenshots visually reviewed.
+   Final source/docs diff reviewed: only UC-05 frontend files and this document.
+
+### Review correction — null ancestry branches
+
+`Ancestor` now renders children only when `depth > 1 && node !== null`.
+A missing parent displays Unknown once and terminates that branch; it does not
+create nested Unknown parents. This supersedes the fixed seven-slot behavior
+recorded in the earlier mocked browser checks above. No other UI behavior changed.
+After this correction, `npm run build` (TypeScript + Vite) passed and
+`npm run lint` exited 0 with the same four pre-existing warnings. The earlier
+browser harness was not rerun; its fixed seven-slot assertion is now obsolete.
+
+### Review correction — remove feature-local theme switch
+
+Removed Pedigree's theme state, toggle button, local `data-theme` attribute and
+unused `pedigree.darkTheme` translations. Light remains the default; dark tokens
+are retained under `[data-theme='dark'] .pedigree` for a future application-level
+ancestor attribute. No global theme system was added. The Design System requires
+both themes, not a feature-local switch. Earlier toggle-driven browser checks
+are historical. After this correction, `npm run build` passed (TypeScript + Vite),
+`npm run lint` exited 0 with the same four pre-existing warnings, and
+`git diff --check` passed. Browser checks were not rerun for this removal.
+
+### Presentation refinement — ancestry layout
+
+In progress: replace nested cards with a compact root and two horizontal ancestry
+branches, collapsing vertically on mobile. Move the existing edit action into
+the heading and retain its form above the tree. Presentation only; no new UC
+capability, API/state/validation changes, database operations or dependencies.
+The null-branch termination fix and ancestor-driven dark tokens remain required.
+
+### Verification commands and remaining manual checklist
+
+Executed from the application repository unless noted:
+
+- `npm --prefix apps/web exec -- tsc -b apps/web/tsconfig.json` after each
+  implementation milestone: passed.
+- In `apps/web`: `npm run build` passed; `npm run lint` exited 0 with the four
+  existing warnings listed above. No backend E2E executed.
+- `git status`, `git branch --show-current`, `git diff --stat`,
+  `git diff -- apps/web`, `git diff -- docs/STATE.md`, `git diff --check`;
+  new (untracked) component/CSS contents also reviewed directly.
+- Scoped formatting only:
+  `node apps/api/node_modules/prettier/bin/prettier.cjs --config apps/api/.prettierrc --write apps/web/src/pages/horse/PedigreeTab.tsx apps/web/src/pages/horse/PedigreeTab.css apps/web/src/pages/HorseDetailPage.tsx`.
+- In `apps/web`: `node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4175 --strictPort`.
+- Temporary smoke harness: `node "$env:TEMP/uc05-smoke-012d1eb7304048d4af758b0a044df6e2/smoke.mjs" "$env:TEMP/uc05-smoke-012d1eb7304048d4af758b0a044df6e2"`.
+  It uses an isolated headless Edge CDP profile on port 9335 and mock API fixtures;
+  no real API/database requests. Harness and screenshots are temporary local
+  artifacts, not repository dependencies or a committed regression suite.
+
+Remaining live/manual checks (use designated disposable horse fixtures for edits):
+
+- [ ] MANAGER: open Horses → Horse Detail → Pedigree; check current horse,
+  sire, dam and both grandparent branches; null parents/grandparents and fitness.
+- [ ] MANAGER: change sire and dam, save and verify refresh without reload;
+  reopen and confirm selections. Clear sire and dam independently, saving each.
+  Confirm self is excluded and identical parents cannot be selected/saved.
+- [ ] TRAINER, VET, GROOM separately: accessible pedigree is readable; no editor.
+- [ ] OWNER: owned horse readable, editor absent; another owner's direct URL
+  denied by the real backend. This task only inspected the server guard.
+- [ ] Exercise loading, API validation/network errors and retries; verify EN/VI,
+  light/dark and mobile. External Google Fonts require network availability.
+- [ ] Check `/horses/:id`, `?tab=health`, `?tab=pedigree` and browser navigation.
+
+All five milestones were documented as work progressed, before starting the next.
+Race UI and the remainder of Phase 6 frontend are not marked complete.
+
+### Inspection findings / implementation constraints
+
+- Workspace `AGENTS.md` and the task make the Markdown design rules normative.
+  The official HTML differs (navy/Inter/20px cards/8px and 10px radii);
+  UC-05 follows Markdown (burgundy/Fraunces, Work Sans, JetBrains Mono/16px
+  cards/10px and 12px radii). Existing purple/system-font SPA styling is drift;
+  use scoped UC-05 styles, not a global migration.
+- Existing backend `assertPedigree` compares only submitted IDs, so a partial
+  PATCH can duplicate the unchanged parent. The UC-05 editor sends both IDs.
+- `pedigreeNode` shares one `seen` set across branches, suppressing repeated
+  ancestors even without a cycle; it also does not filter deleted ancestors.
+  Display the API tree as returned; initialize edits from raw Horse parent IDs,
+  never infer absent relationships from truncated tree nodes. Backend unchanged.
+- Ownership guards the root horse; ancestor nodes are not separately owner-filtered.
+  Do not create ancestor profile links that imply independent access.
+- No database, migration, seed, backend E2E, dependency, commit or push work.
+
+---
+
 
 ## 1. Tóm tắt 30 giây
 
@@ -571,7 +1013,113 @@ thủ công trên bản live** (Render+Vercel) — đăng ký → nhận OTP th�
 Brevo → xác nhận → MANAGER duyệt; Google login tài khoản mới → màn OTP →
 duyệt → đăng nhập lại được; nút Từ chối hoạt động đúng.
 
+## 3m. Flow 1 Frontend đã làm gì (Horse Profile Management — 2026-09-30)
+
+Đặc tả đầy đủ: **[FLOW1_HORSE_PROFILE_DESIGN.md](FLOW1_HORSE_PROFILE_DESIGN.md)**.
+Nguồn: chuẩn thiết kế từ `racehorse-design-system.html` (Tone Navy `#1c2b3a` / Cream `#f5f4f1` / Blue accent `#1a4b8a`, font Inter).
+
+### apps/web — triển khai Flow 1
+- **Design Tokens**: Tích hợp biến CSS vào `src/index.css` (tokens Navy, Cream, Brand Blue, huy hiệu `badge-*`, `metric-card`, `chip`, `table`, `modal-overlay`).
+- **Use Case 1 (View horse list & detail)**:
+  - `HorsesPage.tsx`: Thêm 4 thẻ chỉ số nhanh `HorseMetricCards` (Tổng số ngựa, Đang thi đấu, Nghỉ dưỡng/Giải nghệ, Cần chú ý/Khóa), tìm kiếm tức thời theo tên ngựa, thanh lọc chip trạng thái (`ALL`, `ACTIVE`, `RESTING`, `RETIRED`).
+  - `HorseDetailPage.tsx`: Hero banner có avatar tròn lớn (ảnh hoặc ký tự đầu), huy hiệu trạng thái `HorseStatusBadge` (kết hợp trạng thái nghề nghiệp, sức khỏe, điểm thể trạng, cờ khóa tập luyện). Banner cảnh báo khi ngựa bị khóa tập luyện kèm lý do. 4 Tab: **Hồ sơ chi tiết** (key-value grid), **Cây phả hệ (3 đời)** (`PedigreeTree.tsx`), **Buổi tập**, **Hồ sơ y tế**.
+- **Use Case 2 (Add / Edit / Delete horse profile)**:
+  - `CreateHorseModal.tsx`: Modal tạo ngựa mới (chọn chủ sở hữu từ danh sách user có role OWNER, validate ngày sinh không vượt quá ngày hiện tại).
+  - `EditHorseModal.tsx`: Sửa hồ sơ ngựa, đổi chủ sở hữu, cập nhật điểm thể trạng, gán ngựa cha (sireId) và ngựa mẹ (damId) với validate chống chọn trùng hoặc tự làm cha/mẹ.
+  - `DeleteHorseModal.tsx`: Hộp thoại xác nhận xóa mềm an toàn (soft-delete bảo toàn lịch sử buổi tập và hồ sơ khám).
+  - `PhotoUploadModal.tsx`: Tải lên ảnh đại diện cho ngựa (multipart, tối đa 5MB, preview trước khi lưu).
+- **Kiểm chứng**:
+  - `npm run build` (tsc + vite) ✅ không lỗi.
+  - `npm run lint` (oxlint) ✅ 0 lỗi.
+  - Backend e2e tests `npm run test:e2e` **149/149 passed** ✅.
+
+## 3n. Thiết kế Giao diện Dashboard & Shell Rail theo chuẩn demo + Phân quyền RBAC nghiêm ngặt (2026-09-30)
+
+Nghiên cứu cấu trúc từ file mẫu `demo/racehorse-demo.html` và file thiết kế `racehorse-design-system.html`, chuyển đổi giao diện từ thanh topbar đơn sang layout **Dashboard 2 cột chuyên nghiệp**, đồng thời tinh chỉnh phân quyền thao tác và hiển thị (RBAC) nghiêm ngặt cho 5 vai trò chính:
+- **Chuẩn hóa Icon & Thẩm mỹ**:
+  - Loại bỏ 100% emoji màu mè khỏi toàn bộ giao diện (`Layout`, `DashboardPage`, `HorsesPage`, `HorseDetailPage`).
+  - Xây dựng thư viện component icon SVG tối giản, đơn sắc (`apps/web/src/components/Icons.tsx`) chuẩn thiết kế enterprise.
+  - Phục hồi nguyên trạng (`git checkout`) giao diện trang đăng nhập `LoginPage.tsx` theo yêu cầu.
+- **Cột bên trái (Sidebar Rail - `.rail`)**:
+  - Cố định (sticky, `height: 100vh`, `width: 240px`), nền Navy (`var(--brand-navy)` / `#1c2b3a`), chữ vàng kim/kem.
+  - **Menu lọc chính xác theo quyền của từng vai trò (RBAC)**:
+    - `TRAINER`: Tổng quan, Ngựa đua (toàn bộ chiến mã CLB), Giáo án huấn luyện (Lập giáo án chi tiết), Giải đua (Đăng ký giải đua), Y tế & Sự cố (Cảnh báo vượt ngưỡng thể lực).
+    - `VET`: Tổng quan, Sơ đồ đàn ngựa, Hồ sơ khám bệnh & Phác đồ điều trị, Lịch tiêm phòng & móng định kỳ.
+    - `GROOM`: Tổng quan, Chuồng & Khẩu phần dinh dưỡng, Báo cáo sự cố đột xuất tại chuồng.
+    - `OWNER`: Tổng quan, Ngựa của tôi (chỉ các cá thể sở hữu), Lịch tập & Nhật ký nhận xét HLV, Lịch sử giải đua.
+    - `MANAGER`: Toàn quyền tất cả các phân hệ, bao gồm Quản trị hệ thống & Phân quyền thành viên (`/admin/users`).
+- **Cột bên phải (Main Area - `.main`)**:
+  - **Thanh tiêu đề (`.topbar`)**: Breadcrumb động, nhận diện vai trò người dùng, chuyển đổi ngôn ngữ (VI/EN) và nút đăng xuất.
+  - **Trang Dashboard (`DashboardPage.tsx`) cá nhân hóa theo từng vai trò**:
+    - **KPIs theo vai trò**:
+      - `VET`: 4 trạng thái sức khỏe đàn ngựa (`FIT`, `MONITORING`, `INJURED`, `QUARANTINED`).
+      - `TRAINER`: Tổng số chiến mã CLB, Số lượng sẵn sàng tập luyện, Ngựa cảnh báo thể lực/quá tải, Tỷ lệ tuân thủ giáo án.
+      - `GROOM`: Số cá thể chuồng phụ trách, Tình trạng khẩu phần ăn, Báo cáo sự cố cần xử lý.
+      - `OWNER`: Số ngựa sở hữu, Điểm thể trạng trung bình, Buổi tập gần nhất, Lượt thi đấu sắp tới.
+      - `MANAGER`: Tổng số ngựa, Số lượng ngựa bị khoá tập, Tài khoản chờ duyệt RBAC.
+    - **Thao tác nhanh (Quick Actions) khớp chuẩn nghiệp vụ**:
+      - `TRAINER`: Lập giáo án chi tiết, Đánh giá phong độ buổi tập, Chọn ngựa tham gia giải đua.
+      - `VET`: Ghi nhận hồ sơ khám bệnh, Đặt lệnh Khóa huấn luyện khẩn cấp, Theo dõi lịch tiêm phòng.
+      - `GROOM`: Xác nhận hoàn thành việc chăm sóc, Gửi báo cáo sự cố chuồng (bỏ ăn/sốt/móng xước), Đề xuất vật tư.
+      - `OWNER`: Tra cứu phả hệ (Pedigree) & lý lịch, Theo dõi sức khỏe realtime, Đọc nhật ký nhận xét từ HLV Trưởng.
+      - `MANAGER`: Thêm mới hồ sơ ngựa, Duyệt tài khoản RBAC, Xem báo cáo vận hành & Audit Log.
+    - **Cảnh báo an toàn**: Hiển thị chi tiết danh sách ngựa đang bị áp lệnh khóa huấn luyện kèm lý do thực tế từ cơ sở dữ liệu.
+- **Kiểm chứng**:
+  - `npm run build` ✅ thành công 100% trong 193ms.
+  - `oxlint` ✅ 0 lỗi.
+  - Loại bỏ hoàn toàn emoji, giữ nguyên bản `LoginPage.tsx`.
+
+## 3o. Triển khai phân hệ & Chức năng Lập Giáo án Huấn luyện (Create Training Plan) cho Head Trainer (2026-10-01)
+
+Triển khai hoàn chỉnh tính năng lập giáo án huấn luyện chi tiết cho vai trò Head Trainer (`TRAINER`) và phân hệ quản lý giáo án:
+- **Backend Core API & Nghiệp vụ chuyên sâu (Business Rules)**:
+  - Phân quyền RBAC nghiêm ngặt: Chỉ `TRAINER` mới có quyền tạo giáo án (`@Roles(Role.TRAINER)`). Các vai trò `MANAGER`, `VET`, `GROOM`, `OWNER` bị chặn `403 Forbidden` nếu cố tình gọi API tạo giáo án (đã verify bằng test E2E).
+  - Quy tắc nghiệp vụ chuyên môn (Business Rules):
+    + **BR-1**: Chặn lập giáo án cho chiến mã đã giải nghệ (`status === 'RETIRED'`), trả về `400 VALIDATION_ERROR`.
+    + **BR-2**: Chặn lập giáo án cho chiến mã đang diện cách ly kiểm dịch y tế (`healthStatus === 'QUARANTINED'`), trả về `400 VALIDATION_ERROR`.
+    + **BR-3**: Cho phép soạn thảo giáo án chiến lược cho ngựa đang dính lệnh khóa tập luyện (`locked === true`), nhưng cờ khóa sẽ ngăn việc xếp lịch các buổi tập thực tế (`TrainingSession`).
+  - Mở rộng `PLAN_INCLUDE`: Bổ sung thông tin chi tiết ngựa (`name`, `breed`, `ownerId`) vào payload trả về để tối ưu hiển thị danh sách giáo án.
+  - Bổ sung Endpoint `GET /api/v1/training-plans`: Cho phép liệt kê toàn bộ giáo án của đàn ngựa theo phân quyền (HLV/Quản lý thấy toàn bộ, Chủ ngựa chỉ thấy giáo án của ngựa mình sở hữu).
+  - Viết bổ sung và verify kiểm thử E2E: **152/152 tests PASS 100%** (trong đó có 22/22 test kịch bản `training-plan`).
+- **Frontend Web App (`apps/web`)**:
+  - Chuẩn hóa phân quyền hiển thị (RBAC):
+    + `TRAINER`: Là người duy nhất thấy nút "+ Tạo giáo án mới" trên cả trang `/plans`, trang `/dashboard` và Tab `PlansTab`.
+    + `MANAGER` & `OWNER`: Chỉ có quyền xem giáo án (Read-only), không có nút tạo hay chỉnh sửa giáo án.
+  - Component Modal `CreateTrainingPlanModal.tsx`:
+    + Tự động lọc bỏ các ngựa đã giải nghệ hoặc đang cách ly khỏi danh sách chọn lựa.
+    + Thẻ cảnh báo ngữ cảnh: Phân biệt rõ giữa ngựa bị khóa huấn luyện khẩn cấp và ngựa đang bị chấn thương (`INJURED`) để HLV cân nhắc.
+    + Khối gợi ý giáo án chuyên môn nhanh (Quick Templates): 4 mẫu giáo án chuẩn (Cự ly 1400m sân cát, Cự ly 1600m sân cỏ, Bứt tốc nước rút 1200m, Bài tập nhẹ phục hồi gân cơ).
+  - Trang Quản lý Giáo án `TrainingPlansPage.tsx` (`/plans`):
+    + Phụ đề trang cá nhân hóa theo từng vai trò (HLV: lập giáo án; Quản lý: giám sát tiến độ CLB; Chủ ngựa: xem lịch trình ngựa sở hữu).
+    + Thẻ thống kê KPI: Tổng số giáo án, Đang áp dụng, Đã hoàn thành, Số chiến mã có giáo án.
+    + Bảng danh sách chi tiết các giáo án, người phụ trách, thời gian và trạng thái.
+  - Tích hợp Tab `PlansTab.tsx` trong `HorseDetailPage.tsx`:
+    + Nhận đầy đủ đối tượng `horse` để hiển thị cảnh báo nghiệp vụ nếu ngựa giải nghệ/cách ly và điểm thể lực hiện tại (`fitnessScore/100`).
+  - Kích hoạt menu điều hướng `/plans` trong Sidebar Rail `Layout.tsx` cho các vai trò `TRAINER`, `MANAGER`, `OWNER`.
+- **Kiểm chứng**:
+  - `npm run build` (tsc + vite) ✅ thành công 100% trong 202ms.
+  - `oxlint` ✅ 0 lỗi.
+  - E2E Backend `test/training-plan.e2e-spec.ts` ✅ 22/22 test passed.
+
+## 3p. Cơ chế Phân quyền & Xử lý Ngoại lệ Khóa Huấn luyện (Training Lock Exception) giữa Bác sĩ Thú y & HLV Trưởng (2026-10-01)
+
+Giải quyết và chuẩn hóa luồng nghiệp vụ liên quan đến **Exception "Horse is locked" (Khóa huấn luyện)**:
+- **Phân định thẩm quyền (Role Authority)**:
+  - **Veterinarian (Bác sĩ Thú y)**: Có **thẩm quyền độc quyền** ban hành lệnh *"Khóa huấn luyện"* khẩn cấp (`PATCH /api/v1/horses/:id/lock` với `locked: true` kèm lý do chẩn đoán y tế) và gỡ khóa (`locked: false`) khi chiến mã hồi phục. Các vai trò khác (kể cả Manager hay Trainer) bị chặn `403 Forbidden` nếu gọi route này.
+  - **Head Trainer (HLV Trưởng)**: Là đối tượng **bị ảnh hưởng và kiểm soát** bởi lệnh khóa:
+    + Khi ngựa bị khóa (`locked === true`), Trainer bị chặn không thể lên lịch buổi tập mới (`POST /api/v1/horses/:id/sessions`), hệ thống ném ngoại lệ `400 VALIDATION_ERROR`: `"Horse training is locked: [Lý do]"`.
+    + Khi ngựa bị khóa hoặc chấn thương/cách ly, Trainer cũng bị chặn không thể đăng ký ngựa tham gia giải đua (`POST /api/v1/races/:id/entries`).
+    + Trainer được thông báo tức thời qua chuông Notification (`TRAINING_LOCKED`) để chủ động hủy hoặc sắp xếp lại lịch tập của CLB.
+- **Frontend Web App (`apps/web`)**:
+  - `HorseDetailPage.tsx`: Nút "Khóa tập luyện" / "Mở khóa tập" chỉ hiển thị cho `VET`.
+  - `SessionsTab.tsx`: Khi ngựa bị khóa, tự động hiển thị dải thông báo đỏ nổi bật cảnh báo lý do khóa từ Bác sĩ thú y và ẩn form lên lịch tập luyện.
+- **Kiểm chứng**:
+  - Test E2E `test/races.e2e-spec.ts`: Bổ sung kiểm thử chặn đăng ký giải đua cho ngựa bị khóa (14/14 tests pass).
+  - Toàn bộ backend test suite: **153/153 tests pass 100%**.
+  - Frontend `npm run build` ✅ không lỗi.
+
 ## 4. Việc tiếp theo
+
 
 MVP (Phase 0-5) đủ 4 main flow gốc. 3 luồng mở rộng sau-MVP (Phase 6-8)
 xong phần API. **Phase 9 + Phase 10 vá xong toàn bộ Sprint 2/3 remainder

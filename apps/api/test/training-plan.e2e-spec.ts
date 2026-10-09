@@ -52,6 +52,7 @@ describe('Training plans & lock (e2e)', () => {
     tokens.manager = await login('manager@racehorse.local', 'Manager123!');
     tokens.trainer = await login('trainer@racehorse.local', 'Trainer123!');
     tokens.vet = await login('vet@racehorse.local', 'Vet123!');
+    tokens.groom = await login('groom@racehorse.local', 'Groom123!');
     tokens.owner1 = await login('owner1@racehorse.local', 'Owner123!');
     tokens.owner2 = await login('owner2@racehorse.local', 'Owner123!');
 
@@ -121,7 +122,7 @@ describe('Training plans & lock (e2e)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('VET/OWNER cannot create a training plan (403)', async () => {
+  it('VET/OWNER/MANAGER/GROOM cannot create a training plan (403)', async () => {
     const vetRes = await api()
       .post(`/api/v1/horses/${horseAId}/training-plans`)
       .set(auth('vet'))
@@ -133,6 +134,18 @@ describe('Training plans & lock (e2e)', () => {
       .set(auth('owner1'))
       .send({ goal: 'x', startDate: new Date().toISOString() });
     expect(ownerRes.status).toBe(403);
+
+    const managerRes = await api()
+      .post(`/api/v1/horses/${horseAId}/training-plans`)
+      .set(auth('manager'))
+      .send({ goal: 'x', startDate: new Date().toISOString() });
+    expect(managerRes.status).toBe(403);
+
+    const groomRes = await api()
+      .post(`/api/v1/horses/${horseAId}/training-plans`)
+      .set(auth('groom'))
+      .send({ goal: 'x', startDate: new Date().toISOString() });
+    expect(groomRes.status).toBe(403);
   });
 
   it('creating a plan for an unknown horse is 404', async () => {
@@ -143,6 +156,48 @@ describe('Training plans & lock (e2e)', () => {
       .set(auth('trainer'))
       .send({ goal: 'x', startDate: new Date().toISOString() });
     expect(res.status).toBe(404);
+  });
+
+  it('rejects creating a plan for a RETIRED horse (400)', async () => {
+    // Temporarily set horseA to RETIRED
+    await prisma.horse.update({
+      where: { id: horseAId },
+      data: { status: 'RETIRED' },
+    });
+
+    const res = await api()
+      .post(`/api/v1/horses/${horseAId}/training-plans`)
+      .set(auth('trainer'))
+      .send({ goal: 'Stamina training', startDate: new Date().toISOString() });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain('RETIRED');
+
+    // Restore horseA to ACTIVE
+    await prisma.horse.update({
+      where: { id: horseAId },
+      data: { status: 'ACTIVE' },
+    });
+  });
+
+  it('rejects creating a plan for a QUARANTINED horse (400)', async () => {
+    // Temporarily set horseA healthStatus to QUARANTINED
+    await prisma.horse.update({
+      where: { id: horseAId },
+      data: { healthStatus: 'QUARANTINED' },
+    });
+
+    const res = await api()
+      .post(`/api/v1/horses/${horseAId}/training-plans`)
+      .set(auth('trainer'))
+      .send({ goal: 'Stamina training', startDate: new Date().toISOString() });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain('QUARANTINED');
+
+    // Restore horseA healthStatus to FIT
+    await prisma.horse.update({
+      where: { id: horseAId },
+      data: { healthStatus: 'FIT' },
+    });
   });
 
   it('owner1 sees plans for their horse; owner2 is forbidden', async () => {
@@ -164,6 +219,17 @@ describe('Training plans & lock (e2e)', () => {
       .set(auth('owner1'));
     expect(res.status).toBe(200);
     expect(res.body.sessions).toEqual([]);
+  });
+
+  it('GET /training-plans lists all visible plans for TRAINER', async () => {
+    const res = await api()
+      .get('/api/v1/training-plans')
+      .set(auth('trainer'));
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBeGreaterThan(0);
+    expect(res.body.data[0].horse).toBeDefined();
+    expect(res.body.data[0].trainer).toBeDefined();
   });
 
   it('TRAINER edits the plan goal (200)', async () => {

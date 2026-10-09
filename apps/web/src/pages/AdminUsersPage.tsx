@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
+import { useAuth } from '../auth/useAuth';
 import type { Paginated, Role, User } from '../lib/types';
 import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
@@ -9,6 +10,7 @@ const ROLES: Role[] = ['MANAGER', 'TRAINER', 'VET', 'GROOM', 'OWNER'];
 
 export function AdminUsersPage() {
   const { t } = useTranslation();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [err, setErr] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
@@ -35,9 +37,13 @@ export function AdminUsersPage() {
     <div className="stack">
       <h1>{t('nav.users')}</h1>
       {loading ? (
-        <p className="muted">…</p>
+        <p className="muted">{t('user.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
+      ) : users.length === 0 ? (
+        <div className="card empty-state">
+          <p className="muted" style={{ margin: 0 }}>{t('user.empty')}</p>
+        </div>
       ) : (
         <table className="table">
           <thead>
@@ -52,7 +58,12 @@ export function AdminUsersPage() {
           </thead>
           <tbody>
             {users.map((u) => (
-              <UserRow key={u.id} user={u} onChanged={load} />
+              <UserRow
+                key={u.id}
+                user={u}
+                isSelf={u.id === currentUser?.id}
+                onChanged={load}
+              />
             ))}
           </tbody>
         </table>
@@ -61,7 +72,15 @@ export function AdminUsersPage() {
   );
 }
 
-function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
+function UserRow({
+  user,
+  isSelf,
+  onChanged,
+}: {
+  user: User;
+  isSelf: boolean;
+  onChanged: () => void;
+}) {
   const { t } = useTranslation();
   const [role, setRole] = useState<Role>(user.role ?? 'OWNER');
   const [err, setErr] = useState<unknown>(null);
@@ -94,6 +113,20 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
     }
   };
 
+  const remove = async () => {
+    if (!window.confirm(t('user.deleteConfirm', { name: user.name }))) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      await api.delete(`/users/${user.id}`);
+      onChanged();
+    } catch (e) {
+      setErr(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <tr>
       <td>{user.name}</td>
@@ -118,7 +151,17 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
         )}
       </td>
       <td>
-        <span className="tag">{user.status}</span>
+        <span
+          className={`badge badge-${
+            user.status === 'ACTIVE'
+              ? 'success'
+              : user.status === 'PENDING'
+                ? 'warning'
+                : 'danger'
+          }`}
+        >
+          {t(`user.statusLabel.${user.status}`)}
+        </span>
       </td>
       <td>{formatDate(user.createdAt)}</td>
       <td>
@@ -126,7 +169,7 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
           <>
             <button
               type="button"
-              className="btn small-btn"
+              className="btn btn-sm"
               disabled={busy}
               onClick={() => patch({ role, status: 'ACTIVE' })}
             >
@@ -134,7 +177,7 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
             </button>
             <button
               type="button"
-              className="btn small-btn"
+              className="btn btn-sm"
               disabled={busy}
               onClick={reject}
             >
@@ -145,7 +188,7 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
         {user.status === 'ACTIVE' && (
           <button
             type="button"
-            className="btn small-btn"
+            className="btn btn-sm"
             disabled={busy}
             onClick={() => patch({ status: 'DISABLED' })}
           >
@@ -155,13 +198,24 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
         {user.status === 'DISABLED' && (
           <button
             type="button"
-            className="btn small-btn"
+            className="btn btn-sm"
             disabled={busy}
             onClick={() => patch({ status: 'ACTIVE' })}
           >
             {t('user.enable')}
           </button>
         )}
+        {(user.status === 'ACTIVE' || user.status === 'DISABLED') &&
+          !isSelf && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={busy}
+              onClick={remove}
+            >
+              {t('user.delete')}
+            </button>
+          )}
         <ErrorText err={err} />
       </td>
     </tr>

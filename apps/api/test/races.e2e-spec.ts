@@ -150,6 +150,29 @@ describe('Races (e2e)', () => {
     expect(res.status).toBe(404);
   });
 
+  it('rejects an entry for a locked horse (400)', async () => {
+    // Create another horse that is locked
+    const lockedHorse = await api()
+      .post('/api/v1/horses')
+      .set(auth('manager'))
+      .send({ name: 'Locked Racer', ownerId: owner1Id });
+    const lockedHorseId = lockedHorse.body.id;
+
+    await prisma.horse.update({
+      where: { id: lockedHorseId },
+      data: { locked: true, lockReason: 'Injured tendon' },
+    });
+
+    const res = await api()
+      .post(`/api/v1/races/${raceId}/entries`)
+      .set(auth('manager'))
+      .send({ horseId: lockedHorseId });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain('bị khóa');
+
+    await prisma.horse.delete({ where: { id: lockedHorseId } });
+  });
+
   it('OWNER cannot add an entry (403)', async () => {
     const res = await api()
       .post(`/api/v1/races/${raceId}/entries`)

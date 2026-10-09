@@ -12,7 +12,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { HealthStatus, HorseStatus } from '@prisma/client';
+import { HealthStatus, HorseGender, HorseStatus } from '@prisma/client';
 
 export class CreateHorseDto {
   @IsString()
@@ -22,6 +22,10 @@ export class CreateHorseDto {
 
   @IsUUID()
   ownerId!: string;
+
+  @IsOptional()
+  @IsEnum(HorseGender)
+  gender?: HorseGender;
 
   @IsOptional()
   @IsString()
@@ -47,6 +51,10 @@ export class UpdateHorseDto {
   @IsOptional()
   @IsUUID()
   ownerId?: string;
+
+  @IsOptional()
+  @IsEnum(HorseGender)
+  gender?: HorseGender | null;
 
   // `null` clears the field; a string sets it.
   @IsOptional()

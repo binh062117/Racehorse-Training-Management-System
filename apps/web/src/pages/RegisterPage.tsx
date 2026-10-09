@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { Field } from '../components/Field';
 import { ErrorText } from '../components/ErrorText';
 import { OtpStep } from '../components/OtpStep';
+import { PasswordInput } from '../components/PasswordInput';
 
 export function RegisterPage() {
   const { t } = useTranslation();
@@ -71,9 +72,7 @@ export function RegisterPage() {
           />
         </Field>
         <Field label={t('auth.password')} hint={t('auth.passwordHint')}>
-          <input
-            className="input"
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required

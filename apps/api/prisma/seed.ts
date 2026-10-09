@@ -503,6 +503,158 @@ async function main(): Promise<void> {
   }
   console.log('Seeded treatment plan + medication for Midnight (Mild colic)');
 
+  // Flow 1 demo data: đủ dữ liệu phong phú cho các trang FE mới (lịch sử đua,
+  // danh sách giáo án, lịch tiêm phòng/tẩy giun, phả hệ ngựa thứ 2, thêm 1
+  // PENDING applicant) — phục vụ demo trực quan cho từng role.
+
+  // Thêm 1 giải đã diễn ra (có kết quả) để HorseRaceHistoryPage có KPI
+  // (số lần thi, podium, vị trí tốt nhất) thay vì toàn số 0.
+  let pastRace = await prisma.race.findFirst({ where: { name: 'Autumn Classic 2025' } });
+  if (!pastRace) {
+    pastRace = await prisma.race.create({
+      data: {
+        name: 'Autumn Classic 2025',
+        date: daysFromNow(-60),
+        venue: 'Phú Thọ Racecourse',
+        distance: 2000,
+        surface: 'dirt',
+        prizePool: 50_000_000,
+      },
+    });
+  }
+  const pastResults: { horseId: string | undefined; position: number; time: string }[] = [
+    { horseId: thunderboltId, position: 1, time: '2:04.10' },
+    { horseId: midnightId, position: 3, time: '2:07.55' },
+  ];
+  for (const r of pastResults) {
+    if (!r.horseId) continue;
+    const exists = await prisma.raceEntry.findUnique({
+      where: { raceId_horseId: { raceId: pastRace.id, horseId: r.horseId } },
+    });
+    if (exists) continue;
+    await prisma.raceEntry.create({
+      data: { raceId: pastRace.id, horseId: r.horseId, position: r.position, time: r.time },
+    });
+  }
+  console.log(`Seeded past race "${pastRace.name}" with results (Thunderbolt #1, Midnight #3)`);
+
+  // Thêm giáo án cho Midnight (còn hiệu lực) và Sea Breeze (đã kết thúc) để
+  // TrainingPlansPage có cả 2 trạng thái ACTIVE/COMPLETED (suy ra từ endDate
+  // ở frontend, model không có cột status riêng).
+  const extraPlanSpecs = [
+    {
+      horse: 'Midnight',
+      goal: 'Phục hồi sau chấn thương, tăng dần cường độ',
+      startDate: daysFromNow(-5),
+      endDate: daysFromNow(25),
+    },
+    {
+      horse: 'Sea Breeze',
+      goal: 'Giáo án nền tảng sức bền mùa trước',
+      startDate: daysFromNow(-90),
+      endDate: daysFromNow(-20),
+    },
+  ];
+  for (const spec of extraPlanSpecs) {
+    const horseId = horsesByName[spec.horse];
+    if (!horseId) continue;
+    const exists = await prisma.trainingPlan.findFirst({
+      where: { horseId, goal: spec.goal },
+    });
+    if (exists) continue;
+    await prisma.trainingPlan.create({
+      data: {
+        horseId,
+        trainerId,
+        goal: spec.goal,
+        startDate: spec.startDate,
+        endDate: spec.endDate,
+      },
+    });
+  }
+  console.log('Seeded 2 more training plans (Midnight active, Sea Breeze completed)');
+
+  // Thêm lịch tiêm phòng/tẩy giun đa dạng (careType, nhiều ngựa, nhiều
+  // trạng thái hạn) cho HealthSchedulePage.
+  const careSpecs: {
+    horse: string;
+    careType: 'VACCINATION' | 'DEWORMING';
+    vaccineName: string;
+    date: Date;
+    nextDueDate: Date | null;
+  }[] = [
+    {
+      horse: 'Thunderbolt',
+      careType: 'DEWORMING',
+      vaccineName: 'Ivermectin',
+      date: daysFromNow(-80),
+      nextDueDate: daysFromNow(10),
+    },
+    {
+      horse: 'Sea Breeze',
+      careType: 'VACCINATION',
+      vaccineName: 'Influenza',
+      date: daysFromNow(-300),
+      nextDueDate: daysFromNow(15),
+    },
+    {
+      horse: 'Sea Breeze',
+      careType: 'DEWORMING',
+      vaccineName: 'Fenbendazole',
+      date: daysFromNow(-95),
+      nextDueDate: daysFromNow(-5), // quá hạn — demo trạng thái cần chú ý
+    },
+    {
+      horse: 'Midnight',
+      careType: 'VACCINATION',
+      vaccineName: 'Tetanus',
+      date: daysFromNow(-10),
+      nextDueDate: daysFromNow(355), // còn xa — không rơi vào "upcoming"
+    },
+  ];
+  for (const spec of careSpecs) {
+    const horseId = horsesByName[spec.horse];
+    if (!horseId) continue;
+    const exists = await prisma.vaccination.findFirst({
+      where: { horseId, vaccineName: spec.vaccineName, careType: spec.careType },
+    });
+    if (exists) continue;
+    await prisma.vaccination.create({
+      data: {
+        horseId,
+        careType: spec.careType,
+        vaccineName: spec.vaccineName,
+        date: spec.date,
+        nextDueDate: spec.nextDueDate,
+      },
+    });
+  }
+  console.log('Seeded 4 more vaccination/deworming records across Thunderbolt/Sea Breeze/Midnight');
+
+  // Phả hệ cho ngựa thứ 2 (Sea Breeze) — HorsePedigreePage không chỉ có
+  // đúng 1 ví dụ (Thunderbolt).
+  if (seaBreezeId && ancestorsByName['Northern Star']) {
+    await prisma.horse.update({
+      where: { id: seaBreezeId },
+      data: { sireId: ancestorsByName['Northern Star'] },
+    });
+  }
+  console.log('Seeded pedigree: Sea Breeze ← Northern Star (sire)');
+
+  // Thêm 1 PENDING applicant nữa để demo duyệt/từ chối hàng loạt.
+  await prisma.user.upsert({
+    where: { email: 'newbie2@racehorse.local' },
+    update: {},
+    create: {
+      name: 'Newbie Applicant 2',
+      email: 'newbie2@racehorse.local',
+      passwordHash: await bcrypt.hash('Newbie123!', 10),
+      status: UserStatus.PENDING,
+      emailVerifiedAt: new Date(),
+    },
+  });
+  console.log('Seeded 2nd PENDING user: newbie2@racehorse.local / Newbie123!');
+
   console.log('\nDemo accounts (all password "<Role>123!"):');
   console.log('  manager@racehorse.local  / Manager123!  (MANAGER)');
   console.log('  trainer@racehorse.local  / Trainer123!  (TRAINER)');

@@ -1,0 +1,139 @@
+/* Inherit the merged application's tokens, typography and shared controls. */
+.pedigree {
+  min-width: 0;
+  container: pedigree / inline-size;
+  overflow-wrap: anywhere;
+}
+.pedigree .pedigree-heading {
+  justify-content: space-between;
+}
+.pedigree .pedigree-heading h2,
+.pedigree p {
+  margin: 0;
+}
+/* Semantic lists preserve root -> sire branch -> dam branch reading order. */
+.pedigree .pedigree-tree,
+.pedigree .pedigree-generation {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.pedigree .pedigree-branch {
+  min-width: 0;
+}
+.pedigree .pedigree-node {
+  padding: 12px 14px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  text-align: center;
+}
+.pedigree .pedigree-node-label,
+.pedigree .pedigree-node-fitness dt {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.pedigree .pedigree-node-name {
+  display: block;
+  margin-top: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.pedigree .pedigree-node-fitness {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 8px 0 0;
+}
+.pedigree .pedigree-node-fitness dd {
+  margin: 0;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.pedigree .pedigree-generation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.pedigree .pedigree-level-3 > .pedigree-node {
+  width: 50%;
+  margin-inline: auto;
+  border-color: var(--brand-navy);
+  background: var(--surface-subtle);
+}
+.pedigree .pedigree-level-3 > .pedigree-node .pedigree-node-name {
+  font-size: 15px;
+  color: var(--brand-navy);
+}
+.pedigree .pedigree-level-2 > .pedigree-node {
+  border-color: var(--border-strong);
+}
+.pedigree .pedigree-level-1 > .pedigree-node .pedigree-node-name {
+  font-weight: 500;
+}
+.pedigree .pedigree-node.pedigree-node-unknown {
+  background: var(--surface-subtle);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+.pedigree .pedigree-generation > .pedigree-branch {
+  position: relative;
+}
+.pedigree .pedigree-generation > .pedigree-branch::before {
+  content: '';
+  position: absolute;
+  height: 24px;
+  border-inline-start: 1px solid var(--border-default);
+  bottom: 100%;
+  left: 50%;
+}
+.pedigree .pedigree-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+}
+.pedigree .pedigree-editor > :not(.field) {
+  grid-column: 1 / -1;
+}
+.pedigree .pedigree-editor h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.pedigree .pedigree-editor .field {
+  min-width: 0;
+  margin: 0;
+}
+.pedigree .pedigree-editor .input {
+  min-width: 0;
+  background: var(--surface-card);
+}
+/* Respond to panel width, including tablets with the application sidebar. */
+@container pedigree (max-width: 600px) {
+  .pedigree .pedigree-generation {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline-start: 16px;
+    border-inline-start: 1px solid var(--border-default);
+    margin-top: 16px;
+  }
+  .pedigree .pedigree-level-3 > .pedigree-node {
+    width: 100%;
+  }
+  .pedigree .pedigree-node {
+    text-align: start;
+  }
+  .pedigree .pedigree-node-fitness {
+    justify-content: start;
+  }
+  .pedigree .pedigree-generation > .pedigree-branch::before {
+    content: none;
+  }
+  .pedigree .pedigree-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

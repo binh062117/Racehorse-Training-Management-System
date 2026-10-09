@@ -8,6 +8,7 @@ import { Field } from '../components/Field';
 import { ErrorText } from '../components/ErrorText';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { OtpStep } from '../components/OtpStep';
+import { PasswordInput } from '../components/PasswordInput';
 
 interface LocationState {
   from?: { pathname: string };
@@ -58,7 +59,7 @@ export function LoginPage() {
         <p className="muted">
           <button
             type="button"
-            className="btn small-btn"
+            className="btn btn-sm"
             onClick={() => {
               setGoogleOtpEmail(null);
               setGoogleOtpDone(false);
@@ -111,9 +112,7 @@ export function LoginPage() {
           />
         </Field>
         <Field label={t('auth.password')}>
-          <input
-            className="input"
-            type="password"
+          <PasswordInput
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

@@ -108,6 +108,23 @@ describe('Horses (e2e)', () => {
     createdHorseIds.push(horseId);
   });
 
+  it('MANAGER creates a horse with gender and can update it (201/200)', async () => {
+    const res = await api()
+      .post('/api/v1/horses')
+      .set(auth(managerToken))
+      .send({ name: 'E2E Mare', gender: 'FEMALE', ownerId: owner1Id });
+    expect(res.status).toBe(201);
+    expect(res.body.gender).toBe('FEMALE');
+    createdHorseIds.push(res.body.id as string);
+
+    const patch = await api()
+      .patch(`/api/v1/horses/${res.body.id}`)
+      .set(auth(managerToken))
+      .send({ gender: 'MALE' });
+    expect(patch.status).toBe(200);
+    expect(patch.body.gender).toBe('MALE');
+  });
+
   it('rejects ownerId that is not an OWNER (400)', async () => {
     const res = await api()
       .post('/api/v1/horses')
@@ -203,6 +220,12 @@ describe('Horses (e2e)', () => {
 
     it('owner of the horse can fetch the photo (200)', async () => {
       const res = await api().get(photoUrl).set(auth(owner1Token));
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('image/png');
+    });
+
+    it('owner of the horse can fetch the photo via query token (200)', async () => {
+      const res = await api().get(`${photoUrl}?token=${owner1Token}`);
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toContain('image/png');
     });

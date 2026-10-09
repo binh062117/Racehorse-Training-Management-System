@@ -2,8 +2,55 @@
   "app": {
     "title": "Racehorse Training & Management"
   },
+  "nav": {
+    "dashboard": "Dashboard",
+    "horses": "Horses",
+    "horsesOwner": "My Horses",
+    "horsesVet": "Herd Health Map",
+    "horsesGroom": "Stables & Feed",
+    "plans": "Training Plans",
+    "plansTrainer": "Training Plans",
+    "races": "Races",
+    "racesTooltip": "Race Management",
+    "comingSoon": "Coming soon",
+    "vaccinations": "Vaccinations & Deworming",
+    "healthRecords": "Health Records",
+    "incidents": "Health Incidents",
+    "incidentsGroom": "Incident Reports",
+    "incidentsTooltip": "Health & Incidents",
+    "notifications": "Notifications",
+    "users": "Users",
+    "rbac": "Access Control (RBAC)",
+    "admin": "System Admin",
+    "menu": "Menu",
+    "brandName": "Racehorse Club",
+    "brandSystem": "Racehorse System",
+    "loggedInAs": "Logged in as",
+    "roleLabel": "Role",
+    "noRole": "No role assigned",
+    "logout": "Log out",
+    "logoutConfirm": "Are you sure you want to log out?"
+  },
   "dashboard": {
-    "subtitle": "Club operations",
+    "title": "System Overview Dashboard",
+    "welcome": "Welcome back,",
+    "subtitle": "Monitor your racehorse fleet and daily training progress.",
+    "kpi": {
+      "totalHorses": "Total Horses",
+      "lockedHorses": "Training Locked",
+      "activeHorses": "Ready to Train",
+      "pendingUsers": "Pending Users"
+    },
+    "recentHorses": "Recent Racehorses",
+    "viewAll": "View all",
+    "quickActions": "Quick Actions",
+    "newHorse": "New Horse Profile",
+    "manageUsers": "Review Members",
+    "viewRecords": "Browse Records",
+    "systemAlerts": "Alerts & Status",
+    "noAlerts": "All racehorses are safe and operating under normal training conditions.",
+    "recentNotifs": "Recent Notifications",
+    "noNotifs": "No notifications yet.",
     "navigation": "Primary navigation",
     "overview": "Overview",
     "signedInAs": "Signed in as",
@@ -21,11 +68,6 @@
     "scheduled": "Scheduled",
     "healthTitle": "Health watch",
     "noHealthAlerts": "No horses need health follow-up."
-  },
-  "nav": {
-    "horses": "Horses",
-    "users": "Users",
-    "logout": "Log out"
   },
   "auth": {
     "login": "Log in",
@@ -59,12 +101,26 @@
   },
   "horse": {
     "name": "Name",
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderUnknown": "Unknown",
     "breed": "Breed",
     "birthDate": "Birth date",
     "owner": "Owner",
     "status": "Status",
     "empty": "No horses yet.",
     "new": "New horse"
+  },
+  "horseStatusBadge": {
+    "ACTIVE": "● Active",
+    "RESTING": "● Resting",
+    "RETIRED": "● Retired",
+    "FIT": "Fit",
+    "MONITORING": "Needs monitoring",
+    "QUARANTINED": "Quarantined",
+    "INJURED": "Injured",
+    "locked": "🔒 Training locked"
   },
   "horseFlow": {
     "directoryEyebrow": "CLUB REGISTRY",
@@ -74,7 +130,11 @@
     "filters": "Horse filters",
     "searchPlaceholder": "Search horse name",
     "allStatuses": "All statuses",
-    "status": { "ACTIVE": "In training", "RESTING": "Resting", "RETIRED": "Retired" },
+    "status": {
+      "ACTIVE": "In training",
+      "RESTING": "Resting",
+      "RETIRED": "Retired"
+    },
     "horsesFound": "horses",
     "loading": "Loading horse records...",
     "noHorsesDescription": "Try changing the filters or add a horse record.",
@@ -89,7 +149,12 @@
     "profileSummary": "Horse status summary",
     "fitnessScore": "Fitness score",
     "healthCondition": "Health condition",
-    "health": { "FIT": "Fit", "MONITORING": "Monitoring", "QUARANTINED": "Quarantined", "INJURED": "Injured" },
+    "health": {
+      "FIT": "Fit",
+      "MONITORING": "Monitoring",
+      "QUARANTINED": "Quarantined",
+      "INJURED": "Injured"
+    },
     "trainingLock": "Training lock",
     "locked": "Locked",
     "unlocked": "Unlocked",
@@ -150,11 +215,26 @@
     "transferHistoryExplanation": "The system currently stores only the horse's current owner; the API does not record ownership transfers or their dates. This view does not present inferred history."
   },
   "tab": {
+    "pedigree": "Pedigree",
     "sessions": "Sessions",
     "health": "Health"
   },
+  "pedigree": {
+    "horse": "Current horse",
+    "sire": "Sire",
+    "dam": "Dam",
+    "fitnessScore": "Fitness score",
+    "unknown": "Unknown",
+    "edit": "Edit pedigree",
+    "loading": "Loading pedigree…",
+    "retry": "Try again",
+    "saved": "Parent relationships saved.",
+    "clearHint": "Choose Unknown to clear this parent.",
+    "sameParent": "Sire and dam must be different horses.",
+    "unavailableParent": "Unavailable parent ({{id}}) — clear or replace"
+  },
   "session": {
-    "new": "New session",
+    "new": "Schedule training",
     "scheduledAt": "Scheduled at",
     "type": "Type",
     "notes": "Notes",
@@ -163,7 +243,31 @@
     "status": "Status",
     "resultMetric": "Result metric",
     "resultValue": "Result value",
-    "keepPlanned": "Keep planned"
+    "keepPlanned": "Keep planned",
+    "plan": "Training plan (optional)",
+    "noPlan": "No training plan",
+    "loadingPlans": "Loading training plans…",
+    "planLoadFailed": "Plans could not be loaded. Retry, or schedule without a plan.",
+    "retry": "Try again",
+    "saved": "Training session scheduled.",
+    "invalidDate": "Enter a valid date and time.",
+    "invalidFields": "Enter a training type (1–80 characters) and notes of at most 2,000 characters.",
+    "localTime": "Enter time in your device timezone ({{zone}}).",
+    "displayTime": "Session times are displayed in Vietnam time (Asia/Ho_Chi_Minh).",
+    "loading": "Loading sessions…",
+    "locked": "Training is locked. New sessions cannot be scheduled until the veterinarian unlocks this horse.",
+    "heading": "Training sessions",
+    "openSchedule": "Schedule a session",
+    "schedule": "Schedule",
+    "closeSchedule": "Close scheduling",
+    "planSummary": "Training plan",
+    "planUnavailable": "Attached plan unavailable",
+    "trainer": "Trainer",
+    "displayStatus": {
+      "PLANNED": "Scheduled",
+      "DONE": "Completed",
+      "CANCELLED": "Cancelled"
+    }
   },
   "health": {
     "new": "New health record",
@@ -210,7 +314,16 @@
     "reject": "Reject",
     "rejectConfirm": "Reject this registration? The account will be permanently deleted — this person must register again (including via Google) if they still want an account.",
     "disable": "Disable",
-    "enable": "Enable"
+    "enable": "Enable",
+    "delete": "Delete",
+    "deleteConfirm": "Delete \"{{name}}\" from the system? The account will be disabled and removed from the list (this cannot be undone).",
+    "statusLabel": {
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "DISABLED": "Disabled"
+    },
+    "empty": "No users yet.",
+    "loading": "Loading users…"
   },
   "error": {
     "VALIDATION_ERROR": "Invalid data",
