@@ -19,6 +19,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { TrainingPlansPage } from './pages/TrainingPlansPage';
 import { HealthSchedulePage } from './pages/HealthSchedulePage';
 import { HealthRecordsPage } from './pages/HealthRecordsPage';
+import { IncidentsPage } from './pages/IncidentsPage';
 import {
   HorseFormPage,
   HorseOwnershipPage,
@@ -53,6 +54,14 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['VET']}>
             <HealthRecordsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/incidents',
+        element: (
+          <RequireAuth roles={['MANAGER', 'TRAINER', 'VET', 'GROOM']}>
+            <IncidentsPage />
           </RequireAuth>
         ),
       },

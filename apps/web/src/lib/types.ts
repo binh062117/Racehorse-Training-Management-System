@@ -139,6 +139,25 @@ export interface HealthRecord {
   createdAt: string;
 }
 
+export type IncidentSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
+export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+
+export interface Incident {
+  id: string;
+  horseId: string;
+  horse: { id: string; name: string; ownerId: string };
+  reportedById: string;
+  reportedBy: UserRef;
+  description: string;
+  severity: IncidentSeverity;
+  status: IncidentStatus;
+  healthRecordId: string | null;
+  photoPath: string | null;
+  photoUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Notification {
   id: string;
   userId: string;
