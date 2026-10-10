@@ -26,7 +26,7 @@ export function NotificationsPage() {
     () =>
       api
         .get<Paginated<Notification>>('/notifications', {
-          params: { page, limit: PAGE_SIZE },
+          params: { type: 'AI_RISK_ALERT', page, limit: PAGE_SIZE },
         })
         .then((response) => response.data),
   );

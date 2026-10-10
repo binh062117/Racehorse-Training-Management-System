@@ -43,7 +43,9 @@ export function DashboardPage() {
     'dashboard:notifications',
     () =>
       api
-        .get<Paginated<Notification>>('/notifications', { params: { limit: 5 } })
+        .get<Paginated<Notification>>('/notifications', {
+          params: { type: 'AI_RISK_ALERT', limit: 5 },
+        })
         .then((r) => r.data.data ?? [])
         .catch(() => []),
   );

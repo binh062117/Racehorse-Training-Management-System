@@ -22,9 +22,11 @@ export function NotificationBell() {
   const load = useCallback(async () => {
     try {
       const [recentRes, unreadRes] = await Promise.all([
-        api.get<Paginated<Notification>>('/notifications', { params: { limit: 8 } }),
         api.get<Paginated<Notification>>('/notifications', {
-          params: { unread: true, limit: 1 },
+          params: { type: 'AI_RISK_ALERT', limit: 8 },
+        }),
+        api.get<Paginated<Notification>>('/notifications', {
+          params: { type: 'AI_RISK_ALERT', unread: true, limit: 1 },
         }),
       ]);
       setItems(recentRes.data.data);
