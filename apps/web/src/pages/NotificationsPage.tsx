@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { ErrorText } from '../components/ErrorText';
@@ -48,6 +48,22 @@ export function NotificationsPage() {
     }
   };
 
+  const remove = async (notification: Notification, event: MouseEvent) => {
+    event.stopPropagation();
+    if (updatingId) return;
+    setUpdatingId(notification.id);
+    setActionError(null);
+    try {
+      await api.delete(`/notifications/${notification.id}`);
+      window.dispatchEvent(new Event('notifications:changed'));
+      await reload();
+    } catch (reason) {
+      setActionError(reason);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
@@ -70,11 +86,14 @@ export function NotificationsPage() {
         <div className="stack">
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             {notifications.map((notification) => (
-              <button
+              <div
                 key={notification.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => void markRead(notification)}
-                disabled={notification.read || updatingId !== null}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') void markRead(notification);
+                }}
                 aria-label={notification.read
                   ? t('notificationsPage.read')
                   : t('notificationsPage.markRead')}
@@ -92,14 +111,25 @@ export function NotificationsPage() {
               >
                 <span style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <strong>{notification.message}</strong>
-                  {!notification.read && (
-                    <span className="badge badge-warning">{t('notificationsPage.unread')}</span>
-                  )}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {!notification.read && (
+                      <span className="badge badge-warning">{t('notificationsPage.unread')}</span>
+                    )}
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      style={{ color: 'var(--status-danger)' }}
+                      disabled={updatingId !== null}
+                      onClick={(e) => void remove(notification, e)}
+                    >
+                      Xoá
+                    </button>
+                  </span>
                 </span>
                 <span className="muted small" style={{ display: 'block', marginTop: 5 }}>
                   {formatDateTime(notification.createdAt)}
                 </span>
-              </button>
+              </div>
             ))}
           </div>
 

@@ -87,4 +87,23 @@ export class NotificationsService {
       data: { read: true },
     });
   }
+
+  async remove(
+    id: string,
+    currentUser: AuthUser,
+  ): Promise<{ message: string }> {
+    const existing = await this.prisma.notification.findUnique({
+      where: { id },
+    });
+    if (!existing)
+      throw new AppException('NOT_FOUND', 'Notification not found');
+    if (existing.userId !== currentUser.id) {
+      throw new AppException(
+        'FORBIDDEN',
+        'This notification belongs to another user',
+      );
+    }
+    await this.prisma.notification.delete({ where: { id } });
+    return { message: 'Notification deleted' };
+  }
 }
