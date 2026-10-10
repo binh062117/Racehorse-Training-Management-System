@@ -4,17 +4,25 @@ import type { FeedingRecord, Horse, Paginated } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { Field } from '../../components/Field';
 import { ErrorText } from '../../components/ErrorText';
+import { FeedingSuggestionCard } from '../../components/horse/FeedingSuggestionCard';
 import { PlusIcon } from '../../components/Icons';
 import { formatDate } from '../../lib/format';
+
+interface FormPrefill {
+  feedType: string;
+  quantityKg: string;
+}
 
 export function FeedingTab({ horse }: { horse: Horse }) {
   const { user } = useAuth();
   const isGroom = user?.role === 'GROOM';
+  const canSuggest = isGroom || user?.role === 'VET' || user?.role === 'MANAGER';
 
   const [records, setRecords] = useState<FeedingRecord[]>([]);
   const [err, setErr] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [prefill, setPrefill] = useState<FormPrefill | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -50,7 +58,10 @@ export function FeedingTab({ horse }: { horse: Horse }) {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => setShowForm((s) => !s)}
+            onClick={() => {
+              setPrefill(null);
+              setShowForm((s) => !s);
+            }}
           >
             <PlusIcon style={{ marginRight: 6 }} />
             {showForm ? 'Đóng' : 'Ghi nhận khẩu phần'}
@@ -58,11 +69,28 @@ export function FeedingTab({ horse }: { horse: Horse }) {
         )}
       </div>
 
+      {canSuggest && (
+        <FeedingSuggestionCard
+          horseId={horse.id}
+          onApply={
+            isGroom
+              ? (f) => {
+                  setPrefill({ feedType: f.feedType, quantityKg: String(f.quantityKg) });
+                  setShowForm(true);
+                }
+              : undefined
+          }
+        />
+      )}
+
       {showForm && (
         <CreateFeedingForm
+          key={prefill ? `${prefill.feedType}:${prefill.quantityKg}` : 'blank'}
           horseId={horse.id}
+          initial={prefill}
           onCreated={() => {
             setShowForm(false);
+            setPrefill(null);
             void load();
           }}
         />
@@ -108,13 +136,15 @@ export function FeedingTab({ horse }: { horse: Horse }) {
 
 function CreateFeedingForm({
   horseId,
+  initial,
   onCreated,
 }: {
   horseId: string;
+  initial: FormPrefill | null;
   onCreated: () => void;
 }) {
-  const [feedType, setFeedType] = useState('');
-  const [quantityKg, setQuantityKg] = useState('');
+  const [feedType, setFeedType] = useState(initial?.feedType ?? '');
+  const [quantityKg, setQuantityKg] = useState(initial?.quantityKg ?? '');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<unknown>(null);

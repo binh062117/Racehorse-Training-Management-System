@@ -65,6 +65,13 @@ export class HorsesController {
     return this.horses.aiInsight(id);
   }
 
+  @Post(':id/feeding-suggestion')
+  @Roles(Role.VET, Role.MANAGER, Role.GROOM)
+  @UseGuards(HorseOwnershipGuard)
+  feedingSuggestion(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horses.feedingSuggestion(id);
+  }
+
   @Patch(':id')
   @Roles(Role.MANAGER)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateHorseDto) {

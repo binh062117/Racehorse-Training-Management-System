@@ -3,7 +3,11 @@ import { Horse, NotificationType, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileStorageService } from '../files/file-storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { AiService, HorseInsightResult } from '../ai/ai.service';
+import {
+  AiService,
+  FeedingSuggestionResult,
+  HorseInsightResult,
+} from '../ai/ai.service';
 import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import {
@@ -400,6 +404,18 @@ export class HorsesService {
     const input = await this.gatherInsightInput(id);
     if (!input) throw new AppException('NOT_FOUND', 'Horse not found');
     return this.ai.analyzeHorse(input);
+  }
+
+  /**
+   * AI-generated feeding plan suggestion (VET/MANAGER/GROOM — GROOM is who
+   * actually feeds the horse). Reuses the same gathered data as aiInsight
+   * (feeding history + training intensity + health) so the suggestion stays
+   * continuous with what the horse is already eating.
+   */
+  async feedingSuggestion(id: string): Promise<FeedingSuggestionResult> {
+    const input = await this.gatherInsightInput(id);
+    if (!input) throw new AppException('NOT_FOUND', 'Horse not found');
+    return this.ai.suggestFeedingPlan(input);
   }
 
   /**
