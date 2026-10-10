@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -29,5 +30,13 @@ export class NotificationsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.notifications.markRead(id, user);
+  }
+
+  @Delete(':id')
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.notifications.remove(id, user);
   }
 }

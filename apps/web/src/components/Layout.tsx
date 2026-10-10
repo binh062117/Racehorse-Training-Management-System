@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { setLanguage } from '../i18n';
 import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
-import type { Paginated, Notification, User, Role } from '../lib/types';
+import type { User, Role } from '../lib/types';
+import { NotificationBell } from './NotificationBell';
 import {
   DashboardIcon,
   HorseIcon,
   PlanIcon,
   RaceIcon,
   HealthIcon,
-  BellIcon,
   UserIcon,
 } from './Icons';
 
@@ -21,7 +21,6 @@ export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [pendingUsersCount, setPendingUsersCount] = useState<number>(0);
 
   const role: Role | null = user?.role ?? null;
@@ -33,40 +32,22 @@ export function Layout() {
   };
 
   useEffect(() => {
+    if (user?.role !== 'MANAGER') return;
     let mounted = true;
-    const fetchCounts = async () => {
+    const fetchPending = async () => {
       try {
-        const notifRes = await api.get<Paginated<Notification>>('/notifications', {
-          params: { unread: true, limit: 1 },
-        });
-        if (mounted && notifRes.data?.meta) {
-          setUnreadCount(notifRes.data.meta.total);
+        const userRes = await api.get<User[]>('/users');
+        if (mounted && userRes.data) {
+          const pending = userRes.data.filter((u) => u.status === 'PENDING').length;
+          setPendingUsersCount(pending);
         }
       } catch {
-        // silently ignore error if notifications fail to fetch
-      }
-
-      if (user?.role === 'MANAGER') {
-        try {
-          const userRes = await api.get<User[]>('/users');
-          if (mounted && userRes.data) {
-            const pending = userRes.data.filter((u) => u.status === 'PENDING').length;
-            setPendingUsersCount(pending);
-          }
-        } catch {
-          // silently ignore
-        }
+        // silently ignore
       }
     };
-
-    fetchCounts();
-    const refreshNotificationCount = () => {
-      void fetchCounts();
-    };
-    window.addEventListener('notifications:changed', refreshNotificationCount);
+    void fetchPending();
     return () => {
       mounted = false;
-      window.removeEventListener('notifications:changed', refreshNotificationCount);
     };
   }, [user?.role, location.pathname]);
 
@@ -198,16 +179,6 @@ export function Layout() {
             </NavLink>
           )}
 
-          {/* Notifications: All roles */}
-          <NavLink
-            to="/notifications"
-            className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-          >
-            <span className="ico"><BellIcon /></span>
-            <span>{t('nav.notifications')}</span>
-            {unreadCount > 0 && <span className="count">{unreadCount}</span>}
-          </NavLink>
-
           {/* User Management & RBAC: MANAGER only */}
           {role === 'MANAGER' && (
             <>
@@ -263,6 +234,8 @@ export function Layout() {
                 EN
               </button>
             </div>
+
+            <NotificationBell />
 
             {user && (
               <div className="user-badge">
