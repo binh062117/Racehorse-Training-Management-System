@@ -56,6 +56,7 @@ export class NotificationsService {
     const where: Prisma.NotificationWhereInput = { userId: currentUser.id };
     // unread=true -> only unread; unread=false -> only read; omitted -> all.
     if (q.unread !== undefined) where.read = !q.unread;
+    if (q.type !== undefined) where.type = q.type;
 
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.notification.findMany({
