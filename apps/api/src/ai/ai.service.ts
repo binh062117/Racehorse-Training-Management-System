@@ -47,6 +47,12 @@ export interface HorseInsightInput {
     position: number | null;
     time: string | null;
   }[];
+  feedingRecords: {
+    date: Date;
+    feedType: string;
+    quantityKg: number;
+    notes: string | null;
+  }[];
 }
 
 export interface HorseInsightResult {
@@ -72,6 +78,12 @@ GIẢI THÍCH DỮ LIỆU:
 - fitnessScore: điểm thể trạng 0-100, null nghĩa là chưa đánh giá.
 - locked = true nghĩa là bác sĩ thú y đang khóa, cấm con ngựa tập luyện.
 - position trong kết quả đua: thứ hạng về đích (1 = nhất), null nghĩa là chưa có kết quả (đua chưa diễn ra hoặc chưa cập nhật). Phong độ đi xuống rõ rệt (thứ hạng tụt dần qua các giải gần đây) có thể là dấu hiệu sớm của vấn đề sức khỏe, hãy cân nhắc khi đánh giá rủi ro.
+- quantityKg trong khẩu phần ăn: khối lượng thức ăn (kg) cho 1 lần ghi nhận trong ngày đó, không phải tổng cả ngày.
+
+PHÂN TÍCH CƯỜNG ĐỘ TẬP LUYỆN & DINH DƯỠNG (quan trọng, không chỉ dừng ở bệnh lý):
+- Nhìn vào mật độ buổi tập DONE trong "Lịch sử buổi tập gần đây" (số buổi/tuần, khoảng cách giữa các buổi) để đánh giá cường độ hiện tại có đang tăng đột ngột, quá dày không có ngày nghỉ, hay hợp lý.
+- Đối chiếu cường độ tập với khẩu phần ăn ("Khẩu phần ăn gần đây"): nếu tần suất/cường độ tập tăng nhưng khẩu phần không tăng tương ứng (hoặc ngược lại, ăn nhiều nhưng ít vận động), đó là một yếu tố rủi ro cần nêu rõ trong riskReasons.
+- Nếu dữ liệu buổi tập hoặc khẩu phần ăn quá ít/không có, ghi rõ trong summary là "chưa đủ dữ liệu để đánh giá cường độ/dinh dưỡng" thay vì suy đoán.
 
 ĐẦU RA: luôn trả lời bằng tiếng Việt, dưới dạng JSON với đúng các khóa: summary (chuỗi, 2-4 câu), riskLevel ("LOW" | "MEDIUM" | "HIGH"), riskReasons (mảng chuỗi, tối đa 4 mục, chỉ nêu lý do có cơ sở từ dữ liệu), recommendations (mảng chuỗi, tối đa 4 mục, gợi ý hành động cụ thể và thực tế). Đây chỉ là gợi ý tham khảo, không thay thế chẩn đoán của bác sĩ thú y.`;
 
@@ -155,6 +167,14 @@ export class AiService implements OnModuleInit {
     for (const r of input.raceEntries) {
       lines.push(
         `- ${this.fmtDate(r.raceDate)}: giải "${r.raceName}"${r.distance ? ` (${r.distance}m)` : ''} — về vị trí ${r.position ?? 'chưa có kết quả'}${r.time ? `, thời gian ${r.time}` : ''}`,
+      );
+    }
+
+    lines.push('\nKhẩu phần ăn gần đây:');
+    if (input.feedingRecords.length === 0) lines.push('- (không có)');
+    for (const f of input.feedingRecords) {
+      lines.push(
+        `- ${this.fmtDate(f.date)}: ${f.feedType}, ${f.quantityKg}kg${f.notes ? ` — ghi chú: "${f.notes}"` : ''}`,
       );
     }
 

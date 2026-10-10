@@ -313,54 +313,66 @@ export class HorsesService {
     });
     if (!horse) return null;
 
-    const [healthRecords, incidents, vaccinations, sessions, raceEntries] =
-      await this.prisma.$transaction([
-        this.prisma.healthRecord.findMany({
-          where: { horseId: id },
-          select: { examDate: true, diagnosis: true, treatment: true },
-          orderBy: { examDate: 'desc' },
-          take: 10,
-        }),
-        this.prisma.incidentReport.findMany({
-          where: { horseId: id },
-          select: {
-            createdAt: true,
-            description: true,
-            severity: true,
-            status: true,
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        }),
-        this.prisma.vaccination.findMany({
-          where: { horseId: id },
-          select: { date: true, vaccineName: true, nextDueDate: true },
-          orderBy: { date: 'desc' },
-          take: 10,
-        }),
-        this.prisma.trainingSession.findMany({
-          where: { horseId: id },
-          select: {
-            scheduledAt: true,
-            type: true,
-            status: true,
-            resultMetric: true,
-            resultValue: true,
-          },
-          orderBy: { scheduledAt: 'desc' },
-          take: 15,
-        }),
-        this.prisma.raceEntry.findMany({
-          where: { horseId: id },
-          select: {
-            position: true,
-            time: true,
-            race: { select: { name: true, date: true, distance: true } },
-          },
-          orderBy: { race: { date: 'desc' } },
-          take: 10,
-        }),
-      ]);
+    const [
+      healthRecords,
+      incidents,
+      vaccinations,
+      sessions,
+      raceEntries,
+      feedingRecords,
+    ] = await this.prisma.$transaction([
+      this.prisma.healthRecord.findMany({
+        where: { horseId: id },
+        select: { examDate: true, diagnosis: true, treatment: true },
+        orderBy: { examDate: 'desc' },
+        take: 10,
+      }),
+      this.prisma.incidentReport.findMany({
+        where: { horseId: id },
+        select: {
+          createdAt: true,
+          description: true,
+          severity: true,
+          status: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+      this.prisma.vaccination.findMany({
+        where: { horseId: id },
+        select: { date: true, vaccineName: true, nextDueDate: true },
+        orderBy: { date: 'desc' },
+        take: 10,
+      }),
+      this.prisma.trainingSession.findMany({
+        where: { horseId: id },
+        select: {
+          scheduledAt: true,
+          type: true,
+          status: true,
+          resultMetric: true,
+          resultValue: true,
+        },
+        orderBy: { scheduledAt: 'desc' },
+        take: 15,
+      }),
+      this.prisma.raceEntry.findMany({
+        where: { horseId: id },
+        select: {
+          position: true,
+          time: true,
+          race: { select: { name: true, date: true, distance: true } },
+        },
+        orderBy: { race: { date: 'desc' } },
+        take: 10,
+      }),
+      this.prisma.feedingRecord.findMany({
+        where: { horseId: id },
+        select: { date: true, feedType: true, quantityKg: true, notes: true },
+        orderBy: { date: 'desc' },
+        take: 15,
+      }),
+    ]);
 
     return {
       horse,
@@ -375,6 +387,7 @@ export class HorsesService {
         position: r.position,
         time: r.time,
       })),
+      feedingRecords,
     };
   }
 

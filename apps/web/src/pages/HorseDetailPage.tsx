@@ -8,6 +8,7 @@ import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
 import { SessionsTab } from './horse/SessionsTab';
 import { HealthTab } from './horse/HealthTab';
+import { FeedingTab } from './horse/FeedingTab';
 import { PlansTab } from './horse/PlansTab';
 import { HorseStatusBadge } from '../components/horse/HorseStatusBadge';
 import { EditHorseModal } from '../components/horse/EditHorseModal';
@@ -17,7 +18,7 @@ import { CameraIcon, LockIcon, UnlockIcon, EditIcon, TrashIcon } from '../compon
 import { PedigreeTab } from './horse/PedigreeTab';
 import { HorseRecordNav } from './horse/HorseRecordNav';
 
-type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'health';
+type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'health' | 'feeding';
 
 function calculateAge(birthDate: string | null): string {
   if (!birthDate) return '—';
@@ -53,7 +54,8 @@ export function HorseDetailPage() {
     rawTab === 'pedigree' ||
     rawTab === 'plans' ||
     rawTab === 'sessions' ||
-    rawTab === 'health'
+    rawTab === 'health' ||
+    rawTab === 'feeding'
       ? rawTab
       : 'profile';
 
@@ -283,6 +285,13 @@ export function HorseDetailPage() {
         >
           Hồ sơ y tế
         </button>
+        <button
+          type="button"
+          className={tab === 'feeding' ? 'tab active' : 'tab'}
+          onClick={() => setTab('feeding')}
+        >
+          Khẩu phần ăn
+        </button>
       </div>
 
       {/* Tab Contents — mỗi tab chỉ mount sau khi đã ghé qua ít nhất 1 lần
@@ -364,6 +373,11 @@ export function HorseDetailPage() {
       {visitedTabs.has('health') && (
         <div hidden={tab !== 'health'}>
           <HealthTab horse={horse} />
+        </div>
+      )}
+      {visitedTabs.has('feeding') && (
+        <div hidden={tab !== 'feeding'}>
+          <FeedingTab horse={horse} />
         </div>
       )}
 
