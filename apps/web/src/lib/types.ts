@@ -143,6 +143,18 @@ export interface HealthRecord {
   createdAt: string;
 }
 
+export interface FeedingRecord {
+  id: string;
+  horseId: string;
+  recordedById: string;
+  recordedBy: UserRef;
+  date: string;
+  feedType: string;
+  quantityKg: number;
+  notes: string | null;
+  createdAt: string;
+}
+
 export type IncidentSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
 

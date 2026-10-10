@@ -1,5 +1,13 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
+import { NotificationType } from '@prisma/client';
 
 export class ListNotificationsQueryDto {
   // Query strings are always strings — "false" would coerce truthy with a
@@ -10,6 +18,10 @@ export class ListNotificationsQueryDto {
   )
   @IsBoolean()
   unread?: boolean;
+
+  @IsOptional()
+  @IsEnum(NotificationType)
+  type?: NotificationType;
 
   @IsOptional()
   @Type(() => Number)

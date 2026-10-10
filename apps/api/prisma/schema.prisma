@@ -106,6 +106,7 @@ model User {
   trainingPlans     TrainingPlan[]    @relation("PlanTrainer")
   vetRecords        HealthRecord[]
   reportedIncidents IncidentReport[]  @relation("IncidentReporter")
+  feedingRecords    FeedingRecord[]   @relation("FeedingRecorder")
   notifications     Notification[]
   refreshTokens     RefreshToken[]
   authTokens        AuthToken[]
@@ -174,14 +175,15 @@ model Horse {
   updatedAt    DateTime     @updatedAt
   deletedAt    DateTime?
 
-  sessions      TrainingSession[]
-  trainingPlans TrainingPlan[]
-  healthRecords HealthRecord[]
-  raceEntries   RaceEntry[]
-  incidents     IncidentReport[]
-  vaccinations  Vaccination[]
-  siredFoals    Horse[]           @relation("HorsePedigree_Sire")
-  damFoals      Horse[]           @relation("HorsePedigree_Dam")
+  sessions       TrainingSession[]
+  trainingPlans  TrainingPlan[]
+  healthRecords  HealthRecord[]
+  raceEntries    RaceEntry[]
+  incidents      IncidentReport[]
+  vaccinations   Vaccination[]
+  feedingRecords FeedingRecord[]
+  siredFoals     Horse[]           @relation("HorsePedigree_Sire")
+  damFoals       Horse[]           @relation("HorsePedigree_Dam")
 
   @@index([ownerId])
   @@index([status])
@@ -374,4 +376,21 @@ model Vaccination {
 
   @@index([horseId])
   @@index([nextDueDate])
+}
+
+// Khẩu phần ăn — GROOM ghi lại hàng ngày, dùng cho AI phân tích dinh dưỡng
+// cùng với lịch sử tập luyện (xem ai.service.ts).
+model FeedingRecord {
+  id           String   @id @default(uuid())
+  horseId      String
+  horse        Horse    @relation(fields: [horseId], references: [id])
+  recordedById String
+  recordedBy   User     @relation("FeedingRecorder", fields: [recordedById], references: [id])
+  date         DateTime
+  feedType     String // vd "Cỏ khô Alfalfa", "Cám hỗn hợp", "Yến mạch"
+  quantityKg   Float
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  @@index([horseId, date])
 }
