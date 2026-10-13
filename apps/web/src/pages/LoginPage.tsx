@@ -278,9 +278,7 @@ export function LoginPage() {
         <div>
           {/* Top category pill */}
           <div className="auth-hero-tag">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="#e3e5da" width="30px" height="30px" viewBox="0 0 48 48" data-name="Layer 1" id="Layer_1"><title/><path d="M40,47H8a2,2,0,0,1-2-2V3A2,2,0,0,1,8,1H40a2,2,0,0,1,2,2V45A2,2,0,0,1,40,47ZM10,43H38V5H10Z"/><path d="M15,19a2,2,0,0,1-1.41-3.41l4-4a2,2,0,0,1,2.31-.37l2.83,1.42,5-4.16A2,2,0,0,1,30.2,8.4l4,3a2,2,0,1,1-2.4,3.2l-2.73-2.05-4.79,4a2,2,0,0,1-2.17.25L19.4,15.43l-3,3A2,2,0,0,1,15,19Z"/><circle cx="15" cy="24" r="2"/><circle cx="15" cy="31" r="2"/><circle cx="15" cy="38" r="2"/><path d="M33,26H22a2,2,0,0,1,0-4H33a2,2,0,0,1,0,4Z"/><path d="M33,33H22a2,2,0,0,1,0-4H33a2,2,0,0,1,0,4Z"/><path d="M33,40H22a2,2,0,0,1,0-4H33a2,2,0,0,1,0,4Z"/></svg>
             Hệ thống Quản lý Huấn luyện & Y tế
           </div>
         </div>
@@ -301,7 +299,7 @@ export function LoginPage() {
               TH
             </div>
             <div className="auth-author-info">
-              <span className="auth-author-name">Trần Đức Hùng</span>
+              <span className="auth-author-name">Trainer One</span>
               <span className="auth-author-role">Huấn luyện viên Trưởng &bull; Royal Turf Club</span>
             </div>
           </div>

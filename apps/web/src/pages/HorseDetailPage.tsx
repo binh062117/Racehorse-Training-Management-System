@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { api, getFileUrl } from '../lib/api';
+import { api } from '../lib/api';
 import type { Horse } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
@@ -14,6 +14,7 @@ import { HorseStatusBadge } from '../components/horse/HorseStatusBadge';
 import { EditHorseModal } from '../components/horse/EditHorseModal';
 import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
 import { PhotoUploadModal } from '../components/horse/PhotoUploadModal';
+import { HorseAvatar } from '../components/horse/HorseAvatar';
 import { CameraIcon, LockIcon, UnlockIcon, EditIcon, TrashIcon } from '../components/Icons';
 import { PedigreeTab } from './horse/PedigreeTab';
 import { HorseRecordNav } from './horse/HorseRecordNav';
@@ -138,13 +139,11 @@ export function HorseDetailPage() {
         <div className="detail-hero" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
           {/* Avatar with Upload button for Manager */}
           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-            <div className="avatar avatar-lg">
-              {horse.photoUrl ? (
-                <img src={getFileUrl(horse.photoUrl) ?? undefined} alt={horse.name} />
-              ) : (
-                horse.name.slice(0, 1).toUpperCase()
-              )}
-            </div>
+            <HorseAvatar
+              photoUrl={horse.photoUrl}
+              name={horse.name}
+              size="lg"
+            />
             {isManager && (
               <button
                 type="button"

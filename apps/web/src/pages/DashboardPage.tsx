@@ -1,10 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
-import { api, getFileUrl } from '../lib/api';
+import { api } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, Paginated, Notification, User, Role } from '../lib/types';
 import { HorseStatusBadge } from '../components/horse/HorseStatusBadge';
+import { HorseAvatar } from '../components/horse/HorseAvatar';
 import { formatDate } from '../lib/format';
 import {
   LockIcon,
@@ -205,13 +206,12 @@ export function DashboardPage() {
                     onClick={() => navigate(`/horses/${horse.id}`)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="horse-mini-avatar">
-                      {horse.photoUrl ? (
-                        <img src={getFileUrl(horse.photoUrl) ?? undefined} alt={horse.name} />
-                      ) : (
-                        horse.name.slice(0, 2).toUpperCase()
-                      )}
-                    </div>
+                    <HorseAvatar
+                      photoUrl={horse.photoUrl}
+                      name={horse.name}
+                      size="md"
+                      letters={2}
+                    />
 
                     <div className="horse-mini-info">
                       <div className="horse-mini-title">

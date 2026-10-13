@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, getFileUrl } from '../lib/api';
+import { api } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, HorseStatus, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
@@ -11,6 +11,7 @@ import { HorseMetricCards } from '../components/horse/HorseMetricCards';
 import { CreateHorseModal } from '../components/horse/CreateHorseModal';
 import { EditHorseModal } from '../components/horse/EditHorseModal';
 import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
+import { HorseAvatar } from '../components/horse/HorseAvatar';
 import { PlusIcon, EditIcon, TrashIcon } from '../components/Icons';
 
 function calculateAge(birthDate: string | null): string {
@@ -156,13 +157,11 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                 <tr key={h.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div className="avatar">
-                        {h.photoUrl ? (
-                          <img src={getFileUrl(h.photoUrl) ?? undefined} alt={h.name} />
-                        ) : (
-                          h.name.slice(0, 1).toUpperCase()
-                        )}
-                      </div>
+                      <HorseAvatar
+                        photoUrl={h.photoUrl}
+                        name={h.name}
+                        size="md"
+                      />
                       <div>
                         <Link
                           to={`/horses/${h.id}`}
