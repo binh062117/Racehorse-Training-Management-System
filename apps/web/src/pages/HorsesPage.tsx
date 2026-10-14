@@ -143,7 +143,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
         </Card>
       ) : view === 'cards' ? (
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))' }}>
-          {rows.map((h, i) => <HorseCard key={h.id} h={h} no={i + 1} canManage={isManager} onEdit={() => setEditingHorse(h)} onDelete={() => setDeletingHorse(h)} />)}
+          {rows.map((h) => <HorseCard key={h.id} h={h} canManage={isManager} onEdit={() => setEditingHorse(h)} onDelete={() => setDeletingHorse(h)} />)}
         </div>
       ) : (
         <Card>
@@ -157,13 +157,13 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((h, i) => {
+                {rows.map((h) => {
                   const age = calculateAge(h.birthDate);
                   return (
                     <tr key={h.id} className={`border-b border-line-soft hover:bg-subtle ${h.locked ? 'bg-[#fdfbfb]' : ''}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <Cloth n={i + 1} /><Silk owner={h.owner.id} />
+                          <Cloth n={h.saddleNumber ?? '—'} /><Silk owner={h.owner.id} />
                           <div>
                             <Link to={`/horses/${h.id}`} className="font-semibold text-ink no-underline">{h.name}</Link>
                             <div className="cap num">{h.gender === 'MALE' ? 'Đực' : h.gender === 'FEMALE' ? 'Cái' : '—'} · {age != null ? `${age} tuổi` : '—'}</div>
@@ -201,7 +201,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   );
 }
 
-function HorseCard({ h, no, canManage, onEdit, onDelete }: { h: Horse; no: number; canManage: boolean; onEdit: () => void; onDelete: () => void }) {
+function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: boolean; onEdit: () => void; onDelete: () => void }) {
   const age = calculateAge(h.birthDate);
   const photo = getFileUrl(h.photoUrl);
   return (
@@ -211,7 +211,7 @@ function HorseCard({ h, no, canManage, onEdit, onDelete }: { h: Horse; no: numbe
         {photo ? (
           <img src={photo} alt="" className="w-9 h-9 rounded-full object-cover flex-none border border-line" />
         ) : (
-          <Cloth n={no} />
+          <Cloth n={h.saddleNumber ?? '—'} />
         )}
         <Silk owner={h.owner.id} size={34} />
         <div className="flex-1 min-w-0"><div className="disp text-2xl leading-6 truncate">{h.name}</div><div className="cap num mt-1">{h.breed ?? 'Chưa rõ giống'} · {age != null ? `${age} tuổi` : 'Chưa rõ tuổi'}</div></div>

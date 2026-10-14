@@ -39,6 +39,12 @@ export class CreateHorseDto {
   @IsOptional()
   @IsEnum(HorseStatus)
   status?: HorseStatus;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(999)
+  saddleNumber?: number;
 }
 
 export class UpdateHorseDto {
@@ -84,6 +90,12 @@ export class UpdateHorseDto {
   @Min(0)
   @Max(100)
   fitnessScore?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(999)
+  saddleNumber?: number | null;
 }
 
 // Phase 7 — Training Lock. Separate route (PATCH :id/lock, VET-only) from

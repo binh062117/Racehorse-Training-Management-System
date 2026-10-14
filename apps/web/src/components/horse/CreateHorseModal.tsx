@@ -18,6 +18,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
   const [birthDate, setBirthDate] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
+  const [saddleNumber, setSaddleNumber] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [err, setErr] = useState<unknown>(null);
@@ -48,6 +49,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
         ...(gender ? { gender } : {}),
         ...(breed.trim() ? { breed: breed.trim() } : {}),
         ...(birthDate ? { birthDate: new Date(birthDate).toISOString() } : {}),
+        ...(saddleNumber ? { saddleNumber: Number(saddleNumber) } : {}),
         status,
       });
 
@@ -63,6 +65,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
       setBirthDate('');
       setOwnerId('');
       setStatus('ACTIVE');
+      setSaddleNumber('');
       setPhoto(null);
       setPreview(null);
       onCreated();
@@ -124,6 +127,18 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
                 <option value="FEMALE">Cái</option>
                 <option value="">— Chưa rõ —</option>
               </select>
+            </Field>
+
+            <Field label="Số áo đua (tùy chọn)" hint="Số hiển thị trên yếm số (saddle cloth)">
+              <input
+                className="input"
+                type="number"
+                min={0}
+                max={999}
+                placeholder="vd: 7"
+                value={saddleNumber}
+                onChange={(e) => setSaddleNumber(e.target.value)}
+              />
             </Field>
 
             <Field label="Giống loài">

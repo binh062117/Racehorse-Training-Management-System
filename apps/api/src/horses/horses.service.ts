@@ -142,6 +142,7 @@ export class HorsesService {
         gender: dto.gender ?? null,
         breed: dto.breed?.trim() ?? null,
         birthDate: this.parseBirthDate(dto.birthDate) ?? null,
+        saddleNumber: dto.saddleNumber ?? null,
         ...(dto.status ? { status: dto.status } : {}),
       },
       include: { owner: { select: OWNER_SELECT } },
@@ -220,6 +221,7 @@ export class HorsesService {
         ? { connect: { id: dto.damId } }
         : { disconnect: true };
     if (dto.fitnessScore !== undefined) data.fitnessScore = dto.fitnessScore;
+    if (dto.saddleNumber !== undefined) data.saddleNumber = dto.saddleNumber;
 
     const horse = await this.prisma.horse.update({
       where: { id },

@@ -23,6 +23,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
   const [sireId, setSireId] = useState('');
   const [damId, setDamId] = useState('');
   const [fitnessScore, setFitnessScore] = useState<string>('');
+  const [saddleNumber, setSaddleNumber] = useState<string>('');
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,6 +39,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
     setSireId(horse.sireId ?? '');
     setDamId(horse.damId ?? '');
     setFitnessScore(horse.fitnessScore != null ? String(horse.fitnessScore) : '');
+    setSaddleNumber(horse.saddleNumber != null ? String(horse.saddleNumber) : '');
 
     // Fetch owners
     api
@@ -78,6 +80,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
         sireId: sireId ? sireId : null,
         damId: damId ? damId : null,
         fitnessScore: fitnessScore !== '' ? Number(fitnessScore) : null,
+        saddleNumber: saddleNumber !== '' ? Number(saddleNumber) : null,
       };
 
       await api.patch(`/horses/${horse.id}`, payload);
@@ -184,6 +187,18 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
                 />
               </Field>
             </div>
+
+            <Field label="Số áo đua (tùy chọn)" hint="Số hiển thị trên yếm số (saddle cloth)">
+              <input
+                className="input"
+                type="number"
+                min={0}
+                max={999}
+                placeholder="vd: 7"
+                value={saddleNumber}
+                onChange={(e) => setSaddleNumber(e.target.value)}
+              />
+            </Field>
 
             <div style={{ marginTop: '8px', padding: '12px', background: 'var(--surface-subtle)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--brand-navy)', marginBottom: '8px' }}>
