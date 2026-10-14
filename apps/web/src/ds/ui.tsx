@@ -25,6 +25,8 @@ const P: Record<string, string[]> = {
   syringe: ['m18 2 4 4M7 13l4 4M3 21l4-4M14 4l6 6-9 9-6-6Z'], steth: ['M4 4v6a6 6 0 0 0 12 0V4', 'M8 4H4M16 4h-4', 'M20 12a2 2 0 1 0 0 .01', 'M10 16v1a5 5 0 0 0 10 0v-1'],
   pill: ['M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7Z', 'M8.5 8.5l7 7'], file: ['M3 3h18v18H3z', 'M8 8h8M8 12h8M8 16h5'],
   sparkle: ['M12 3v4M12 17v4M3 12h4M17 12h4', 'M8 8 6 6M18 18l-2-2M16 8l2-2M6 18l2-2'],
+  eye: ['M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
+  eyeOff: ['M2 12s3.5-7 10-7c2 0 3.6.6 4.9 1.4M22 12s-3.5 7-10 7c-2 0-3.6-.6-4.9-1.4', 'M9.9 9.9a3 3 0 0 0 4.2 4.2', 'M3 3l18 18'],
 };
 export function Icon({ name, className = 'w-4 h-4', label }: { name: string; className?: string; label?: string }) {
   return (
