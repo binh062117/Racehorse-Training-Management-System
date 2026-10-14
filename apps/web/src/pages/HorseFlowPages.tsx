@@ -4,7 +4,6 @@ import { HorsesPage } from './HorsesPage';
 // Mục đích là giữ import ổn định ở nơi khác dù các component đã được tách ra thành module nhỏ hơn.
 export { HorseFormPage } from './horse/HorseFormPage';
 export { HorseOwnershipPage } from './horse/HorseOwnershipPage';
-export { HorsePedigreePage } from './horse/HorsePedigreePage';
 export { HorseRaceHistoryPage } from './horse/HorseRaceHistoryPage';
 export { HorseRecordNav } from './horse/HorseRecordNav';
 

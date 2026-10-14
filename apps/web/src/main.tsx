@@ -27,7 +27,6 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import {
   HorseFormPage,
   HorseOwnershipPage,
-  HorsePedigreePage,
   HorseRaceHistoryPage,
   MyHorsesPage,
 } from './pages/HorseFlowPages';
@@ -104,7 +103,6 @@ const router = createBrowserRouter([
         ),
       },
       { path: '/horses/:id', element: <HorseDetailPage /> },
-      { path: '/horses/:id/pedigree', element: <HorsePedigreePage /> },
       { path: '/horses/:id/performance', element: <HorseRaceHistoryPage /> },
       { path: '/horses/:id/ownership', element: <HorseOwnershipPage /> },
       { path: '/plans', element: <TrainingPlansPage /> },

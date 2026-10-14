@@ -5,7 +5,6 @@ export function HorseRecordNav({ horseId }: { horseId: string }) {
   const { t } = useTranslation();
   const links = [
     { to: `/horses/${horseId}`, label: t('horseFlow.overview'), end: true },
-    { to: `/horses/${horseId}/pedigree`, label: t('horseFlow.pedigree') },
     { to: `/horses/${horseId}/performance`, label: t('horseFlow.performance') },
     { to: `/horses/${horseId}/ownership`, label: t('horseFlow.ownership') },
   ];
