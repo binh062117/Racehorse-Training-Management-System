@@ -4,50 +4,66 @@ import { useAuth } from '../auth/useAuth';
 import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, Paginated, Notification, User, Role } from '../lib/types';
-import { HorseStatusBadge } from '../components/horse/HorseStatusBadge';
 import { formatDate } from '../lib/format';
+import { usePageChrome } from '../ds/AppShell';
 import {
-  LockIcon,
-  CheckIcon,
-  AlertIcon,
-  PlusIcon,
-  PlanIcon,
-  RaceIcon,
-  HealthIcon,
-  UserIcon,
-  HorseIcon,
-  ArrowRightIcon,
-} from '../components/Icons';
+  Badge, Btn, Card, CardHeader, HeroStats, Icon, Silk,
+  careerTone, healthTone,
+} from '../ds/ui';
+
+interface QuickAction {
+  icon: string;
+  title: string;
+  desc: string;
+  to: string;
+}
+
+const QUICK_ACTIONS: Partial<Record<Role, QuickAction[]>> = {
+  TRAINER: [
+    { icon: 'plans', to: '/plans?action=create', title: 'Lập giáo án huấn luyện chi tiết', desc: 'Cự ly, khối lượng, mặt sân theo từng giai đoạn' },
+    { icon: 'heart', to: '/plans', title: 'Theo dõi tiến độ & Giáo án', desc: 'Quản lý toàn bộ danh sách giáo án của các chiến mã' },
+    { icon: 'flag', to: '/races', title: 'Lựa chọn chiến mã tham gia giải đua', desc: 'Đăng ký danh sách thi đấu phù hợp' },
+  ],
+  VET: [
+    { icon: 'heart', to: '/health-records', title: 'Ghi nhận hồ sơ khám bệnh', desc: 'Chẩn đoán chi tiết và cập nhật phác đồ điều trị' },
+    { icon: 'lock', to: '/horses', title: 'Đặt lệnh Khóa huấn luyện khẩn cấp', desc: 'Ngăn chặn xếp lịch bài tập nặng với ngựa chấn thương' },
+    { icon: 'check', to: '/vaccinations', title: 'Lịch tiêm phòng & Tẩy giun định kỳ', desc: 'Theo dõi nhắc lịch tiêm chủng tự động' },
+  ],
+  GROOM: [
+    { icon: 'check', to: '/horses', title: 'Ghi nhận khẩu phần ăn hàng ngày', desc: 'Loại thức ăn, khối lượng cho từng ngựa' },
+    { icon: 'alert', to: '/incidents', title: 'Gửi báo cáo sự cố đột xuất tại chuồng', desc: 'Bỏ ăn, dấu hiệu sốt, móng xước kèm ảnh thực tế' },
+    { icon: 'horse', to: '/horses', title: 'Theo dõi lịch tiêm phòng', desc: 'Sắp xếp công việc theo lịch sắp đến hạn' },
+  ],
+  OWNER: [
+    { icon: 'horse', to: '/my-horses', title: 'Xem dòng dõi (Pedigree) & Lý lịch', desc: 'Hồ sơ 3 đời và lịch sử thành tích thi đấu' },
+    { icon: 'heart', to: '/my-horses', title: 'Theo dõi sức khỏe & Thể trạng', desc: 'Trạng thái sẵn sàng thi đấu của ngựa sở hữu' },
+    { icon: 'plans', to: '/plans', title: 'Lịch tập luyện', desc: 'Xem giáo án huấn luyện từ Huấn luyện viên' },
+  ],
+  MANAGER: [
+    { icon: 'plus', to: '/horses', title: 'Thêm mới hồ sơ ngựa đua', desc: 'Quản lý danh mục tổng các cá thể ngựa' },
+    { icon: 'user', to: '/admin/users', title: 'Phân quyền truy cập hệ thống (RBAC)', desc: 'Duyệt tài khoản và gán vai trò vận hành' },
+    { icon: 'flag', to: '/races', title: 'Quản lý giải đua', desc: 'Tạo giải, đăng ký ngựa, cập nhật kết quả' },
+  ],
+};
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
-
   const role: Role | null = user?.role ?? null;
 
-  const { data: horsesData, loading: horsesLoading } = useCachedResource(
-    'dashboard:horses',
-    async () => {
-      const res = await api.get<Paginated<Horse>>('/horses', { params: { limit: 6 } });
-      return {
-        items: res.data.data ?? [],
-        total: res.data.meta?.total ?? res.data.data.length,
-      };
-    },
-  );
+  usePageChrome({ crumbs: [t('nav.dashboard')] });
+
+  const { data: horsesData, loading: horsesLoading } = useCachedResource('dashboard:horses', async () => {
+    const res = await api.get<Paginated<Horse>>('/horses', { params: { limit: 6 } });
+    return { items: res.data.data ?? [], total: res.data.meta?.total ?? res.data.data.length };
+  });
   const horses = horsesData?.items ?? [];
   const totalHorses = horsesData?.total ?? 0;
 
-  const { data: notificationsData, loading: notificationsLoading } = useCachedResource(
-    'dashboard:notifications',
-    () =>
-      api
-        .get<Paginated<Notification>>('/notifications', {
-          params: { type: 'AI_RISK_ALERT', limit: 5 },
-        })
-        .then((r) => r.data.data ?? [])
-        .catch(() => []),
+  const { data: notificationsData, loading: notificationsLoading } = useCachedResource('dashboard:notifications', () =>
+    api.get<Paginated<Notification>>('/notifications', { params: { type: 'AI_RISK_ALERT', limit: 5 } })
+      .then((r) => r.data.data ?? []).catch(() => []),
   );
   const notifications = notificationsData ?? [];
 
@@ -60,7 +76,6 @@ export function DashboardPage() {
     },
   );
   const pendingUsersCount = pendingUsersData ?? 0;
-
   const loading = horsesLoading || notificationsLoading || pendingUsersLoading;
 
   const lockedHorses = horses.filter((h) => h.locked);
@@ -70,426 +85,141 @@ export function DashboardPage() {
   const injuredHorses = horses.filter((h) => h.healthStatus === 'INJURED');
   const quarantinedHorses = horses.filter((h) => h.healthStatus === 'QUARANTINED');
 
+  const subtitle: Partial<Record<Role, string>> = {
+    TRAINER: 'Theo dõi tiến độ huấn luyện, cảnh báo ngưỡng thể lực và lập giáo án cho toàn bộ chiến mã.',
+    VET: 'Kiểm soát sơ đồ sức khỏe đàn ngựa, hồ sơ bệnh án và lệnh khóa huấn luyện an toàn.',
+    GROOM: 'Quản lý khẩu phần dinh dưỡng hàng ngày và báo cáo sự cố chuồng.',
+    OWNER: 'Tra cứu hồ sơ lý lịch, dòng dõi gia phả và tình trạng sẵn sàng thi đấu của ngựa sở hữu.',
+    MANAGER: 'Giám sát vận hành câu lạc bộ, quản lý danh mục và phân quyền kiểm soát truy cập (RBAC).',
+  };
+
+  const heroStats = role === 'VET'
+    ? [
+      { label: 'Đủ điều kiện (FIT)', value: loading ? '…' : fitHorses.length, color: '#9fd9b1' },
+      { label: 'Cần theo dõi', value: loading ? '…' : monitoringHorses.length, color: monitoringHorses.length ? '#f3d29a' : undefined },
+      { label: 'Đang chấn thương', value: loading ? '…' : injuredHorses.length, color: injuredHorses.length ? '#f3b4b4' : undefined },
+      { label: 'Cách ly kiểm dịch', value: loading ? '…' : quarantinedHorses.length, color: quarantinedHorses.length ? '#f3b4b4' : undefined },
+    ]
+    : [
+      { label: role === 'OWNER' ? 'Ngựa thuộc sở hữu' : 'Tổng số ngựa', value: loading ? '…' : totalHorses },
+      { label: 'Đang bị khóa huấn luyện', value: loading ? '…' : lockedHorses.length, color: lockedHorses.length ? '#f3b4b4' : '#9fd9b1' },
+      { label: role === 'TRAINER' ? 'Sẵn sàng tập luyện' : 'Hoạt động bình thường', value: loading ? '…' : activeHorses.length, color: '#9fd9b1' },
+      ...(role === 'MANAGER' ? [{ label: 'Tài khoản chờ duyệt (RBAC)', value: loading ? '…' : pendingUsersCount, color: pendingUsersCount ? '#f3d29a' : undefined }] : []),
+    ];
+
   return (
-    <div className="stack">
-      {/* Header Banner */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ marginBottom: 4 }}>
-            {t('dashboard.welcome')} {user?.name}
-          </h1>
-          <p className="muted">
-            {role === 'TRAINER' && 'Theo dõi tiến độ huấn luyện, cảnh báo ngưỡng thể lực và lập giáo án cho toàn bộ chiến mã.'}
-            {role === 'VET' && 'Kiểm soát sơ đồ sức khỏe đàn ngựa, hồ sơ bệnh án và lệnh khóa huấn luyện an toàn.'}
-            {role === 'GROOM' && 'Quản lý phân bổ chuồng trại, khẩu phần dinh dưỡng hàng ngày và báo cáo sự cố chuồng.'}
-            {role === 'OWNER' && 'Tra cứu hồ sơ lý lịch, dòng dõi gia phả và tình trạng sẵn sàng thi đấu của ngựa sở hữu.'}
-            {role === 'MANAGER' && 'Giám sát vận hành câu lạc bộ, quản lý danh mục và phân quyền kiểm soát truy cập (RBAC).'}
-            {!role && t('dashboard.subtitle')}
-          </p>
+    <>
+      <section className="hero px-8 py-7 flex flex-col gap-6">
+        <div className="flex flex-wrap gap-6 items-end justify-between">
+          <div>
+            <div className="lbl">Racehorse Club</div>
+            <h1 className="disp text-[56px] mt-2">{t('dashboard.welcome')} {user?.name}</h1>
+            <p className="text-hero-muted mt-2 max-w-[560px]">{(role && subtitle[role]) || t('dashboard.subtitle')}</p>
+          </div>
+          {role === 'MANAGER' && <Btn v="light" to="/horses"><Icon name="plus" />{t('dashboard.newHorse')}</Btn>}
+          {role === 'TRAINER' && <Btn v="light" to="/plans?action=create"><Icon name="plus" />Lập giáo án mới</Btn>}
         </div>
+        <HeroStats items={heroStats} />
+      </section>
 
-        {role === 'MANAGER' && (
-          <div className="btn-row">
-            <Link to="/horses" className="btn btn-primary">
-              <PlusIcon /> {t('dashboard.newHorse')}
-            </Link>
-          </div>
-        )}
-        {role === 'TRAINER' && (
-          <div className="btn-row">
-            <Link to="/plans?action=create" className="btn btn-primary">
-              <PlusIcon /> Lập giáo án mới
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Role-Specific KPI Cards Grid */}
-      <div className="kpi-grid">
-        {/* VET Role: 4 health states */}
-        {role === 'VET' ? (
-          <>
-            <div className="kpi-tile ok">
-              <div className="k-num">{loading ? '…' : fitHorses.length}</div>
-              <div className="k-label">Đủ điều kiện (FIT)</div>
-            </div>
-            <div className={`kpi-tile ${monitoringHorses.length > 0 ? 'warn' : 'ok'}`}>
-              <div className="k-num">{loading ? '…' : monitoringHorses.length}</div>
-              <div className="k-label">Cần theo dõi (MONITORING)</div>
-            </div>
-            <div className={`kpi-tile ${injuredHorses.length > 0 ? 'alert' : 'ok'}`}>
-              <div className="k-num">{loading ? '…' : injuredHorses.length}</div>
-              <div className="k-label">Đang chấn thương (INJURED)</div>
-            </div>
-            <div className={`kpi-tile ${quarantinedHorses.length > 0 ? 'alert' : 'ok'}`}>
-              <div className="k-num">{loading ? '…' : quarantinedHorses.length}</div>
-              <div className="k-label">Cách ly kiểm dịch (QUARANTINED)</div>
-            </div>
-          </>
-        ) : (
-          /* Other Roles: Standard KPIs */
-          <>
-            <div className="kpi-tile">
-              <div className="k-num">{loading ? '…' : totalHorses}</div>
-              <div className="k-label">
-                {role === 'OWNER' ? 'Ngựa thuộc sở hữu' : 'Tổng số ngựa'}
-              </div>
-            </div>
-
-            <div className={`kpi-tile ${lockedHorses.length > 0 ? 'alert' : 'ok'}`}>
-              <div className="k-num">{loading ? '…' : lockedHorses.length}</div>
-              <div className="k-label">Đang bị khoá huấn luyện</div>
-            </div>
-
-            <div className="kpi-tile ok">
-              <div className="k-num">{loading ? '…' : activeHorses.length}</div>
-              <div className="k-label">
-                {role === 'TRAINER' ? 'Sẵn sàng tập luyện' : 'Hoạt động bình thường'}
-              </div>
-            </div>
-
-            {role === 'MANAGER' && (
-              <div className={`kpi-tile ${pendingUsersCount > 0 ? 'warn' : 'ok'}`}>
-                <div className="k-num">{loading ? '…' : pendingUsersCount}</div>
-                <div className="k-label">Tài khoản chờ duyệt (RBAC)</div>
-              </div>
-            )}
-
-            {(role === 'TRAINER' || role === 'OWNER') && (
-              <div className="kpi-tile">
-                <div className="k-num">{loading ? '…' : '100%'}</div>
-                <div className="k-label">Tuân thủ giáo án</div>
-              </div>
-            )}
-
-            {role === 'GROOM' && (
-              <div className="kpi-tile ok">
-                <div className="k-num">{loading ? '…' : 'Đầy đủ'}</div>
-                <div className="k-label">Khẩu phần dinh dưỡng</div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="two-col">
-        {/* Left Column: Recent Horses Table/List */}
-        <div className="panel">
-          <div className="panel-head">
-            <h3>
-              {role === 'OWNER'
-                ? 'Danh sách ngựa thuộc sở hữu'
-                : role === 'VET'
-                ? 'Sơ đồ trạng thái sức khỏe đàn ngựa'
-                : role === 'GROOM'
-                ? 'Danh sách ngựa tại khu vực phụ trách'
-                : 'Danh sách ngựa đua'}
-            </h3>
-            <Link to="/horses" className="small" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-              Xem tất cả <ArrowRightIcon />
-            </Link>
-          </div>
-
-          <div className="panel-body flush">
+      <div className="flex flex-wrap gap-5 items-start">
+        <div className="flex-[1.6_1_480px] min-w-0">
+          <Card>
+            <CardHeader title={
+              role === 'OWNER' ? 'Danh sách ngựa thuộc sở hữu'
+                : role === 'VET' ? 'Sơ đồ trạng thái sức khỏe đàn ngựa'
+                  : role === 'GROOM' ? 'Danh sách ngựa tại khu vực phụ trách'
+                    : 'Danh sách ngựa đua'
+            }>
+              <Link to="/horses" className="font-semibold text-info text-[12.5px] no-underline flex items-center gap-1">Xem tất cả <Icon name="chevRight" className="w-3.5 h-3.5" /></Link>
+            </CardHeader>
             {horses.length === 0 ? (
-              <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                {t('horse.empty')}
-              </div>
+              <div className="py-10 text-center"><p className="cap">{t('horse.empty')}</p></div>
             ) : (
-              <div>
-                {horses.map((horse) => (
-                  <div
-                    key={horse.id}
-                    className="horse-mini-row"
-                    onClick={() => navigate(`/horses/${horse.id}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="horse-mini-avatar">
-                      {horse.photoUrl ? (
-                        <img src={getFileUrl(horse.photoUrl) ?? undefined} alt={horse.name} />
+              <ul className="list-none p-0 m-0">
+                {horses.map((horse) => {
+                  const photo = getFileUrl(horse.photoUrl);
+                  return (
+                    <li key={horse.id} onClick={() => navigate(`/horses/${horse.id}`)}
+                      className="flex items-center gap-3 px-5 py-3 border-b border-line-soft last:border-0 cursor-pointer hover:bg-subtle">
+                      {photo ? (
+                        <img src={photo} alt="" className="w-9 h-9 rounded-full object-cover flex-none border border-line" />
                       ) : (
-                        horse.name.slice(0, 2).toUpperCase()
+                        <Silk owner={horse.owner.id} size={34} />
                       )}
-                    </div>
-
-                    <div className="horse-mini-info">
-                      <div className="horse-mini-title">
-                        <span>{horse.name}</span>
-                        {horse.locked && (
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              color: 'var(--status-danger)',
-                              fontWeight: 700,
-                              background: 'var(--status-danger-bg)',
-                              padding: '1px 6px',
-                              borderRadius: '4px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                            }}
-                          >
-                            <LockIcon /> Khoá tập
-                          </span>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{horse.name}</span>
+                          {horse.locked && <Badge tone="bad"><Icon name="lock" className="w-3 h-3" />Khóa tập</Badge>}
+                        </div>
+                        <div className="cap truncate">{horse.breed || 'Không rõ giống'}{horse.gender ? ` · ${horse.gender === 'MALE' ? 'Đực' : 'Cái'}` : ''} · Chủ sở hữu: {horse.owner?.name || 'N/A'}</div>
                       </div>
-                      <div className="horse-mini-sub">
-                        {horse.breed || 'Không rõ giống'}
-                        {horse.gender ? ` · ${horse.gender === 'MALE' ? 'Đực' : 'Cái'}` : ''}
-                        {' '}· Chủ sở hữu: {horse.owner?.name || 'N/A'}
+                      <div className="flex items-center gap-2 flex-none">
+                        <Badge tone={careerTone[horse.status]}>{horse.status}</Badge>
+                        <Badge tone={healthTone[horse.healthStatus]}>{horse.healthStatus}</Badge>
                       </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <HorseStatusBadge status={horse.status} healthStatus={horse.healthStatus} />
-                      <span className="small muted">›</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </div>
+          </Card>
         </div>
 
-        {/* Right Column: Role-Specific Quick Actions + Alerts + Notifications */}
-        <div className="stack" style={{ gap: 16 }}>
-          {/* Quick Actions Panel tailored to Role */}
-          <div className="panel">
-            <div className="panel-head">
-              <h3>Các thao tác chính ({role ? t(`role.${role}`) : 'Người dùng'})</h3>
+        <div className="flex-[1_1_320px] min-w-0 flex flex-col gap-5">
+          <Card>
+            <CardHeader title={`Các thao tác chính (${role ? t(`role.${role}`) : 'Người dùng'})`} />
+            <div className="p-3 flex flex-col gap-1">
+              {role && QUICK_ACTIONS[role]?.map((action) => (
+                <Link key={action.title} to={action.to} className="flex gap-3 items-start p-2.5 rounded-btn no-underline text-ink hover:bg-subtle">
+                  <span className="w-9 h-9 rounded-btn bg-info-bg text-info flex items-center justify-center flex-none"><Icon name={action.icon} /></span>
+                  <div>
+                    <div className="font-semibold text-[13px]">{action.title}</div>
+                    <div className="cap mt-0.5">{action.desc}</div>
+                  </div>
+                </Link>
+              ))}
+              {!role && <p className="cap p-2.5">Tài khoản đang chờ Club Manager phê duyệt vai trò để kích hoạt chức năng nghiệp vụ.</p>}
             </div>
-            <div className="panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Head Trainer */}
-              {role === 'TRAINER' && (
-                <>
-                  <Link to="/plans?action=create" className="quick-action-item">
-                    <span className="quick-action-icon"><PlanIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Lập giáo án huấn luyện chi tiết</div>
-                      <div className="muted small">Cự ly, khối lượng, mặt sân theo từng giai đoạn</div>
-                    </div>
-                  </Link>
-                  <Link to="/plans" className="quick-action-item">
-                    <span className="quick-action-icon"><HealthIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Theo dõi tiến độ &amp; Giáo án</div>
-                      <div className="muted small">Quản lý toàn bộ danh sách giáo án của các chiến mã</div>
-                    </div>
-                  </Link>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><RaceIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Lựa chọn chiến mã tham gia giải đua</div>
-                      <div className="muted small">Đăng ký danh sách thi đấu phù hợp</div>
-                    </div>
-                  </Link>
-                </>
-              )}
+          </Card>
 
-              {/* Veterinarian */}
-              {role === 'VET' && (
-                <>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><HealthIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Ghi nhận hồ sơ khám bệnh</div>
-                      <div className="muted small">Chẩn đoán chi tiết và cập nhật phác đồ điều trị</div>
-                    </div>
-                  </Link>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><LockIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Đặt lệnh Khóa huấn luyện khẩn cấp</div>
-                      <div className="muted small">Ngăn chặn xếp lịch bài tập nặng với ngựa chấn thương</div>
-                    </div>
-                  </Link>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><CheckIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Lịch tiêm phòng & Kiểm tra móng định kỳ</div>
-                      <div className="muted small">Theo dõi nhắc lịch tiêm chủng và tẩy giun tự động</div>
-                    </div>
-                  </Link>
-                </>
-              )}
-
-              {/* Groom */}
-              {role === 'GROOM' && (
-                <>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><CheckIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Xác nhận hoàn thành công việc</div>
-                      <div className="muted small">Cho ăn, vệ sinh chuồng trại, ngâm chân nước đá</div>
-                    </div>
-                  </Link>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><AlertIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Gửi báo cáo sự cố đột xuất tại chuồng</div>
-                      <div className="muted small">Bỏ ăn, dấu hiệu sốt, móng xước kèm ảnh thực tế</div>
-                    </div>
-                  </Link>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><HorseIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Theo dõi vật tư & Thức ăn</div>
-                      <div className="muted small">Đề xuất bổ sung ngũ cốc, cỏ và dụng cụ chuồng</div>
-                    </div>
-                  </Link>
-                </>
-              )}
-
-              {/* Horse Owner */}
-              {role === 'OWNER' && (
-                <>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><HorseIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Xem dòng dõi (Pedigree) & Lý lịch</div>
-                      <div className="muted small">Hồ sơ 3 đời và lịch sử thành tích thi đấu</div>
-                    </div>
-                  </Link>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><HealthIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Theo dõi sức khỏe & Thể trạng</div>
-                      <div className="muted small">Cân nặng và trạng thái sẵn sàng thi đấu realtime</div>
-                    </div>
-                  </Link>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><PlanIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Lịch tập luyện & Nhật ký nhận xét</div>
-                      <div className="muted small">Xem đánh giá chuyên môn từ Huấn luyện viên trưởng</div>
-                    </div>
-                  </Link>
-                </>
-              )}
-
-              {/* Club Manager */}
-              {role === 'MANAGER' && (
-                <>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><PlusIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Thêm mới hồ sơ ngựa đua</div>
-                      <div className="muted small">Quản lý danh mục tổng các cá thể ngựa</div>
-                    </div>
-                  </Link>
-                  <Link to="/admin/users" className="quick-action-item">
-                    <span className="quick-action-icon"><UserIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Phân quyền truy cập hệ thống (RBAC)</div>
-                      <div className="muted small">Duyệt tài khoản và gán vai trò vận hành</div>
-                    </div>
-                  </Link>
-                  <Link to="/horses" className="quick-action-item">
-                    <span className="quick-action-icon"><HealthIcon /></span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Báo cáo hiệu suất & Vận hành chuồng trại</div>
-                      <div className="muted small">Kiểm tra nhật ký thao tác (Audit Log) minh bạch</div>
-                    </div>
-                  </Link>
-                </>
-              )}
-
-              {/* Fallback for unassigned role */}
-              {!role && (
-                <div className="muted small" style={{ padding: '8px 0' }}>
-                  Tài khoản đang chờ Club Manager phê duyệt vai trò để kích hoạt chức năng nghiệp vụ.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* System & Health Alerts Panel */}
-          <div className="panel">
-            <div className="panel-head">
-              <h3>
-                {role === 'VET'
-                  ? 'Cảnh báo dịch tễ & Chấn thương'
-                  : role === 'TRAINER'
-                  ? 'Cảnh báo ngưỡng thể lực & Khóa tập'
-                  : 'Cảnh báo & Tình trạng vận hành'}
-              </h3>
-            </div>
-            <div className="panel-body">
+          <Card>
+            <CardHeader title={role === 'VET' ? 'Cảnh báo dịch tễ & Chấn thương' : role === 'TRAINER' ? 'Cảnh báo ngưỡng thể lực & Khóa tập' : 'Cảnh báo & Tình trạng vận hành'} />
+            <div className="p-5">
               {lockedHorses.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="flex flex-col gap-2">
                   {lockedHorses.map((h) => (
-                    <div
-                      key={h.id}
-                      style={{
-                        padding: '10px 12px',
-                        background: 'var(--status-danger-bg)',
-                        border: '1px solid #e8b8a4',
-                        borderRadius: 6,
-                        fontSize: 12.5,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <LockIcon />
-                        <strong>{h.name}</strong> đang bị khóa huấn luyện khẩn cấp.
-                      </div>
-                      {h.lockReason && (
-                        <div style={{ color: 'var(--status-danger)', marginTop: 2, paddingLeft: 18 }}>
-                          Lý do: {h.lockReason}
-                        </div>
-                      )}
+                    <div key={h.id} className="rounded-btn border border-bad-bd bg-bad-bg px-3 py-2.5 text-[12.5px]">
+                      <div className="flex items-center gap-1.5"><Icon name="lock" className="w-4 h-4 text-bad" /><strong>{h.name}</strong> đang bị khóa huấn luyện khẩn cấp.</div>
+                      {h.lockReason && <div className="text-bad mt-0.5 pl-[22px]">Lý do: {h.lockReason}</div>}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ fontSize: 13, color: 'var(--status-success)', display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <CheckIcon />
-                  <span>Tất cả các cá thể ngựa đều đang trong điều kiện an toàn và sẵn sàng hoạt động.</span>
-                </div>
+                <div className="text-[13px] text-ok flex gap-2 items-center"><Icon name="check" />Tất cả các cá thể ngựa đều đang trong điều kiện an toàn và sẵn sàng hoạt động.</div>
               )}
             </div>
-          </div>
+          </Card>
 
-          {/* Notifications Panel */}
-          <div className="panel">
-            <div className="panel-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3>Thông báo gần đây</h3>
-              <Link to="/notifications">{t('dashboard.viewAll')}</Link>
-            </div>
-            <div className="panel-body flush">
-              {notifications.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
-                  {t('dashboard.noNotifs')}
-                </div>
-              ) : (
-                <div>
-                  {notifications.map((n) => (
-                    <Link
-                      key={n.id}
-                      to="/notifications"
-                      style={{
-                        display: 'block',
-                        padding: '10px 16px',
-                        borderBottom: '1px solid var(--border-default)',
-                        fontSize: 12.5,
-                        color: 'inherit',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {n.message}
-                      </div>
-                      <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-                        {formatDate(n.createdAt)}
-                      </div>
+          <Card>
+            <CardHeader title="Thông báo gần đây"><Link to="/notifications" className="font-semibold text-info text-[12.5px] no-underline">{t('dashboard.viewAll')}</Link></CardHeader>
+            {notifications.length === 0 ? (
+              <div className="py-6 text-center"><p className="cap">{t('dashboard.noNotifs')}</p></div>
+            ) : (
+              <ul className="list-none p-0 m-0">
+                {notifications.map((n) => (
+                  <li key={n.id} className="border-b border-line-soft last:border-0">
+                    <Link to="/notifications" className="block px-5 py-3 text-[12.5px] no-underline text-ink">
+                      <div className="font-semibold">{n.message}</div>
+                      <div className="cap mt-0.5">{formatDate(n.createdAt)}</div>
                     </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
         </div>
       </div>
-    </div>
+    </>
   );
 }
