@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import {
+  createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode,
+} from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
@@ -183,35 +185,88 @@ function UserMenu() {
   );
 }
 
+/* ---------- chrome context: lets a page set its own crumbs/search without re-mounting the shell ---------- */
 export type Crumb = string | [string, string];
+interface Chrome {
+  crumbs: Crumb[];
+  search?: string;
+  onSearch?: (v: string) => void;
+  wide: boolean;
+}
+const DEFAULT_CHROME: Chrome = { crumbs: [], wide: true };
+/** Shown for a route that hasn't been migrated to call usePageChrome() yet. */
+function fallbackCrumb(pathname: string): string {
+  const seg = pathname.split('/').filter(Boolean)[0] ?? 'dashboard';
+  return seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ');
+}
+const ChromeContext = createContext<{ setChrome: (c: Partial<Chrome>) => void } | null>(null);
 
-export function Page({ crumbs = [], search, onSearch, wide = true, children }: { crumbs?: Crumb[]; search?: string; onSearch?: (v: string) => void; wide?: boolean; children: ReactNode }) {
+/** Call once per page to set the topbar breadcrumb / search box. */
+export function usePageChrome(chrome: Partial<Chrome>) {
+  const ctx = useContext(ChromeContext);
+  // Re-run when the serialized chrome changes (pages pass plain data, not stable refs).
+  const key = JSON.stringify(chrome);
+  useEffect(() => {
+    ctx?.setChrome(chrome);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx, key]);
+}
+
+/** Route-level shell: sidebar + topbar. Rendered once by Layout.tsx; pages
+ * customize the topbar via usePageChrome() instead of re-wrapping.
+ *
+ * Chrome lives in a ref (not state) and is reset synchronously during render
+ * whenever the path changes — before the new route's own usePageChrome
+ * effect runs — so a page that never calls usePageChrome never shows the
+ * previous page's stale breadcrumb/search box.
+ */
+export function AppShell({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const [, forceRender] = useReducer((n: number) => n + 1, 0);
+  const chromeRef = useRef<Chrome>(DEFAULT_CHROME);
+  const lastPathRef = useRef(location.pathname);
+  if (lastPathRef.current !== location.pathname) {
+    lastPathRef.current = location.pathname;
+    chromeRef.current = DEFAULT_CHROME;
+  }
+  const chrome = chromeRef.current;
+  const setChrome = useCallback((patch: Partial<Chrome>) => {
+    chromeRef.current = { ...chromeRef.current, ...patch };
+    forceRender();
+  }, []);
+  const ctxValue = useMemo(() => ({ setChrome }), [setChrome]);
+
   return (
-    <div className="flex flex-wrap min-h-screen bg-page">
-      <Sidebar />
-      <div className="flex-[999_1_560px] min-w-0 flex flex-col">
-        <header className="min-h-14 bg-white border-b border-line flex flex-wrap items-center gap-x-5 gap-y-3 px-8 py-2">
-          <div className="flex items-center gap-2 text-muted">
-            {crumbs.map((c, i) => (
-              <span key={i} className="flex items-center gap-2">
-                {i > 0 && <span aria-hidden="true">/</span>}
-                {i === crumbs.length - 1 ? <b className="text-ink font-semibold">{Array.isArray(c) ? c[0] : c}</b> : Array.isArray(c) ? <Link to={c[1]} className="no-underline text-muted">{c[0]}</Link> : <span>{c}</span>}
-              </span>
-            ))}
-          </div>
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            {search !== undefined && (
-              <label className="flex items-center gap-2 h-9 w-[300px] max-w-full rounded-btn border border-line px-3 text-muted">
-                <Icon name="search" />
-                <input type="search" placeholder={search} aria-label={search} onChange={(e) => onSearch?.(e.target.value)} className="flex-1 min-w-0 outline-none bg-transparent text-ink" />
-              </label>
-            )}
-            <Notifications />
-            <UserMenu />
-          </div>
-        </header>
-        <main className={`flex flex-col gap-5 px-8 pt-7 pb-12 w-full ${wide ? 'max-w-[1400px]' : 'max-w-[1240px]'}`}>{children}</main>
+    <ChromeContext.Provider value={ctxValue}>
+      <div className="flex flex-wrap min-h-screen bg-page">
+        <Sidebar />
+        <div className="flex-[999_1_560px] min-w-0 flex flex-col">
+          <header className="min-h-14 bg-white border-b border-line flex flex-wrap items-center gap-x-5 gap-y-3 px-8 py-2">
+            <div className="flex items-center gap-2 text-muted">
+              {(() => {
+                const crumbs = chrome.crumbs.length > 0 ? chrome.crumbs : [fallbackCrumb(location.pathname)];
+                return crumbs.map((c, i) => (
+                  <span key={i} className="flex items-center gap-2">
+                    {i > 0 && <span aria-hidden="true">/</span>}
+                    {i === crumbs.length - 1 ? <b className="text-ink font-semibold">{Array.isArray(c) ? c[0] : c}</b> : Array.isArray(c) ? <Link to={c[1]} className="no-underline text-muted">{c[0]}</Link> : <span>{c}</span>}
+                  </span>
+                ));
+              })()}
+            </div>
+            <div className="ml-auto flex flex-wrap items-center gap-3">
+              {chrome.search !== undefined && (
+                <label className="flex items-center gap-2 h-9 w-[300px] max-w-full rounded-btn border border-line px-3 text-muted">
+                  <Icon name="search" />
+                  <input type="search" placeholder={chrome.search} aria-label={chrome.search} onChange={(e) => chrome.onSearch?.(e.target.value)} className="flex-1 min-w-0 outline-none bg-transparent text-ink" />
+                </label>
+              )}
+              <Notifications />
+              <UserMenu />
+            </div>
+          </header>
+          <main className={`flex flex-col gap-5 px-8 pt-7 pb-12 w-full ${chrome.wide ? 'max-w-[1400px]' : 'max-w-[1240px]'}`}>{children}</main>
+        </div>
       </div>
-    </div>
+    </ChromeContext.Provider>
   );
 }
