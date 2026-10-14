@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { OtpRequiredError } from '../auth/context';
 import { getLastEmail, setLastEmail } from '../lib/api';
-import { Field } from '../components/Field';
 import { ErrorText } from '../components/ErrorText';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { OtpStep } from '../components/OtpStep';
 import { PasswordInput } from '../components/PasswordInput';
+import { AuthLayout } from '../ds/AuthLayout';
+import { Btn, Field, Input } from '../ds/ui';
 
 interface LocationState {
   from?: { pathname: string };
@@ -53,31 +54,18 @@ export function LoginPage() {
 
   if (googleOtpDone) {
     return (
-      <div className="auth-card card">
-        <h1>{t('auth.register')}</h1>
+      <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
         <p>{t('auth.registerDone')}</p>
-        <p className="muted">
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={() => {
-              setGoogleOtpEmail(null);
-              setGoogleOtpDone(false);
-            }}
-          >
-            {t('auth.login')}
-          </button>
-        </p>
-      </div>
+        <Btn v="p" onClick={() => { setGoogleOtpEmail(null); setGoogleOtpDone(false); }}>{t('auth.login')}</Btn>
+      </AuthLayout>
     );
   }
 
   if (googleOtpEmail) {
     return (
-      <OtpStep
-        email={googleOtpEmail}
-        onVerified={() => setGoogleOtpDone(true)}
-      />
+      <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
+        <OtpStep email={googleOtpEmail} onVerified={() => setGoogleOtpDone(true)} />
+      </AuthLayout>
     );
   }
 
@@ -98,12 +86,10 @@ export function LoginPage() {
   };
 
   return (
-    <div className="auth-card card">
-      <h1>{t('auth.login')}</h1>
-      <form onSubmit={submit}>
+    <AuthLayout eyebrow="Training & Management" title={t('auth.login')}>
+      <form onSubmit={submit} className="flex flex-col gap-4">
         <Field label={t('auth.email')}>
-          <input
-            className="input"
+          <Input
             type="email"
             autoComplete="username"
             value={email}
@@ -120,17 +106,19 @@ export function LoginPage() {
           />
         </Field>
         <ErrorText err={err} />
-        <button type="submit" className="btn btn-primary" disabled={busy}>
+        <Btn v="p" type="submit" className="w-full h-11" disabled={busy}>
           {t('auth.login')}
-        </button>
+        </Btn>
       </form>
-      <div className="auth-divider">{t('auth.or')}</div>
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div className="flex items-center gap-3 text-muted text-[12px]">
+        <span className="flex-1 h-px bg-line" />{t('auth.or')}<span className="flex-1 h-px bg-line" />
+      </div>
+      <div className="flex justify-center">
         <GoogleSignInButton onToken={onGoogleToken} />
       </div>
-      <p className="muted">
-        {t('auth.noAccount')} <Link to="/register">{t('auth.register')}</Link>
+      <p className="cap text-center">
+        {t('auth.noAccount')} <Link to="/register" className="font-semibold text-info no-underline">{t('auth.register')}</Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }
