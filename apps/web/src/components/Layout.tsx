@@ -1,57 +1,23 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { setLanguage } from '../i18n';
 import { useAuth } from '../auth/useAuth';
-import { api } from '../lib/api';
-import type { User, Role } from '../lib/types';
-import { NotificationBell } from './NotificationBell';
-import {
-  DashboardIcon,
-  HorseIcon,
-  PlanIcon,
-  RaceIcon,
-  HealthIcon,
-  UserIcon,
-} from './Icons';
+import { Page } from '../ds/AppShell';
 
+/**
+ * Route-level shell — every authenticated page renders inside this. Visual
+ * design: Racehorse DS v3 (navy/cream, Barlow Condensed headlines), ported
+ * from the racehorse-ui mockup (see apps/web/src/ds/).
+ *
+ * Breadcrumb is a single generic label derived from the path for now; pages
+ * migrated to the new design pass their own richer crumbs by rendering
+ * <Page> themselves instead of relying on this wrapper (see HorsesPage etc.)
+ */
 export function Layout() {
-  const { t, i18n } = useTranslation();
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { user } = useAuth();
   const location = useLocation();
+  const role = user?.role ?? null;
 
-  const [pendingUsersCount, setPendingUsersCount] = useState<number>(0);
-
-  const role: Role | null = user?.role ?? null;
-
-  const handleLogout = async () => {
-    if (!window.confirm(t('nav.logoutConfirm'))) return;
-    await logout();
-    navigate('/login');
-  };
-
-  useEffect(() => {
-    if (user?.role !== 'MANAGER') return;
-    let mounted = true;
-    const fetchPending = async () => {
-      try {
-        const userRes = await api.get<User[]>('/users');
-        if (mounted && userRes.data) {
-          const pending = userRes.data.filter((u) => u.status === 'PENDING').length;
-          setPendingUsersCount(pending);
-        }
-      } catch {
-        // silently ignore
-      }
-    };
-    void fetchPending();
-    return () => {
-      mounted = false;
-    };
-  }, [user?.role, location.pathname]);
-
-  // Determine topbar page title
   const getPageTitle = () => {
     const path = location.pathname;
     if (path.startsWith('/dashboard') || path === '/') return t('nav.dashboard');
@@ -72,193 +38,9 @@ export function Layout() {
     return t('app.title');
   };
 
-  const getInitials = (name?: string) => {
-    if (!name) return 'U';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
-  };
-
   return (
-    <div className="app">
-      {/* Left Sidebar Rail */}
-      <aside className="rail">
-        <div className="rail-brand">
-          <p className="eyebrow">{t('nav.brandName')}</p>
-          <h1>{t('nav.brandSystem')}</h1>
-          <p className="sub">{t('app.title')}</p>
-        </div>
-
-        <nav className="rail-nav">
-          <div className="rail-section">{t('nav.menu')}</div>
-
-          {/* All authenticated roles have Dashboard */}
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-          >
-            <span className="ico"><DashboardIcon /></span>
-            <span>{t('nav.dashboard')}</span>
-          </NavLink>
-
-          {/* Horses: MANAGER (master list), TRAINER (all club horses), VET (health map), GROOM (stables), OWNER (owned horses) */}
-          <NavLink
-            to="/horses"
-            className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-          >
-            <span className="ico"><HorseIcon /></span>
-            <span>
-              {role === 'OWNER'
-                ? t('nav.horsesOwner')
-                : role === 'VET'
-                ? t('nav.horsesVet')
-                : role === 'GROOM'
-                ? t('nav.horsesGroom')
-                : t('nav.horses')}
-            </span>
-          </NavLink>
-
-          {/* Training Plans: backend GET /training-plans has no @Roles — any authenticated role can view */}
-          <NavLink
-            to="/plans"
-            className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-          >
-            <span className="ico"><PlanIcon /></span>
-            <span>{role === 'TRAINER' ? t('nav.plansTrainer') : t('nav.plans')}</span>
-          </NavLink>
-
-          {/* Race management: read access for owners/trainers; writes are manager-only. */}
-          {(role === 'MANAGER' || role === 'TRAINER' || role === 'OWNER') && (
-            <NavLink
-              to="/races"
-              className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-              title={t('nav.racesTooltip')}
-            >
-              <span className="ico"><RaceIcon /></span>
-              <span>{t('nav.races')}</span>
-            </NavLink>
-          )}
-
-
-          {/* Vaccinations & Deworming: backend chặn mỗi OWNER (xem vaccinations.controller.ts) */}
-          {(role === 'MANAGER' || role === 'TRAINER' || role === 'VET' || role === 'GROOM') && (
-            <NavLink
-              to="/vaccinations"
-              className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-            >
-              <span className="ico"><HealthIcon /></span>
-              <span>{t('nav.vaccinations')}</span>
-            </NavLink>
-          )}
-
-
-          {/* Health & Incidents: MANAGER, VET (medical records), GROOM (barn incident report), TRAINER (fatigue alerts) */}
-          {role === 'VET' && (
-            <NavLink
-              to="/health-records"
-              className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-            >
-              <span className="ico"><HealthIcon /></span>
-              <span>{t('nav.healthRecords')}</span>
-            </NavLink>
-          )}
-          {(role === 'MANAGER' || role === 'GROOM' || role === 'TRAINER' || role === 'VET') && (
-            <NavLink
-              to="/incidents"
-              className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-              title={t('nav.incidentsTooltip')}
-            >
-              <span className="ico"><HealthIcon /></span>
-              <span>
-                {role === 'GROOM'
-                  ? t('nav.incidentsGroom')
-                  : t('nav.incidents')}
-              </span>
-            </NavLink>
-          )}
-
-          {/* User Management & RBAC: MANAGER only */}
-          {role === 'MANAGER' && (
-            <>
-              <div className="rail-section" style={{ marginTop: 8 }}>
-                {t('nav.admin')}
-              </div>
-              <NavLink
-                to="/admin/users"
-                className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-              >
-                <span className="ico"><UserIcon /></span>
-                <span>{t('nav.rbac')}</span>
-                {pendingUsersCount > 0 && (
-                  <span className="count">{pendingUsersCount}</span>
-                )}
-              </NavLink>
-            </>
-          )}
-        </nav>
-
-        <div className="rail-foot">
-          <div>
-            {t('nav.loggedInAs')}: <strong>{user?.name}</strong>
-          </div>
-          <div style={{ color: 'rgba(243, 239, 230, 0.55)', marginTop: 2 }}>
-            {t('nav.roleLabel')}: {role ? t(`role.${role}`) : t('nav.noRole')}
-          </div>
-        </div>
-      </aside>
-
-      {/* Right Main Area */}
-      <div className="main">
-        <header className="topbar">
-          <h2>{getPageTitle()}</h2>
-
-          <div className="topbar-right">
-            <div className="lang">
-              <button
-                type="button"
-                className="linklike"
-                onClick={() => setLanguage('vi')}
-                disabled={i18n.language === 'vi'}
-              >
-                VI
-              </button>
-              <span aria-hidden>/</span>
-              <button
-                type="button"
-                className="linklike"
-                onClick={() => setLanguage('en')}
-                disabled={i18n.language === 'en'}
-              >
-                EN
-              </button>
-            </div>
-
-            <NotificationBell />
-
-            {user && (
-              <div className="user-badge">
-                <div className="user-avatar">{getInitials(user.name)}</div>
-                <div>
-                  <strong>{user.name}</strong>
-                  {role && (
-                    <span className="role-tag"> · {t(`role.${role}`)}</span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <button type="button" className="btn btn-sm" onClick={handleLogout}>
-              {t('nav.logout')}
-            </button>
-          </div>
-        </header>
-
-        <main className="page">
-          <Outlet />
-        </main>
-      </div>
-    </div>
+    <Page crumbs={[getPageTitle()]}>
+      <Outlet />
+    </Page>
   );
 }

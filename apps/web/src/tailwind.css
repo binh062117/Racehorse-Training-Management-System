@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  h1, h2, h3, h4, p { margin: 0; }
+}
+
+@layer components {
+  /* Big condensed display type — race-board feel */
+  .disp { @apply font-display font-bold uppercase; line-height: .95; }
+  .num { font-variant-numeric: tabular-nums; }
+  .lbl { @apply text-[11px] leading-4 font-semibold uppercase tracking-[.04em] text-muted; }
+  .cap { @apply text-[11.5px] leading-4 text-muted; }
+
+  /* Navy hero band with track-lane rules */
+  .hero { @apply relative overflow-hidden rounded-[14px] bg-navy text-white; }
+  .hero::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(90deg, transparent 0 119px, rgba(255,255,255,.045) 119px 120px); }
+  .hero::after { content: ""; position: absolute; right: -120px; top: -160px; width: 520px; height: 520px; border-radius: 50%; pointer-events: none;
+    border: 1px solid rgba(255,255,255,.07); box-shadow: 0 0 0 40px rgba(255,255,255,.025), 0 0 0 80px rgba(255,255,255,.02); }
+  .hero > * { position: relative; z-index: 1; }
+  .hero .lbl { @apply text-hero-label; }
+  .hero .cap { @apply text-hero-muted; }
+
+  /* Saddle cloth number */
+  .cloth { @apply inline-flex flex-none items-center justify-center rounded-badge bg-navy px-[5px] font-display font-bold text-white;
+    min-width: 26px; height: 30px; font-size: 19px; line-height: 1; }
+  .cloth-inv { @apply bg-cream text-navy; }
+
+  /* Diagonal hatch for locked items */
+  .hatch { background: repeating-linear-gradient(135deg,#fff 0 10px,#fdf7f7 10px 20px); }
+  .lockband { @apply absolute bg-bad text-white text-[10px] font-bold uppercase tracking-[.12em];
+    top: 14px; right: -34px; transform: rotate(35deg); padding: 4px 40px; }
+
+  /* Photo placeholder */
+  .photo { @apply relative flex min-h-[120px] items-end overflow-hidden rounded-card border border-line;
+    background: repeating-linear-gradient(135deg,#e9e6df 0 10px,#f1efea 10px 20px); }
+
+  /* Vertical connector for timelines */
+  .tl-line::before { content: ""; position: absolute; top: 28px; bottom: -22px; left: 50%; width: 2px; margin-left: -1px; background: #e2e0db; }
+}
+
+/* Racing silks: kept outside @layer so dynamically-built class names (silk-a…f) are never purged */
+.silk { display: inline-block; flex: none; width: 30px; height: 30px; background: #cdc9c3;
+  clip-path: polygon(28% 0,72% 0,100% 16%,90% 40%,78% 34%,78% 100%,22% 100%,22% 34%,10% 40%,0 16%); }
+.silk-a { background: repeating-linear-gradient(90deg,#1c2b3a 0 18%,#f5f4f1 18% 34%); }
+.silk-b { background: repeating-linear-gradient(180deg,#d39a2a 0 22%,#1c2b3a 22% 34%); }
+.silk-c { background: conic-gradient(from 0deg at 50% 52%,#7a1f2b 0 25%,#f5f4f1 0 50%,#7a1f2b 0 75%,#f5f4f1 0); }
+.silk-d { background: linear-gradient(135deg,#2f6b45 0 38%,#f5f4f1 38% 58%,#2f6b45 58%); }
+.silk-e { background: repeating-conic-gradient(#4b2d7f 0 25%,#e9e3f5 0 50%) 0 0/34% 34%; }
+.silk-f { background: radial-gradient(circle at 50% 50%,#f5f4f1 0 18%,transparent 19%) 0 0/50% 50%, #1a4b8a; }

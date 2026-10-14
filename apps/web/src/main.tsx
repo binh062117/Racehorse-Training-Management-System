@@ -6,6 +6,7 @@ import {
   RouterProvider,
 } from 'react-router-dom';
 import './index.css';
+import './tailwind.css';
 import './i18n';
 import { AuthProvider } from './auth/AuthProvider';
 import { RequireAuth } from './auth/RequireAuth';
