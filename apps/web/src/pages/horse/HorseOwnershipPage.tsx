@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ErrorText } from '../../components/ErrorText';
 import { api } from '../../lib/api';
 import type { Horse } from '../../lib/types';
+import { usePageChrome } from '../../ds/AppShell';
+import { Badge, Card, Icon } from '../../ds/ui';
 import { HorseRecordNav } from './HorseRecordNav';
 
 export function HorseOwnershipPage() {
@@ -20,25 +22,39 @@ export function HorseOwnershipPage() {
     return () => { active = false; };
   }, [id]);
 
-  if (error) return <div className="horse-workspace"><ErrorText err={error} /></div>;
-  if (!horse) return <p className="muted">{t('horseFlow.loading')}</p>;
+  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], horse?.name ?? '…', t('horseFlow.ownershipTitle')] });
+
+  if (error) return <ErrorText err={error} />;
+  if (!horse) return <p className="cap">{t('horseFlow.loading')}</p>;
 
   return (
-    <div className="horse-workspace">
-      <div className="horse-back-row"><Link to={`/horses/${id}`}>← {horse.name}</Link></div>
-      <section className="horse-page-heading">
-        <div><p className="eyebrow">{t('horseFlow.recordsEyebrow')}</p><h1>{t('horseFlow.ownershipTitle')}</h1><p className="muted">{t('horseFlow.ownershipDescription')}</p></div>
-      </section>
+    <div className="flex flex-col gap-4">
       <HorseRecordNav horseId={id} />
-      <section className="ownership-current">
-        <div className="ownership-mark" aria-hidden="true">{horse.owner.name.slice(0, 1).toUpperCase()}</div>
-        <div><span className="eyebrow">{t('horseFlow.currentOwner')}</span><h2>{horse.owner.name}</h2><p>{horse.owner.email}</p></div>
-        <span className="horse-status status-active"><span aria-hidden="true" />{t('horseFlow.current')}</span>
-      </section>
-      <section className="ownership-notice">
-        <span className="ownership-notice-icon" aria-hidden="true">i</span>
-        <div><h2>{t('horseFlow.transferHistoryUnavailable')}</h2><p>{t('horseFlow.transferHistoryExplanation')}</p></div>
-      </section>
+
+      <div>
+        <h1 className="text-lg font-semibold">{t('horseFlow.ownershipTitle')}</h1>
+        <p className="cap mt-0.5">{t('horseFlow.ownershipDescription')}</p>
+      </div>
+
+      <Card className="p-5 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-navy text-white flex items-center justify-center font-semibold text-lg flex-none" aria-hidden="true">
+          {horse.owner.name.slice(0, 1).toUpperCase()}
+        </div>
+        <div className="flex-1">
+          <span className="lbl">{t('horseFlow.currentOwner')}</span>
+          <h2 className="font-semibold text-[15px] mt-0.5">{horse.owner.name}</h2>
+          <p className="cap mt-0.5">{horse.owner.email}</p>
+        </div>
+        <Badge tone="ok"><Icon name="check" className="w-3.5 h-3.5" />{t('horseFlow.current')}</Badge>
+      </Card>
+
+      <Card className="p-5 flex gap-3 items-start">
+        <Icon name="info" className="w-5 h-5 text-muted mt-px flex-none" />
+        <div>
+          <h2 className="font-semibold text-[15px]">{t('horseFlow.transferHistoryUnavailable')}</h2>
+          <p className="cap mt-1">{t('horseFlow.transferHistoryExplanation')}</p>
+        </div>
+      </Card>
     </div>
   );
 }
