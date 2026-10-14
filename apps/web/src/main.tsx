@@ -11,7 +11,6 @@ import './i18n';
 import { AuthProvider } from './auth/AuthProvider';
 import { RequireAuth } from './auth/RequireAuth';
 import { Layout } from './components/Layout';
-import { OverviewPage } from './pages/OverviewPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HorsesPage } from './pages/HorsesPage';
@@ -43,7 +42,6 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Navigate to="/dashboard" replace /> },
       { path: '/dashboard', element: <DashboardPage /> },
-      { path: '/overview', element: <OverviewPage /> },
       { path: '/notifications', element: <NotificationsPage /> },
       {
         path: '/races',
