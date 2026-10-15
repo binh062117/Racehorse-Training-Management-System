@@ -8,7 +8,7 @@ export function ErrorText({ err }: { err: unknown }) {
   const key = `error.${code}`;
   const translated = i18n.exists(key) ? t(key) : null;
   return (
-    <p className="error" role="alert">
+    <p className="text-bad font-medium text-[13px]" role="alert">
       {translated ?? apiErrorMessage(err) ?? t('error.INTERNAL')}
     </p>
   );

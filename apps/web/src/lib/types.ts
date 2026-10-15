@@ -33,6 +33,7 @@ export interface Horse {
   status: HorseStatus;
   healthStatus: HealthStatus;
   fitnessScore: number | null;
+  saddleNumber: number | null;
   sireId: string | null;
   damId: string | null;
   locked: boolean;

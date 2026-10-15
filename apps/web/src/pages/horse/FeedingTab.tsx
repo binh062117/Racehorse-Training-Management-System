@@ -2,11 +2,10 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import type { FeedingRecord, Horse, Paginated } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
-import { Field } from '../../components/Field';
 import { ErrorText } from '../../components/ErrorText';
 import { FeedingSuggestionCard } from '../../components/horse/FeedingSuggestionCard';
-import { PlusIcon } from '../../components/Icons';
 import { formatDate } from '../../lib/format';
+import { Btn, Card, Field, Icon, Input } from '../../ds/ui';
 
 interface FormPrefill {
   feedType: string;
@@ -26,10 +25,7 @@ export function FeedingTab({ horse }: { horse: Horse }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get<Paginated<FeedingRecord>>(
-        `/horses/${horse.id}/feeding-records`,
-        { params: { limit: 50 } },
-      );
+      const res = await api.get<Paginated<FeedingRecord>>(`/horses/${horse.id}/feeding-records`, { params: { limit: 50 } });
       setRecords(res.data.data);
       setErr(null);
     } catch (e) {
@@ -39,47 +35,28 @@ export function FeedingTab({ horse }: { horse: Horse }) {
     }
   }, [horse.id]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   return (
-    <div className="stack">
-      <div className="toolbar">
+    <div className="flex flex-col gap-5">
+      <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h2 style={{ margin: 0, fontSize: 16 }}>Khẩu phần ăn</h2>
-          <p className="muted small" style={{ margin: '2px 0 0' }}>
-            {isGroom
-              ? 'Ghi lại loại thức ăn và khối lượng mỗi lần cho ăn, phục vụ phân tích dinh dưỡng của AI.'
-              : 'Lịch sử khẩu phần ăn của chiến mã.'}
+          <h2 className="text-[15px] font-semibold">Khẩu phần ăn</h2>
+          <p className="cap mt-0.5">
+            {isGroom ? 'Ghi lại loại thức ăn và khối lượng mỗi lần cho ăn, phục vụ phân tích dinh dưỡng của AI.' : 'Lịch sử khẩu phần ăn của chiến mã.'}
           </p>
         </div>
         {isGroom && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              setPrefill(null);
-              setShowForm((s) => !s);
-            }}
-          >
-            <PlusIcon style={{ marginRight: 6 }} />
-            {showForm ? 'Đóng' : 'Ghi nhận khẩu phần'}
-          </button>
+          <Btn v="p" onClick={() => { setPrefill(null); setShowForm((s) => !s); }}>
+            <Icon name="plus" />{showForm ? 'Đóng' : 'Ghi nhận khẩu phần'}
+          </Btn>
         )}
       </div>
 
       {canSuggest && (
         <FeedingSuggestionCard
           horseId={horse.id}
-          onApply={
-            isGroom
-              ? (f) => {
-                  setPrefill({ feedType: f.feedType, quantityKg: String(f.quantityKg) });
-                  setShowForm(true);
-                }
-              : undefined
-          }
+          onApply={isGroom ? (f) => { setPrefill({ feedType: f.feedType, quantityKg: String(f.quantityKg) }); setShowForm(true); } : undefined}
         />
       )}
 
@@ -88,61 +65,47 @@ export function FeedingTab({ horse }: { horse: Horse }) {
           key={prefill ? `${prefill.feedType}:${prefill.quantityKg}` : 'blank'}
           horseId={horse.id}
           initial={prefill}
-          onCreated={() => {
-            setShowForm(false);
-            setPrefill(null);
-            void load();
-          }}
+          onCreated={() => { setShowForm(false); setPrefill(null); void load(); }}
         />
       )}
 
       {loading ? (
-        <p className="muted">Đang tải...</p>
+        <p className="cap">Đang tải...</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-          <p className="muted">Chưa có bản ghi khẩu phần ăn nào.</p>
-        </div>
+        <Card className="px-5 py-10 text-center"><p className="cap">Chưa có bản ghi khẩu phần ăn nào.</p></Card>
       ) : (
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Ngày</th>
-                <th>Loại thức ăn</th>
-                <th>Khối lượng</th>
-                <th>Ghi chú</th>
-                <th>Người ghi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((r) => (
-                <tr key={r.id}>
-                  <td>{formatDate(r.date)}</td>
-                  <td>{r.feedType}</td>
-                  <td>{r.quantityKg} kg</td>
-                  <td className="muted small">{r.notes ?? '—'}</td>
-                  <td className="muted small">{r.recordedBy.name}</td>
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse">
+              <thead>
+                <tr className="text-left">
+                  {['Ngày', 'Loại thức ăn', 'Khối lượng', 'Ghi chú', 'Người ghi'].map((th) => (
+                    <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {records.map((r) => (
+                  <tr key={r.id} className="border-b border-line-soft hover:bg-subtle">
+                    <td className="px-4 py-3">{formatDate(r.date)}</td>
+                    <td className="px-4 py-3">{r.feedType}</td>
+                    <td className="px-4 py-3 num">{r.quantityKg} kg</td>
+                    <td className="px-4 py-3 cap">{r.notes ?? '—'}</td>
+                    <td className="px-4 py-3 cap">{r.recordedBy.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
     </div>
   );
 }
 
-function CreateFeedingForm({
-  horseId,
-  initial,
-  onCreated,
-}: {
-  horseId: string;
-  initial: FormPrefill | null;
-  onCreated: () => void;
-}) {
+function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; initial: FormPrefill | null; onCreated: () => void }) {
   const [feedType, setFeedType] = useState(initial?.feedType ?? '');
   const [quantityKg, setQuantityKg] = useState(initial?.quantityKg ?? '');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -170,53 +133,25 @@ function CreateFeedingForm({
   };
 
   return (
-    <form className="card" style={{ padding: '16px 20px' }} onSubmit={submit}>
-      <div className="form-grid-2">
-        <Field label="Loại thức ăn">
-          <input
-            className="input"
-            value={feedType}
-            onChange={(e) => setFeedType(e.target.value)}
-            maxLength={120}
-            required
-            placeholder="Ví dụ: Cỏ khô Alfalfa, Cám hỗn hợp..."
-          />
-        </Field>
-        <Field label="Khối lượng (kg)">
-          <input
-            className="input"
-            type="number"
-            step="0.1"
-            min="0.1"
-            max="100"
-            value={quantityKg}
-            onChange={(e) => setQuantityKg(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Ngày">
-          <input
-            className="input"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Ghi chú (tuỳ chọn)">
-          <input
-            className="input"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            maxLength={500}
-            placeholder="Ví dụ: ăn ít hơn bình thường..."
-          />
-        </Field>
-      </div>
-      <ErrorText err={error} />
-      <button className="btn btn-primary" type="submit" disabled={saving} style={{ marginTop: 10 }}>
-        {saving ? 'Đang lưu...' : 'Lưu khẩu phần'}
-      </button>
+    <form onSubmit={submit}>
+      <Card className="p-5 flex flex-col gap-4">
+        <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
+          <Field label="Loại thức ăn">
+            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required placeholder="Ví dụ: Cỏ khô Alfalfa, Cám hỗn hợp..." />
+          </Field>
+          <Field label="Khối lượng (kg)">
+            <Input type="number" step="0.1" min="0.1" max="100" value={quantityKg} onChange={(e) => setQuantityKg(e.target.value)} required />
+          </Field>
+          <Field label="Ngày">
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          </Field>
+          <Field label="Ghi chú (tuỳ chọn)">
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder="Ví dụ: ăn ít hơn bình thường..." />
+          </Field>
+        </div>
+        <ErrorText err={error} />
+        <Btn v="p" type="submit" disabled={saving} className="self-start">{saving ? 'Đang lưu...' : 'Lưu khẩu phần'}</Btn>
+      </Card>
     </form>
   );
 }

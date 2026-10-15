@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
-import { Field } from './Field';
 import { ErrorText } from './ErrorText';
+import { Btn, Field, Input } from '../ds/ui';
 
 export function OtpStep({
   email,
@@ -46,28 +46,19 @@ export function OtpStep({
   };
 
   return (
-    <div className="auth-card card">
-      <h1>{t('auth.otpTitle')}</h1>
-      <p className="muted">{t('auth.otpHint', { email })}</p>
-      <form onSubmit={submit}>
+    <div>
+      <h2 className="font-semibold text-[15px]">{t('auth.otpTitle')}</h2>
+      <p className="cap mt-1">{t('auth.otpHint', { email })}</p>
+      <form onSubmit={submit} className="flex flex-col gap-3.5 mt-3.5">
         <Field label={t('auth.otpCode')}>
-          <input
-            className="input"
-            inputMode="numeric"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-          />
+          <Input inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} required />
         </Field>
         <ErrorText err={err} />
-        {resent && <p className="muted small">{t('auth.otpResent')}</p>}
-        <button type="submit" className="btn btn-primary" disabled={busy}>
-          {t('auth.otpVerify')}
-        </button>
-        <button type="button" className="btn" disabled={busy} onClick={resend}>
-          {t('auth.otpResend')}
-        </button>
+        {resent && <p className="cap">{t('auth.otpResent')}</p>}
+        <div className="flex gap-2">
+          <Btn v="p" type="submit" disabled={busy}>{t('auth.otpVerify')}</Btn>
+          <Btn disabled={busy} onClick={() => void resend()}>{t('auth.otpResend')}</Btn>
+        </div>
       </form>
     </div>
   );

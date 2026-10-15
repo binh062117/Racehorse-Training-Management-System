@@ -1,13 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
-import { Field } from '../../components/Field';
 import { api } from '../../lib/api';
 import type { Horse, HorseGender, HorseStatus, Paginated, User } from '../../lib/types';
+import { usePageChrome } from '../../ds/AppShell';
+import { Btn, Card, Field, Input } from '../../ds/ui';
 
 const HORSE_STATUSES: HorseStatus[] = ['ACTIVE', 'RESTING', 'RETIRED'];
+const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
 
 type HorseFormState = {
   name: string;
@@ -85,6 +87,8 @@ export function HorseFormPage() {
     };
   }, [id]);
 
+  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')] });
+
   const setValue = <K extends keyof HorseFormState>(key: K, value: HorseFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
@@ -130,91 +134,83 @@ export function HorseFormPage() {
     }
   };
 
-  if (loading) return <p className="muted">{t('horseFlow.loading')}</p>;
+  if (loading) return <p className="cap">{t('horseFlow.loading')}</p>;
   if (loadError) return <ErrorText err={loadError} />;
 
   return (
-    <div className="horse-workspace">
-      <div className="horse-back-row">
-        <Link to={id ? `/horses/${id}` : '/horses'}>← {t('horseFlow.backToDirectory')}</Link>
+    <div className="flex flex-col gap-4 max-w-3xl">
+      <div>
+        <p className="lbl">{t('horseFlow.managementEyebrow')}</p>
+        <h1 className="text-lg font-semibold mt-0.5">{id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')}</h1>
+        <p className="cap mt-0.5">{t('horseFlow.formDescription')}</p>
       </div>
-      <section className="horse-page-heading">
-        <div>
-          <p className="eyebrow">{t('horseFlow.managementEyebrow')}</p>
-          <h1>{id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')}</h1>
-          <p className="muted">{t('horseFlow.formDescription')}</p>
-        </div>
-      </section>
-      <form className="horse-form" onSubmit={submit}>
-        <section className="horse-form-section">
-          <h2>{t('horseFlow.identitySection')}</h2>
-          <div className="horse-form-grid">
+
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <Card className="p-5 flex flex-col gap-3.5">
+          <h2 className="font-semibold text-[15px]">{t('horseFlow.identitySection')}</h2>
+          <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
             <Field label={t('horse.name')}>
-              <input className="input" value={form.name} onChange={(event) => setValue('name', event.target.value)} required maxLength={120} />
+              <Input value={form.name} onChange={(event) => setValue('name', event.target.value)} required maxLength={120} />
             </Field>
             <Field label={t('horse.gender')}>
-              <select
-                className="input"
-                value={form.gender}
-                onChange={(event) => setValue('gender', event.target.value as HorseGender | '')}
-              >
+              <select className={selectCls} value={form.gender} onChange={(event) => setValue('gender', event.target.value as HorseGender | '')}>
                 <option value="">— {t('horse.genderUnknown')} —</option>
                 <option value="MALE">{t('horse.genderMale')}</option>
                 <option value="FEMALE">{t('horse.genderFemale')}</option>
               </select>
             </Field>
             <Field label={t('horse.breed')}>
-              <input className="input" value={form.breed} onChange={(event) => setValue('breed', event.target.value)} maxLength={120} />
+              <Input value={form.breed} onChange={(event) => setValue('breed', event.target.value)} maxLength={120} />
             </Field>
             <Field label={t('horse.birthDate')}>
-              <input className="input" type="date" value={form.birthDate} onChange={(event) => setValue('birthDate', event.target.value)} />
+              <Input type="date" value={form.birthDate} onChange={(event) => setValue('birthDate', event.target.value)} />
             </Field>
             <Field label={t('horse.owner')}>
-              <select className="input" value={form.ownerId} onChange={(event) => setValue('ownerId', event.target.value)} required>
+              <select className={selectCls} value={form.ownerId} onChange={(event) => setValue('ownerId', event.target.value)} required>
                 <option value="">{t('horseFlow.selectOwner')}</option>
                 {owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name} ({owner.email})</option>)}
               </select>
             </Field>
             <Field label={t('horse.status')}>
-              <select className="input" value={form.status} onChange={(event) => setValue('status', event.target.value as HorseStatus)}>
+              <select className={selectCls} value={form.status} onChange={(event) => setValue('status', event.target.value as HorseStatus)}>
                 {HORSE_STATUSES.map((status) => <option key={status} value={status}>{t(`horseFlow.status.${status}`)}</option>)}
               </select>
             </Field>
             <Field label={t('horseFlow.photo')}>
-              <input className="input" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} />
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} className="text-[12.5px]" />
             </Field>
           </div>
-        </section>
+        </Card>
 
         {id && (
-          <section className="horse-form-section">
-            <h2>{t('horseFlow.pedigreeAndFitness')}</h2>
-            <div className="horse-form-grid">
+          <Card className="p-5 flex flex-col gap-3.5">
+            <h2 className="font-semibold text-[15px]">{t('horseFlow.pedigreeAndFitness')}</h2>
+            <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
               <Field label={t('horseFlow.sire')}>
-                <select className="input" value={form.sireId} onChange={(event) => setValue('sireId', event.target.value)}>
+                <select className={selectCls} value={form.sireId} onChange={(event) => setValue('sireId', event.target.value)}>
                   <option value="">{t('horseFlow.unknown')}</option>
                   {horses.filter((horse) => horse.id !== id && horse.id !== form.damId).map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
                 </select>
               </Field>
               <Field label={t('horseFlow.dam')}>
-                <select className="input" value={form.damId} onChange={(event) => setValue('damId', event.target.value)}>
+                <select className={selectCls} value={form.damId} onChange={(event) => setValue('damId', event.target.value)}>
                   <option value="">{t('horseFlow.unknown')}</option>
                   {horses.filter((horse) => horse.id !== id && horse.id !== form.sireId).map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
                 </select>
               </Field>
               <Field label={t('horseFlow.fitnessScore')}>
-                <input className="input" type="number" min="0" max="100" value={form.fitnessScore} onChange={(event) => setValue('fitnessScore', event.target.value)} />
+                <Input type="number" min="0" max="100" value={form.fitnessScore} onChange={(event) => setValue('fitnessScore', event.target.value)} />
               </Field>
             </div>
-          </section>
+          </Card>
         )}
 
         {saveError && <ErrorText err={saveError} />}
-        <div className="horse-form-actions">
-          <button className="btn btn-primary" type="submit" disabled={saving || !user}>
+        <div className="flex gap-2">
+          <Btn v="p" type="submit" disabled={saving || !user}>
             {saving ? t('horseFlow.saving') : id ? t('common.save') : t('horseFlow.createRecord')}
-          </button>
-          <Link className="btn" to={id ? `/horses/${id}` : '/horses'}>{t('common.cancel')}</Link>
+          </Btn>
+          <Btn to={id ? `/horses/${id}` : '/horses'}>{t('common.cancel')}</Btn>
         </div>
       </form>
     </div>

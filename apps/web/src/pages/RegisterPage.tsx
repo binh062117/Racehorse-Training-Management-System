@@ -2,10 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
-import { Field } from '../components/Field';
 import { ErrorText } from '../components/ErrorText';
 import { OtpStep } from '../components/OtpStep';
 import { PasswordInput } from '../components/PasswordInput';
+import { AuthLayout } from '../ds/AuthLayout';
+import { Btn, Field, Input } from '../ds/ui';
 
 export function RegisterPage() {
   const { t } = useTranslation();
@@ -36,56 +37,41 @@ export function RegisterPage() {
 
   if (step === 'done') {
     return (
-      <div className="auth-card card">
-        <h1>{t('auth.register')}</h1>
+      <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
         <p>{t('auth.registerDone')}</p>
-        <p className="muted">
-          <Link to="/login">{t('auth.login')}</Link>
-        </p>
-      </div>
+        <Link to="/login"><Btn v="p" className="w-full h-11">{t('auth.login')}</Btn></Link>
+      </AuthLayout>
     );
   }
 
   if (step === 'otp') {
-    return <OtpStep email={email.trim()} onVerified={() => setStep('done')} />;
+    return (
+      <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
+        <OtpStep email={email.trim()} onVerified={() => setStep('done')} />
+      </AuthLayout>
+    );
   }
 
   return (
-    <div className="auth-card card">
-      <h1>{t('auth.register')}</h1>
-      <form onSubmit={submit}>
+    <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
+      <form onSubmit={submit} className="flex flex-col gap-4">
         <Field label={t('auth.name')}>
-          <input
-            className="input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
+          <Input value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
         <Field label={t('auth.email')}>
-          <input
-            className="input"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </Field>
         <Field label={t('auth.password')} hint={t('auth.passwordHint')}>
-          <PasswordInput
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required />
         </Field>
         <ErrorText err={err} />
-        <button type="submit" className="btn btn-primary" disabled={busy}>
+        <Btn v="p" type="submit" className="w-full h-11" disabled={busy}>
           {t('auth.register')}
-        </button>
+        </Btn>
       </form>
-      <p className="muted">
-        <Link to="/login">{t('auth.login')}</Link>
+      <p className="cap text-center">
+        <Link to="/login" className="font-semibold text-info no-underline">{t('auth.login')}</Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }

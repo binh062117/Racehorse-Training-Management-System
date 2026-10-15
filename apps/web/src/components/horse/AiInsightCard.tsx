@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { ErrorText } from '../ErrorText';
-import { SparkleIcon } from '../Icons';
+import { Badge, Btn, Card, Icon, type Tone } from '../../ds/ui';
 
 interface HorseInsight {
   summary: string;
@@ -16,10 +16,10 @@ const RISK_LABEL: Record<HorseInsight['riskLevel'], string> = {
   HIGH: 'Rủi ro cao',
 };
 
-const RISK_CSS: Record<HorseInsight['riskLevel'], string> = {
-  LOW: 'badge-success',
-  MEDIUM: 'badge-warning',
-  HIGH: 'badge-danger',
+const RISK_TONE: Record<HorseInsight['riskLevel'], Tone> = {
+  LOW: 'ok',
+  MEDIUM: 'warn',
+  HIGH: 'bad',
 };
 
 /** AI-generated health/injury-risk summary for a horse (VET/MANAGER only). */
@@ -42,74 +42,43 @@ export function AiInsightCard({ horseId }: { horseId: string }) {
   };
 
   return (
-    <div className="card" style={{ padding: '16px 20px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
+    <Card className="p-5">
+      <div className="flex justify-between items-center gap-3 flex-wrap">
         <div>
-          <h2 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SparkleIcon /> Trợ lý AI — phân tích rủi ro sức khỏe
-          </h2>
-          <p className="muted small" style={{ margin: '2px 0 0' }}>
-            Dùng AI tóm tắt lịch sử khám bệnh, sự cố và tập luyện, gợi ý rủi ro chấn thương. Chỉ mang tính tham khảo.
-          </p>
+          <h2 className="text-[15px] font-semibold flex items-center gap-2"><Icon name="sparkle" />Trợ lý AI — phân tích rủi ro sức khỏe</h2>
+          <p className="cap mt-1">Dùng AI tóm tắt lịch sử khám bệnh, sự cố và tập luyện, gợi ý rủi ro chấn thương. Chỉ mang tính tham khảo.</p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary btn-sm"
-          onClick={analyze}
-          disabled={loading}
-          style={{ whiteSpace: 'nowrap' }}
-        >
+        <Btn v="p" sm onClick={() => void analyze()} disabled={loading} className="whitespace-nowrap">
           {loading ? 'Đang phân tích…' : insight ? 'Phân tích lại' : 'Phân tích ngay'}
-        </button>
+        </Btn>
       </div>
 
-      {err && (
-        <div style={{ marginTop: 12 }}>
-          <ErrorText err={err} />
-        </div>
-      )}
+      {err && <div className="mt-3"><ErrorText err={err} /></div>}
 
       {insight && !loading && (
-        <div style={{ marginTop: 14, borderTop: '1px solid var(--border-default)', paddingTop: 14 }}>
-          <span className={`badge ${RISK_CSS[insight.riskLevel]}`}>
-            {RISK_LABEL[insight.riskLevel]}
-          </span>
-          <p style={{ margin: '10px 0 0', lineHeight: 1.6 }}>{insight.summary}</p>
+        <div className="mt-3.5 pt-3.5 border-t border-line-soft">
+          <Badge tone={RISK_TONE[insight.riskLevel]}>{RISK_LABEL[insight.riskLevel]}</Badge>
+          <p className="mt-2.5 leading-relaxed">{insight.summary}</p>
 
           {insight.riskReasons.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <span className="muted small" style={{ fontWeight: 600 }}>
-                Yếu tố rủi ro
-              </span>
-              <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
-                {insight.riskReasons.map((reason, i) => (
-                  <li key={i} style={{ marginBottom: 4 }}>{reason}</li>
-                ))}
+            <div className="mt-3">
+              <span className="lbl">Yếu tố rủi ro</span>
+              <ul className="mt-1.5 pl-5 list-disc">
+                {insight.riskReasons.map((reason, i) => <li key={i} className="mb-1">{reason}</li>)}
               </ul>
             </div>
           )}
 
           {insight.recommendations.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <span className="muted small" style={{ fontWeight: 600 }}>
-                Khuyến nghị
-              </span>
-              <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
-                {insight.recommendations.map((rec, i) => (
-                  <li key={i} style={{ marginBottom: 4 }}>{rec}</li>
-                ))}
+            <div className="mt-3">
+              <span className="lbl">Khuyến nghị</span>
+              <ul className="mt-1.5 pl-5 list-disc">
+                {insight.recommendations.map((rec, i) => <li key={i} className="mb-1">{rec}</li>)}
               </ul>
             </div>
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

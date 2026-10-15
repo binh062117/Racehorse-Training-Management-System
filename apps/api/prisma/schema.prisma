@@ -168,6 +168,7 @@ model Horse {
   damId        String?
   dam          Horse?      @relation("HorsePedigree_Dam", fields: [damId], references: [id])
   fitnessScore Int? // 0..100, nullable — chưa đánh giá
+  saddleNumber Int? // Số áo đua (saddle cloth) — hiển thị trên UI, không bắt buộc duy nhất
   locked       Boolean      @default(false) // Training Lock — VET ban hành
   lockReason   String? // chỉ có ý nghĩa khi locked=true
   healthStatus HealthStatus @default(FIT) // Phase 10 — độc lập với `status` (career)

@@ -3,15 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
-import { Field } from '../../components/Field';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate, fromDateTimeLocal } from '../../lib/format';
-import { LockIcon } from '../../components/Icons';
-import './SessionsTab.css';
+import {
+  Alert, Badge, Btn, Card, Field, Icon, Modal, ModalBody, ModalFoot, ModalHead, Textarea, type Tone,
+} from '../../ds/ui';
 
 const sessionTime = new Intl.DateTimeFormat('vi-VN', {
   timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit',
 });
+
+const STATUS_TONE: Record<TrainingSession['status'], Tone> = { PLANNED: 'info', DONE: 'ok', CANCELLED: 'neu' };
 
 interface Props {
   horseId: string;
@@ -114,72 +116,53 @@ function SessionsContent({ horseId, isLocked, lockReason }: Props) {
   }
 
   return (
-    <div className="stack session-schedule">
+    <div className="flex flex-col gap-4">
       {isLocked && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '12px 16px',
-            background: 'var(--status-danger-bg)',
-            border: '1px solid #f5c2c7',
-            borderRadius: 6,
-            color: 'var(--status-danger)',
-            fontSize: '13px',
-          }}
-        >
-          <LockIcon width="18" height="18" />
-          <div>
-            <strong>{t('session.locked')}</strong>
-            {lockReason && <div>{lockReason}</div>}
-          </div>
-        </div>
+        <Alert tone="bad" icon="lock" title={t('session.locked')}>
+          {lockReason}
+        </Alert>
       )}
 
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>{t('session.heading')}</h2>
+      <div className="flex justify-between items-center flex-wrap gap-2.5">
+        <h2 className="text-[15px] font-semibold">{t('session.heading')}</h2>
         {canCreate && !isLocked && (
-          <button type="button" className="btn btn-primary" onClick={() => {
-            setCreated(false);
-            setCreating(true);
-          }}>+ {t('session.openSchedule')}</button>
+          <Btn v="p" onClick={() => { setCreated(false); setCreating(true); }}><Icon name="plus" />{t('session.openSchedule')}</Btn>
         )}
       </div>
-      {created && <p className="badge badge-success schedule-success" role="status">{t('session.saved')}</p>}
-      {canCreate && !isLocked && creating && (
-        <CreateSessionForm horseId={horseId} plans={plans} plansLoading={plansLoading}
-          plansErr={plansErr} retryPlans={retryPlans} onClose={() => setCreating(false)}
-          onCreated={() => { setCreating(false); setCreated(true); void load(); }} />
-      )}
+      {created && <div role="status"><Badge tone="ok" className="h-auto py-1.5 px-3"><Icon name="check" className="w-3.5 h-3.5" />{t('session.saved')}</Badge></div>}
 
-      <p className="muted small schedule-timezone">{t('session.displayTime')}</p>
+      <CreateSessionForm
+        open={canCreate && !isLocked && creating}
+        horseId={horseId} plans={plans} plansLoading={plansLoading}
+        plansErr={plansErr} retryPlans={retryPlans} onClose={() => setCreating(false)}
+        onCreated={() => { setCreating(false); setCreated(true); void load(); }}
+      />
+
+      <p className="cap">{t('session.displayTime')}</p>
       {loading ? (
-        <p className="muted" role="status">{t('session.loading')}</p>
+        <p className="cap" role="status">{t('session.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : sessions.length === 0 ? (
-        <p className="muted">{t('session.empty')}</p>
+        <p className="cap">{t('session.empty')}</p>
       ) : (
-        <div className="schedule-days">
+        <div className="flex flex-col gap-5">
           {[...days].map(([date, entries]) => (
-            <section className="schedule-day" key={date} aria-label={date}>
-              <h3 className="schedule-date">{date}</h3>
-        <ul className="schedule-day-list">
-          {entries.map((s) => (
-            <SessionItem
-              key={s.id}
-              session={s}
-              hasPlan={!!s.planId}
-              planLabel={s.planId
-                ? plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable')
-                : t('session.noPlan')}
-              canUpdate={canUpdate}
-              isTrainer={role === 'TRAINER'}
-              onChanged={load}
-            />
-          ))}
-        </ul>
+            <section key={date} aria-label={date}>
+              <h3 className="lbl mb-2">{date}</h3>
+              <ul className="list-none p-0 flex flex-col gap-2.5">
+                {entries.map((s) => (
+                  <SessionItem
+                    key={s.id}
+                    session={s}
+                    hasPlan={!!s.planId}
+                    planLabel={s.planId ? plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable') : t('session.noPlan')}
+                    canUpdate={canUpdate}
+                    isTrainer={role === 'TRAINER'}
+                    onChanged={load}
+                  />
+                ))}
+              </ul>
             </section>
           ))}
         </div>
@@ -189,14 +172,9 @@ function SessionsContent({ horseId, isLocked, lockReason }: Props) {
 }
 
 function CreateSessionForm({
-  horseId,
-  onCreated,
-  onClose,
-  plans,
-  plansLoading,
-  plansErr,
-  retryPlans,
+  open, horseId, onCreated, onClose, plans, plansLoading, plansErr, retryPlans,
 }: {
+  open: boolean;
   horseId: string;
   onCreated: () => void;
   onClose: () => void;
@@ -213,7 +191,6 @@ function CreateSessionForm({
   const [err, setErr] = useState<unknown>(null);
   const [validation, setValidation] = useState('');
   const [busy, setBusy] = useState(false);
-
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -249,103 +226,56 @@ function CreateSessionForm({
   };
 
   return (
-    <div className="modal-overlay" onClick={() => { if (!busy) onClose(); }}>
-      <div className="modal-content" role="dialog" aria-modal="true" aria-label={t('session.new')}
-        style={{ minWidth: 0 }} onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && !busy) onClose();
-          if (e.key === 'Tab') {
-            const controls = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'));
-            const first = controls[0], last = controls[controls.length - 1];
-            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
-            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
-          }
-        }}>
-        <div className="modal-header">
-          <h2 className="modal-title">{t('session.new')}</h2>
-          <button type="button" className="modal-close" disabled={busy}
-            aria-label={t('session.closeSchedule')} onClick={onClose}>×</button>
-        </div>
-        <form onSubmit={submit} aria-label={t('session.new')}>
-          <div className="modal-body form-grid" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-      <Field label={t('session.scheduledAt')} hint={t('session.localTime', {
-        zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      })}>
-        <input
-          className="input"
-          type="datetime-local"
-          autoFocus
-          value={scheduledAt}
-          onChange={(e) => setScheduledAt(e.target.value)}
-          disabled={busy}
-          required
-        />
-      </Field>
-      <Field label={t('session.plan')}>
-        <select className="input" value={planId}
-          onChange={(e) => setPlanId(e.target.value)}
-          disabled={busy || plansLoading || !!plansErr}>
-          <option value="">{t('session.noPlan')}</option>
-          {plans.map((plan) => (
-            <option key={plan.id} value={plan.id}>
-              {plan.goal} ({formatDate(plan.startDate)})
-            </option>
-          ))}
-        </select>
-      </Field>
-      {plansLoading && <p className="muted" role="status">{t('session.loadingPlans')}</p>}
-      {plansErr && (
-        <div>
-          <ErrorText err={plansErr} />
-          <p className="muted small">{t('session.planLoadFailed')}</p>
-          <button type="button" className="btn" disabled={busy} onClick={retryPlans}>{t('session.retry')}</button>
-        </div>
-      )}
-      <Field label={t('session.type')}>
-        <input
-          className="input"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          placeholder="gallop, sprint, trot…"
-          maxLength={80}
-          disabled={busy}
-          required
-        />
-      </Field>
-      <Field label={t('session.notes')}>
-        <textarea
-          className="input"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          maxLength={2000}
-          disabled={busy}
-          rows={2}
-        />
-      </Field>
-      {validation && <p className="error" role="alert">{t(validation)}</p>}
-      <ErrorText err={err} />
-      {err != null && apiErrorMessage(err) && (
-        <p className="error" role="alert">{apiErrorMessage(err)}</p>
-      )}
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn" disabled={busy} onClick={onClose}>{t('common.cancel')}</button>
-            <button type="submit" className="btn btn-primary" disabled={busy}>{t('session.schedule')}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Modal open={open} onClose={() => { if (!busy) onClose(); }} labelledBy="session-new-title">
+      <ModalHead icon="calendar" title={t('session.new')} id="session-new-title" onClose={() => !busy && onClose()} />
+      <form onSubmit={submit} aria-label={t('session.new')}>
+        <ModalBody>
+          <Field label={t('session.scheduledAt')} hint={t('session.localTime', { zone: Intl.DateTimeFormat().resolvedOptions().timeZone })}>
+            <input
+              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              type="datetime-local" autoFocus value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} disabled={busy} required
+            />
+          </Field>
+          <Field label={t('session.plan')}>
+            <select
+              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              value={planId} onChange={(e) => setPlanId(e.target.value)} disabled={busy || plansLoading || !!plansErr}
+            >
+              <option value="">{t('session.noPlan')}</option>
+              {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.goal} ({formatDate(plan.startDate)})</option>)}
+            </select>
+          </Field>
+          {plansLoading && <p className="cap" role="status">{t('session.loadingPlans')}</p>}
+          {plansErr != null && (
+            <div>
+              <ErrorText err={plansErr} />
+              <p className="cap">{t('session.planLoadFailed')}</p>
+              <Btn sm disabled={busy} onClick={retryPlans}>{t('session.retry')}</Btn>
+            </div>
+          )}
+          <Field label={t('session.type')}>
+            <input
+              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              value={type} onChange={(e) => setType(e.target.value)} placeholder="gallop, sprint, trot…" maxLength={80} disabled={busy} required
+            />
+          </Field>
+          <Field label={t('session.notes')}>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} disabled={busy} rows={2} />
+          </Field>
+          {validation && <p className="text-bad font-medium text-[13px]" role="alert">{t(validation)}</p>}
+          <ErrorText err={err} />
+          {err != null && apiErrorMessage(err) && <p className="text-bad font-medium text-[13px]" role="alert">{apiErrorMessage(err)}</p>}
+        </ModalBody>
+        <ModalFoot>
+          <Btn disabled={busy} onClick={onClose}>{t('common.cancel')}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{t('session.schedule')}</Btn>
+        </ModalFoot>
+      </form>
+    </Modal>
   );
 }
 
-function SessionItem({
-  session,
-  planLabel,
-  hasPlan,
-  canUpdate,
-  isTrainer,
-  onChanged,
-}: {
+function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChanged }: {
   session: TrainingSession;
   planLabel: string;
   hasPlan: boolean;
@@ -357,9 +287,7 @@ function SessionItem({
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState<'DONE' | 'CANCELLED' | ''>('');
   const [resultMetric, setResultMetric] = useState(session.resultMetric ?? '');
-  const [resultValue, setResultValue] = useState(
-    session.resultValue?.toString() ?? '',
-  );
+  const [resultValue, setResultValue] = useState(session.resultValue?.toString() ?? '');
   const [notes, setNotes] = useState(session.notes ?? '');
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -387,101 +315,60 @@ function SessionItem({
   };
 
   return (
-    <li className="card">
-      <div className="schedule-summary">
-        <div className="schedule-summary-head">
-          <time className="schedule-time" dateTime={session.scheduledAt}>
-            {sessionTime.format(new Date(session.scheduledAt))}
-          </time>
-          <div className="schedule-type-status">
-            <strong className="schedule-type">{session.type}</strong>
-            <span className={`badge ${session.status === 'PLANNED' ? 'badge-info' : session.status === 'DONE' ? 'badge-success' : 'badge-neutral'}`}>
-              {t(`session.displayStatus.${session.status}`)}
-            </span>
+    <li>
+      <Card className="p-4">
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <time className="disp text-2xl" dateTime={session.scheduledAt}>{sessionTime.format(new Date(session.scheduledAt))}</time>
+          <div className="flex items-center gap-2">
+            <strong>{session.type}</strong>
+            <Badge tone={STATUS_TONE[session.status]}>{t(`session.displayStatus.${session.status}`)}</Badge>
           </div>
         </div>
-        <div className="schedule-description">
-          <div className="schedule-plan-label">{t('session.planSummary')}</div>
-          <div className={hasPlan ? 'schedule-plan' : 'schedule-plan muted'}>{planLabel}</div>
-          <div className="schedule-trainer">{t('session.trainer')}: {session.trainer.name}</div>
-          {session.notes && <div className="schedule-notes">{t('session.notes')}: {session.notes}</div>}
+        <div className="mt-2 text-[13px]">
+          <div className="lbl">{t('session.planSummary')}</div>
+          <div className={hasPlan ? '' : 'cap'}>{planLabel}</div>
+          <div className="cap mt-0.5">{t('session.trainer')}: {session.trainer.name}</div>
+          {session.notes && <div className="cap mt-0.5">{t('session.notes')}: {session.notes}</div>}
         </div>
-      </div>
-      {(session.resultMetric || session.resultValue != null) && (
-        <div className="small">
-          {t('session.result')}: {session.resultMetric ?? '—'} ={' '}
-          {session.resultValue ?? '—'}
-        </div>
-      )}
+        {(session.resultMetric || session.resultValue != null) && (
+          <div className="text-[12.5px] mt-1.5">{t('session.result')}: {session.resultMetric ?? '—'} = {session.resultValue ?? '—'}</div>
+        )}
 
-      {editable && !editing && (
-        <button
-          type="button"
-          className="btn btn-sm"
-          onClick={() => setEditing(true)}
-        >
-          {t('common.update')}
-        </button>
-      )}
+        {editable && !editing && <Btn sm className="mt-2.5" onClick={() => setEditing(true)}>{t('common.update')}</Btn>}
 
-      {editing && (
-        <form className="form-grid mt" onSubmit={save}>
-          <Field label={t('session.status')}>
-            <select
-              className="input"
-              value={status}
-              onChange={(e) =>
-                setStatus(e.target.value as 'DONE' | 'CANCELLED' | '')
-              }
-            >
-              <option value="">{t('session.keepPlanned')}</option>
-              <option value="DONE">DONE</option>
-              <option value="CANCELLED">CANCELLED</option>
-            </select>
-          </Field>
-          <Field label={t('session.resultMetric')}>
-            <input
-              className="input"
-              value={resultMetric}
-              onChange={(e) => setResultMetric(e.target.value)}
-              placeholder="time_1200m_s"
-            />
-          </Field>
-          <Field label={t('session.resultValue')}>
-            <input
-              className="input"
-              type="number"
-              step="any"
-              value={resultValue}
-              onChange={(e) => setResultValue(e.target.value)}
-            />
-          </Field>
-          {isTrainer && (
-            <Field label={t('session.notes')}>
-              <textarea
-                className="input"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
+        {editing && (
+          <form onSubmit={save} className="flex flex-col gap-3 mt-3.5 pt-3.5 border-t border-line-soft">
+            <Field label={t('session.status')}>
+              <select
+                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+                value={status} onChange={(e) => setStatus(e.target.value as 'DONE' | 'CANCELLED' | '')}
+              >
+                <option value="">{t('session.keepPlanned')}</option>
+                <option value="DONE">DONE</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
+            </Field>
+            <Field label={t('session.resultMetric')}>
+              <input
+                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+                value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} placeholder="time_1200m_s"
               />
             </Field>
-          )}
-          <ErrorText err={err} />
-          <div className="row">
-            <button type="submit" className="btn btn-primary" disabled={busy}>
-              {t('common.save')}
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setEditing(false)}
-              disabled={busy}
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
-        </form>
-      )}
+            <Field label={t('session.resultValue')}>
+              <input
+                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+                type="number" step="any" value={resultValue} onChange={(e) => setResultValue(e.target.value)}
+              />
+            </Field>
+            {isTrainer && <Field label={t('session.notes')}><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></Field>}
+            <ErrorText err={err} />
+            <div className="flex gap-2">
+              <Btn v="p" sm type="submit" disabled={busy}>{t('common.save')}</Btn>
+              <Btn sm onClick={() => setEditing(false)} disabled={busy}>{t('common.cancel')}</Btn>
+            </div>
+          </form>
+        )}
+      </Card>
     </li>
   );
 }

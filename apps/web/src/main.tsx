@@ -5,12 +5,11 @@ import {
   Navigate,
   RouterProvider,
 } from 'react-router-dom';
-import './index.css';
+import './tailwind.css';
 import './i18n';
 import { AuthProvider } from './auth/AuthProvider';
 import { RequireAuth } from './auth/RequireAuth';
 import { Layout } from './components/Layout';
-import { OverviewPage } from './pages/OverviewPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HorsesPage } from './pages/HorsesPage';
@@ -26,7 +25,6 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import {
   HorseFormPage,
   HorseOwnershipPage,
-  HorsePedigreePage,
   HorseRaceHistoryPage,
   MyHorsesPage,
 } from './pages/HorseFlowPages';
@@ -43,7 +41,6 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Navigate to="/dashboard" replace /> },
       { path: '/dashboard', element: <DashboardPage /> },
-      { path: '/overview', element: <OverviewPage /> },
       { path: '/notifications', element: <NotificationsPage /> },
       {
         path: '/races',
@@ -103,7 +100,6 @@ const router = createBrowserRouter([
         ),
       },
       { path: '/horses/:id', element: <HorseDetailPage /> },
-      { path: '/horses/:id/pedigree', element: <HorsePedigreePage /> },
       { path: '/horses/:id/performance', element: <HorseRaceHistoryPage /> },
       { path: '/horses/:id/ownership', element: <HorseOwnershipPage /> },
       { path: '/plans', element: <TrainingPlansPage /> },

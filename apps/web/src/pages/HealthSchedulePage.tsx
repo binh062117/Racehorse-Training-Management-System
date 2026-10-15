@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
-import { Field } from '../components/Field';
 import { api } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import { formatDate } from '../lib/format';
 import type { Horse, Paginated, Vaccination } from '../lib/types';
+import { usePageChrome } from '../ds/AppShell';
+import { Badge, Btn, Card, Chip, Field, Icon, Input, Select } from '../ds/ui';
 
 export function HealthSchedulePage() {
   const { t } = useTranslation();
@@ -15,137 +16,91 @@ export function HealthSchedulePage() {
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [careType, setCareType] = useState<'ALL' | 'VACCINATION' | 'DEWORMING'>('ALL');
 
+  usePageChrome({ crumbs: ['Sức khỏe', t('healthSchedule.title')] });
+
   const vaccinationParams = {
     limit: 100,
     ...(upcomingOnly ? { upcoming: true } : {}),
     ...(careType !== 'ALL' ? { careType } : {}),
   };
-  const {
-    data: records,
-    error,
-    reload: load,
-  } = useCachedResource(`vaccinations:${JSON.stringify(vaccinationParams)}`, () =>
-    api
-      .get<Paginated<Vaccination>>('/vaccinations', { params: vaccinationParams })
-      .then((r) => r.data.data),
+  const { data: records, error, reload: load } = useCachedResource(`vaccinations:${JSON.stringify(vaccinationParams)}`, () =>
+    api.get<Paginated<Vaccination>>('/vaccinations', { params: vaccinationParams }).then((r) => r.data.data),
   );
 
-  const changeFilter = (nextUpcomingOnly: boolean) => {
-    setUpcomingOnly(nextUpcomingOnly);
-  };
-
   return (
-    <div className="horse-workspace health-schedule-page">
-      <section className="horse-page-heading">
-        <div>
-          <p className="eyebrow">{t('healthSchedule.eyebrow')}</p>
-          <h1>{t('healthSchedule.title')}</h1>
-          <p className="muted">{t('healthSchedule.description')}</p>
-        </div>
+    <>
+      <section className="hero px-8 py-7 flex flex-col gap-2">
+        <div className="lbl">{t('healthSchedule.eyebrow')}</div>
+        <h1 className="disp text-[56px] mt-1">{t('healthSchedule.title')}</h1>
+        <p className="text-hero-muted max-w-[560px]">{t('healthSchedule.description')}</p>
       </section>
 
       {user?.role === 'VET' && <CreateVaccinationForm onCreated={load} />}
 
-      <section className="health-schedule-section">
-        <div className="health-schedule-toolbar">
-          <div className="health-schedule-tabs" role="group" aria-label={t('healthSchedule.status')}>
-            <button
-              type="button"
-              className={upcomingOnly ? 'active' : ''}
-              aria-pressed={upcomingOnly}
-              onClick={() => changeFilter(true)}
-            >
-              {t('healthSchedule.upcoming')}
-            </button>
-            <button
-              type="button"
-              className={!upcomingOnly ? 'active' : ''}
-              aria-pressed={!upcomingOnly}
-              onClick={() => changeFilter(false)}
-            >
-              {t('healthSchedule.all')}
-            </button>
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line-soft">
+          <div className="flex gap-2">
+            <Chip on={upcomingOnly} onClick={() => setUpcomingOnly(true)}>{t('healthSchedule.upcoming')}</Chip>
+            <Chip on={!upcomingOnly} onClick={() => setUpcomingOnly(false)}>{t('healthSchedule.all')}</Chip>
           </div>
-          <span className="health-schedule-count">{records?.length ?? 0}</span>
+          <span className="cap num">{records?.length ?? 0}</span>
         </div>
-        <div
-          className="health-schedule-tabs"
-          role="group"
-          aria-label={t('healthSchedule.kind')}
-          style={{ marginTop: '12px' }}
-        >
+        <div className="flex flex-wrap gap-2 px-5 pt-4">
           {(['ALL', 'VACCINATION', 'DEWORMING'] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              className={careType === type ? 'active' : ''}
-              aria-pressed={careType === type}
-              onClick={() => setCareType(type)}
-            >
-              {t(`healthSchedule.kindOptions.${type}`)}
-            </button>
+            <Chip key={type} on={careType === type} onClick={() => setCareType(type)}>{t(`healthSchedule.kindOptions.${type}`)}</Chip>
           ))}
         </div>
+
         {error ? (
-          <ErrorText err={error} />
+          <div className="p-5"><ErrorText err={error} /></div>
         ) : records === null ? (
-          <p className="muted">…</p>
+          <p className="cap p-5">…</p>
         ) : records.length === 0 ? (
-          <div className="horse-empty-state">
-            <p>{t(upcomingOnly ? 'healthSchedule.emptyUpcoming' : 'healthSchedule.emptyAll')}</p>
-          </div>
+          <div className="p-10 text-center"><p className="cap">{t(upcomingOnly ? 'healthSchedule.emptyUpcoming' : 'healthSchedule.emptyAll')}</p></div>
         ) : (
-          <div className="health-schedule-table-wrap">
-            <table className="health-schedule-table">
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full min-w-[760px] border-collapse">
               <thead>
-                <tr>
-                  <th>{t('healthSchedule.horse')}</th>
-                  <th>{t('healthSchedule.item')}</th>
-                  <th>{t('healthSchedule.lastDate')}</th>
-                  <th>{t('healthSchedule.nextDue')}</th>
-                  <th>{t('healthSchedule.status')}</th>
+                <tr className="text-left">
+                  {[t('healthSchedule.horse'), t('healthSchedule.item'), t('healthSchedule.lastDate'), t('healthSchedule.nextDue'), t('healthSchedule.status')].map((th) => (
+                    <th key={th} className="h-[42px] px-5 bg-cream lbl border-y border-line">{th}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {records.map((record) => (
-                  <tr key={record.id}>
-                    <td>
-                      {record.horse ? (
-                        <Link to={`/horses/${record.horse.id}`}>{record.horse.name}</Link>
-                      ) : '—'}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                  <tr key={record.id} className="border-b border-line-soft hover:bg-subtle">
+                    <td className="px-5 py-3">{record.horse ? <Link to={`/horses/${record.horse.id}`} className="font-semibold text-navy no-underline">{record.horse.name}</Link> : '—'}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex flex-col gap-1 items-start">
                         <strong>{record.vaccineName}</strong>
-                        <span className="health-schedule-badge neutral">
-                          {t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}
-                        </span>
+                        <Badge tone="neu">{t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}</Badge>
                       </div>
                     </td>
-                    <td>{formatDate(record.date)}</td>
-                    <td>{record.nextDueDate ? formatDate(record.nextDueDate) : t('healthSchedule.noDueDate')}</td>
-                    <td><DueStatus date={record.nextDueDate} /></td>
+                    <td className="px-5 py-3">{formatDate(record.date)}</td>
+                    <td className="px-5 py-3">{record.nextDueDate ? formatDate(record.nextDueDate) : t('healthSchedule.noDueDate')}</td>
+                    <td className="px-5 py-3"><DueStatus date={record.nextDueDate} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </section>
-    </div>
+      </Card>
+    </>
   );
 }
 
 function DueStatus({ date }: { date: string | null }) {
   const { t } = useTranslation();
-  if (!date) return <span className="health-schedule-badge neutral">{t('healthSchedule.noDueDate')}</span>;
+  if (!date) return <Badge tone="neu">{t('healthSchedule.noDueDate')}</Badge>;
   const due = new Date(date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const daysUntilDue = Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
-  if (daysUntilDue < 0) return <span className="health-schedule-badge danger">{t('healthSchedule.overdue')}</span>;
-  if (daysUntilDue <= 14) return <span className="health-schedule-badge warning">{t('healthSchedule.dueSoon')}</span>;
-  return <span className="health-schedule-badge success">{t('healthSchedule.scheduled')}</span>;
+  if (daysUntilDue < 0) return <Badge tone="bad">{t('healthSchedule.overdue')}</Badge>;
+  if (daysUntilDue <= 14) return <Badge tone="warn">{t('healthSchedule.dueSoon')}</Badge>;
+  return <Badge tone="ok">{t('healthSchedule.scheduled')}</Badge>;
 }
 
 function CreateVaccinationForm({ onCreated }: { onCreated: () => Promise<void> }) {
@@ -188,37 +143,42 @@ function CreateVaccinationForm({ onCreated }: { onCreated: () => Promise<void> }
   };
 
   return (
-    <form className="health-schedule-form" onSubmit={submit}>
-      <div className="health-schedule-form-heading">
-        <h2>{t('healthSchedule.new')}</h2>
-      </div>
-      <div className="health-schedule-form-grid">
-        <Field label={t('healthSchedule.horse')}>
-          <select className="input" value={horseId} onChange={(event) => setHorseId(event.target.value)} required>
-            <option value="">{t('healthSchedule.selectHorse')}</option>
-            {horses.map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
-          </select>
-        </Field>
-        <Field label={t('healthSchedule.kind')}>
-          <select className="input" value={careType} onChange={(event) => setCareType(event.target.value as typeof careType)}>
-            <option value="VACCINATION">{t('healthSchedule.kindOptions.VACCINATION')}</option>
-            <option value="DEWORMING">{t('healthSchedule.kindOptions.DEWORMING')}</option>
-          </select>
-        </Field>
-        <Field label={t('healthSchedule.item')}>
-          <input className="input" value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required />
-        </Field>
-        <Field label={t('healthSchedule.lastDate')}>
-          <input className="input" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
-        </Field>
-        <Field label={t('healthSchedule.nextDue')}>
-          <input className="input" type="date" value={nextDueDate} onChange={(event) => setNextDueDate(event.target.value)} />
-        </Field>
-      </div>
-      <ErrorText err={error} />
-      <button className="btn btn-primary" type="submit" disabled={saving || horses.length === 0}>
-        {saving ? t('healthSchedule.saving') : t('common.create')}
-      </button>
+    <form onSubmit={submit}>
+      <Card className="p-5 flex flex-col gap-4">
+        <h2 className="text-[15px] font-semibold">{t('healthSchedule.new')}</h2>
+        <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
+          <Field label={t('healthSchedule.horse')}>
+            <select
+              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              value={horseId}
+              onChange={(e) => setHorseId(e.target.value)}
+              required
+            >
+              <option value="">{t('healthSchedule.selectHorse')}</option>
+              {horses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+            </select>
+          </Field>
+          <Field label={t('healthSchedule.kind')}>
+            <Select options={[t('healthSchedule.kindOptions.VACCINATION'), t('healthSchedule.kindOptions.DEWORMING')]}
+              value={t(`healthSchedule.kindOptions.${careType}`)}
+              onChange={(e) => setCareType(e.target.value === t('healthSchedule.kindOptions.DEWORMING') ? 'DEWORMING' : 'VACCINATION')}
+            />
+          </Field>
+          <Field label={t('healthSchedule.item')}>
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
+          </Field>
+          <Field label={t('healthSchedule.lastDate')}>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          </Field>
+          <Field label={t('healthSchedule.nextDue')}>
+            <Input type="date" value={nextDueDate} onChange={(e) => setNextDueDate(e.target.value)} />
+          </Field>
+        </div>
+        <ErrorText err={error} />
+        <Btn v="p" type="submit" disabled={saving || horses.length === 0} className="self-start">
+          <Icon name="plus" />{saving ? t('healthSchedule.saving') : t('common.create')}
+        </Btn>
+      </Card>
     </form>
   );
 }

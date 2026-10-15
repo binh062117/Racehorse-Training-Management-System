@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { ErrorText } from '../ErrorText';
-import { SparkleIcon } from '../Icons';
+import { Badge, Btn, Card, Icon } from '../../ds/ui';
 
 interface SuggestedFeed {
   feedType: string;
@@ -31,9 +31,7 @@ export function FeedingSuggestionCard({
     setLoading(true);
     setErr(null);
     try {
-      const res = await api.post<FeedingSuggestion>(
-        `/horses/${horseId}/feeding-suggestion`,
-      );
+      const res = await api.post<FeedingSuggestion>(`/horses/${horseId}/feeding-suggestion`);
       setSuggestion(res.data);
     } catch (e) {
       setErr(e);
@@ -43,99 +41,50 @@ export function FeedingSuggestionCard({
   };
 
   return (
-    <div className="card" style={{ padding: '16px 20px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
+    <Card className="p-5">
+      <div className="flex justify-between items-center gap-3 flex-wrap">
         <div>
-          <h2 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SparkleIcon /> Trợ lý AI — đề xuất khẩu phần ăn
-          </h2>
-          <p className="muted small" style={{ margin: '2px 0 0' }}>
-            Dựa vào khẩu phần hiện tại, cường độ tập luyện và tình trạng sức khỏe để gợi ý điều chỉnh. Chỉ mang tính tham khảo.
-          </p>
+          <h2 className="text-[15px] font-semibold flex items-center gap-2"><Icon name="sparkle" />Trợ lý AI — đề xuất khẩu phần ăn</h2>
+          <p className="cap mt-1">Dựa vào khẩu phần hiện tại, cường độ tập luyện và tình trạng sức khỏe để gợi ý điều chỉnh. Chỉ mang tính tham khảo.</p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary btn-sm"
-          onClick={analyze}
-          disabled={loading}
-          style={{ whiteSpace: 'nowrap' }}
-        >
+        <Btn v="p" sm onClick={() => void analyze()} disabled={loading} className="whitespace-nowrap">
           {loading ? 'Đang tạo đề xuất…' : suggestion ? 'Đề xuất lại' : 'Đề xuất khẩu phần'}
-        </button>
+        </Btn>
       </div>
 
-      {err && (
-        <div style={{ marginTop: 12 }}>
-          <ErrorText err={err} />
-        </div>
-      )}
+      {err && <div className="mt-3"><ErrorText err={err} /></div>}
 
       {suggestion && !loading && (
-        <div style={{ marginTop: 14, borderTop: '1px solid var(--border-default)', paddingTop: 14 }}>
-          <p style={{ margin: '0 0 12px', lineHeight: 1.6 }}>{suggestion.summary}</p>
+        <div className="mt-3.5 pt-3.5 border-t border-line-soft">
+          <p className="mb-3 leading-relaxed">{suggestion.summary}</p>
 
           {suggestion.suggestedFeeds.length > 0 && (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <ul className="list-none p-0 m-0 flex flex-col gap-2">
               {suggestion.suggestedFeeds.map((f, i) => (
-                <li
-                  key={i}
-                  className="card"
-                  style={{
-                    padding: '10px 14px',
-                    marginBottom: 8,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <div>
-                    <strong>{f.feedType}</strong>
-                    <span style={{ marginLeft: 8 }} className="badge badge-neutral">
-                      {f.quantityKg} kg
-                    </span>
-                    {f.note && (
-                      <p className="muted small" style={{ margin: '4px 0 0' }}>
-                        {f.note}
-                      </p>
-                    )}
-                  </div>
-                  {onApply && (
-                    <button
-                      type="button"
-                      className="btn btn-sm"
-                      onClick={() => onApply(f)}
-                      style={{ whiteSpace: 'nowrap' }}
-                    >
-                      Dùng gợi ý này
-                    </button>
-                  )}
+                <li key={i}>
+                  <Card className="px-3.5 py-2.5 flex justify-between items-center gap-2.5">
+                    <div>
+                      <strong>{f.feedType}</strong>
+                      <Badge tone="neu" className="ml-2">{f.quantityKg} kg</Badge>
+                      {f.note && <p className="cap mt-1">{f.note}</p>}
+                    </div>
+                    {onApply && <Btn sm onClick={() => onApply(f)} className="whitespace-nowrap">Dùng gợi ý này</Btn>}
+                  </Card>
                 </li>
               ))}
             </ul>
           )}
 
           {suggestion.cautions.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <span className="muted small" style={{ fontWeight: 600 }}>
-                Lưu ý
-              </span>
-              <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
-                {suggestion.cautions.map((c, i) => (
-                  <li key={i} style={{ marginBottom: 4 }}>{c}</li>
-                ))}
+            <div className="mt-3">
+              <span className="lbl">Lưu ý</span>
+              <ul className="mt-1.5 pl-5 list-disc">
+                {suggestion.cautions.map((c, i) => <li key={i} className="mb-1">{c}</li>)}
               </ul>
             </div>
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
