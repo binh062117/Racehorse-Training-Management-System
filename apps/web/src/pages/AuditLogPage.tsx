@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { AuditLog, AuditStats, Paginated } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
@@ -22,6 +23,9 @@ const ACTION_TONE: Record<string, string> = {
   HORSE_DELETE: 'text-bad bg-bad-bg',
   HORSE_LOCK: 'text-warn bg-warn-bg',
   HORSE_UNLOCK: 'text-ok bg-ok-bg',
+  DAILY_CARE_GENERATE: 'text-info bg-info-bg',
+  DAILY_CARE_COMPLETE: 'text-ok bg-ok-bg',
+  DAILY_CARE_UNCOMPLETE: 'text-neu bg-neu-bg',
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -38,6 +42,9 @@ const ACTION_LABELS: Record<string, string> = {
   HORSE_DELETE: 'Xóa ngựa',
   HORSE_LOCK: 'Khoá tập luyện',
   HORSE_UNLOCK: 'Mở khoá tập luyện',
+  DAILY_CARE_GENERATE: 'Tạo checklist',
+  DAILY_CARE_COMPLETE: 'Hoàn thành chăm sóc',
+  DAILY_CARE_UNCOMPLETE: 'Hủy hoàn thành',
 };
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -48,6 +55,7 @@ const ENTITY_LABELS: Record<string, string> = {
   TRAINING_PLAN: 'Kế hoạch',
   HEALTH_RECORD: 'Hồ sơ khám',
   INCIDENT_REPORT: 'Sự cố',
+  DAILY_CARE: 'Chăm sóc',
 };
 
 function ActionBadge({ action }: { action: string }) {
@@ -61,91 +69,16 @@ function ActionBadge({ action }: { action: string }) {
   );
 }
 
-function DiffViewer({ diff }: { diff: unknown }) {
-  if (!diff || typeof diff !== 'object') return null;
-  return (
-    <pre className="mt-2 p-2 rounded bg-[#f5f6f8] text-[11px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words max-h-40">
-      {JSON.stringify(diff, null, 2)}
-    </pre>
-  );
-}
-
-/* ─────────────── detail modal ─────────────── */
-
-function DetailModal({ log, onClose }: { log: AuditLog; onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-xl shadow-pop w-full max-w-lg mx-4 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-line-soft">
-          <Icon name="eye" className="w-5 h-5 text-navy" />
-          <h2 className="flex-1 font-semibold text-[15px]">Chi tiết nhật ký</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-btn hover:bg-subtle text-muted"
-          >
-            <Icon name="x" />
-          </button>
-        </div>
-        <div className="px-5 py-4 space-y-3 text-[13px]">
-          <div className="flex gap-2 flex-wrap">
-            <ActionBadge action={log.action} />
-            <span className="inline-flex items-center h-[22px] px-2 rounded-badge text-[10.5px] font-bold uppercase tracking-[.05em] bg-cream text-navy">
-              {ENTITY_LABELS[log.entity] ?? log.entity}
-            </span>
-          </div>
-          <p className="text-ink leading-relaxed">{log.description}</p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px]">
-            <div>
-              <span className="lbl">Người thực hiện</span>
-              <p className="font-medium">
-                {log.actor ? `${log.actor.name} (${log.actor.email})` : 'Hệ thống'}
-              </p>
-            </div>
-            <div>
-              <span className="lbl">Thời gian</span>
-              <p className="font-medium num">{formatDateTime(log.createdAt)}</p>
-            </div>
-            {log.entityId && (
-              <div className="col-span-2">
-                <span className="lbl">Entity ID</span>
-                <p className="font-mono text-[11px] break-all text-muted">{log.entityId}</p>
-              </div>
-            )}
-            {log.ipAddress && (
-              <div>
-                <span className="lbl">Địa chỉ IP</span>
-                <p className="font-mono text-[11px]">{log.ipAddress}</p>
-              </div>
-            )}
-            {log.userAgent && (
-              <div className="col-span-2">
-                <span className="lbl">Trình duyệt</span>
-                <p className="text-muted text-[11px] truncate" title={log.userAgent}>{log.userAgent}</p>
-              </div>
-            )}
-          </div>
-          {log.diff && (
-            <div>
-              <span className="lbl">Dữ liệu thay đổi</span>
-              <DiffViewer diff={log.diff} />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────── main page ─────────────── */
-
-const ENTITIES = ['AUTH', 'USER', 'HORSE', 'TRAINING_SESSION', 'TRAINING_PLAN', 'HEALTH_RECORD', 'INCIDENT_REPORT'];
+const ENTITIES = [
+  'AUTH',
+  'USER',
+  'HORSE',
+  'TRAINING_SESSION',
+  'TRAINING_PLAN',
+  'HEALTH_RECORD',
+  'INCIDENT_REPORT',
+  'DAILY_CARE',
+];
 const ACTIONS = Object.keys(ACTION_LABELS);
 
 export function AuditLogPage() {
@@ -157,7 +90,6 @@ export function AuditLogPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<unknown>(null);
-  const [detail, setDetail] = useState<AuditLog | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -168,33 +100,38 @@ export function AuditLogPage() {
 
   const LIMIT = 20;
 
-  const load = useCallback(async (p = 1) => {
-    setLoading(true);
-    setErr(null);
-    try {
-      const params: Record<string, string | number> = { page: p, limit: LIMIT };
-      if (search) params.search = search;
-      if (filterEntity) params.entity = filterEntity;
-      if (filterAction) params.action = filterAction;
-      if (filterStart) params.startDate = filterStart;
-      if (filterEnd) params.endDate = filterEnd;
+  const load = useCallback(
+    async (p = 1) => {
+      setLoading(true);
+      setErr(null);
+      try {
+        const params: Record<string, string | number> = { page: p, limit: LIMIT };
+        if (search) params.search = search;
+        if (filterEntity) params.entity = filterEntity;
+        if (filterAction) params.action = filterAction;
+        if (filterStart) params.startDate = filterStart;
+        if (filterEnd) params.endDate = filterEnd;
 
-      const [logsRes, statsRes] = await Promise.all([
-        api.get<Paginated<AuditLog>>('/audit-logs', { params }),
-        p === 1 ? api.get<AuditStats>('/audit-logs/stats') : Promise.resolve(null),
-      ]);
-      setLogs(logsRes.data.data);
-      setTotal(logsRes.data.meta.total);
-      setPage(p);
-      if (statsRes) setStats(statsRes.data);
-    } catch (e) {
-      setErr(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, filterEntity, filterAction, filterStart, filterEnd]);
+        const [logsRes, statsRes] = await Promise.all([
+          api.get<Paginated<AuditLog>>('/audit-logs', { params }),
+          p === 1 ? api.get<AuditStats>('/audit-logs/stats') : Promise.resolve(null),
+        ]);
+        setLogs(logsRes.data.data);
+        setTotal(logsRes.data.meta.total);
+        setPage(p);
+        if (statsRes) setStats(statsRes.data);
+      } catch (e) {
+        setErr(e);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search, filterEntity, filterAction, filterStart, filterEnd],
+  );
 
-  useEffect(() => { void load(1); }, [load]);
+  useEffect(() => {
+    void load(1);
+  }, [load]);
 
   const totalPages = Math.ceil(total / LIMIT);
 
@@ -205,26 +142,45 @@ export function AuditLogPage() {
         <div>
           <div className="lbl">Quản trị hệ thống</div>
           <h1 className="disp text-[48px] mt-2">Nhật ký hệ thống</h1>
+          <p className="cap mt-1">
+            Theo dõi danh sách các thao tác và sự kiện quan trọng trong hệ thống để đảm bảo an toàn thông tin và tính minh bạch.
+          </p>
         </div>
 
         {/* KPI stats */}
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white/10 rounded-card px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[.08em] text-hero-line font-semibold mb-1">Tổng nhật ký</div>
-              <div className="text-[32px] font-display font-bold text-white num">{stats.totalLogs.toLocaleString()}</div>
+              <div className="text-[11px] uppercase tracking-[.08em] text-hero-line font-semibold mb-1">
+                Tổng nhật ký
+              </div>
+              <div className="text-[32px] font-display font-bold text-white num">
+                {stats.totalLogs.toLocaleString()}
+              </div>
             </div>
             <div className="bg-white/10 rounded-card px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[.08em] text-hero-line font-semibold mb-1">Hôm nay</div>
-              <div className="text-[32px] font-display font-bold text-white num">{stats.todayLogs}</div>
+              <div className="text-[11px] uppercase tracking-[.08em] text-hero-line font-semibold mb-1">
+                Hôm nay
+              </div>
+              <div className="text-[32px] font-display font-bold text-white num">
+                {stats.todayLogs}
+              </div>
             </div>
             <div className="bg-white/10 rounded-card px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[.08em] text-hero-line font-semibold mb-1">Sự kiện Auth hôm nay</div>
-              <div className="text-[32px] font-display font-bold text-white num">{stats.authEventsToday}</div>
+              <div className="text-[11px] uppercase tracking-[.08em] text-hero-line font-semibold mb-1">
+                Sự kiện Auth hôm nay
+              </div>
+              <div className="text-[32px] font-display font-bold text-white num">
+                {stats.authEventsToday}
+              </div>
             </div>
             <div className="bg-white/10 rounded-card px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[.08em] text-hero-line font-semibold mb-1">Người dùng duy nhất</div>
-              <div className="text-[32px] font-display font-bold text-white num">{stats.uniqueActorsCount}</div>
+              <div className="text-[11px] uppercase tracking-[.08em] text-hero-line font-semibold mb-1">
+                Thành viên thao tác
+              </div>
+              <div className="text-[32px] font-display font-bold text-white num">
+                {stats.uniqueActorsCount}
+              </div>
             </div>
           </div>
         )}
@@ -239,7 +195,9 @@ export function AuditLogPage() {
               {stats.topActions.map((a) => (
                 <div key={a.action} className="flex items-center gap-2 bg-subtle rounded-btn px-3 py-2">
                   <ActionBadge action={a.action} />
-                  <span className="font-semibold num text-[13px]">{a.count.toLocaleString()}</span>
+                  <span className="font-semibold num text-[13px]">
+                    {a.count.toLocaleString()}
+                  </span>
                 </div>
               ))}
             </div>
@@ -254,10 +212,13 @@ export function AuditLogPage() {
             <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
               <label className="lbl">Tìm kiếm</label>
               <div className="relative">
-                <Icon name="search" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                <Icon
+                  name="search"
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"
+                />
                 <input
                   type="text"
-                  placeholder="Mô tả, tên người dùng, ID..."
+                  placeholder="Mô tả, người thực hiện, mã đối tượng..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && void load(1)}
@@ -265,6 +226,7 @@ export function AuditLogPage() {
                 />
               </div>
             </div>
+
             <div className="flex flex-col gap-1">
               <label className="lbl">Đối tượng</label>
               <select
@@ -274,10 +236,13 @@ export function AuditLogPage() {
               >
                 <option value="">Tất cả</option>
                 {ENTITIES.map((e) => (
-                  <option key={e} value={e}>{ENTITY_LABELS[e] ?? e}</option>
+                  <option key={e} value={e}>
+                    {ENTITY_LABELS[e] ?? e}
+                  </option>
                 ))}
               </select>
             </div>
+
             <div className="flex flex-col gap-1">
               <label className="lbl">Thao tác</label>
               <select
@@ -287,10 +252,13 @@ export function AuditLogPage() {
               >
                 <option value="">Tất cả</option>
                 {ACTIONS.map((a) => (
-                  <option key={a} value={a}>{ACTION_LABELS[a]}</option>
+                  <option key={a} value={a}>
+                    {ACTION_LABELS[a]}
+                  </option>
                 ))}
               </select>
             </div>
+
             <div className="flex flex-col gap-1">
               <label className="lbl">Từ ngày</label>
               <input
@@ -300,6 +268,7 @@ export function AuditLogPage() {
                 className="h-9 rounded-btn border border-line bg-white px-2.5 text-[12.5px] outline-none focus:border-info"
               />
             </div>
+
             <div className="flex flex-col gap-1">
               <label className="lbl">Đến ngày</label>
               <input
@@ -309,6 +278,7 @@ export function AuditLogPage() {
                 className="h-9 rounded-btn border border-line bg-white px-2.5 text-[12.5px] outline-none focus:border-info"
               />
             </div>
+
             <Btn v="p" sm onClick={() => void load(1)}>
               <Icon name="search" />
               Lọc
@@ -330,7 +300,7 @@ export function AuditLogPage() {
         </Card>
       </section>
 
-      {/* ── Log Table ── */}
+      {/* ── Main Log Table (Giao diện bảng gọn gàng, cơ bản) ── */}
       <section className="px-8 pb-8">
         {loading ? (
           <p className="cap py-8 text-center">Đang tải nhật ký...</p>
@@ -339,60 +309,96 @@ export function AuditLogPage() {
         ) : logs.length === 0 ? (
           <Card className="py-12 text-center">
             <Icon name="eye" className="w-8 h-8 mx-auto text-faint mb-3" />
-            <p className="cap">Không tìm thấy nhật ký nào.</p>
+            <p className="cap">Không tìm thấy nhật ký nào phù hợp.</p>
           </Card>
         ) : (
           <Card>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse">
+              <table className="w-full min-w-[850px] border-collapse">
                 <thead>
                   <tr className="text-left">
-                    {['Thời gian', 'Thao tác', 'Đối tượng', 'Mô tả', 'Người thực hiện', ''].map((th) => (
-                      <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line text-[11px] font-semibold">
-                        {th}
-                      </th>
-                    ))}
+                    <th className="h-[42px] px-4 bg-cream lbl border-b border-line text-[11px] font-semibold w-36">
+                      Thời gian
+                    </th>
+                    <th className="h-[42px] px-4 bg-cream lbl border-b border-line text-[11px] font-semibold w-40">
+                      Thao tác
+                    </th>
+                    <th className="h-[42px] px-4 bg-cream lbl border-b border-line text-[11px] font-semibold w-28">
+                      Đối tượng
+                    </th>
+                    <th className="h-[42px] px-4 bg-cream lbl border-b border-line text-[11px] font-semibold">
+                      Mô tả nội dung
+                    </th>
+                    <th className="h-[42px] px-4 bg-cream lbl border-b border-line text-[11px] font-semibold w-48">
+                      Người thực hiện
+                    </th>
+                    <th className="h-[42px] px-4 bg-cream lbl border-b border-line text-[11px] font-semibold w-32 text-right">
+                      Thao tác
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map((log) => (
                     <tr
                       key={log.id}
-                      className="border-b border-line-soft hover:bg-subtle transition-colors align-top"
+                      className="border-b border-line-soft hover:bg-subtle transition-colors align-middle"
                     >
-                      <td className="px-4 py-3 text-[12px] num text-muted whitespace-nowrap">
+                      {/* Thời gian */}
+                      <td className="px-4 py-3 text-[12.5px] num font-medium text-ink whitespace-nowrap">
                         {formatDateTime(log.createdAt)}
                       </td>
+
+                      {/* Thao tác */}
                       <td className="px-4 py-3">
                         <ActionBadge action={log.action} />
                       </td>
+
+                      {/* Đối tượng */}
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center h-[20px] px-2 rounded-badge text-[10px] font-semibold uppercase tracking-[.06em] bg-cream text-navy">
+                        <span className="inline-flex items-center h-[20px] px-2 rounded-badge text-[10px] font-semibold uppercase tracking-[.06em] bg-cream text-navy border border-line">
                           {ENTITY_LABELS[log.entity] ?? log.entity}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-[12.5px] max-w-[300px]">
-                        <span className="line-clamp-2 leading-relaxed">{log.description}</span>
+
+                      {/* Mô tả vắn tắt */}
+                      <td className="px-4 py-3 text-[13px] max-w-[340px]">
+                        <span className="line-clamp-2 leading-relaxed text-ink font-normal">
+                          {log.description}
+                        </span>
                       </td>
+
+                      {/* Người thực hiện */}
                       <td className="px-4 py-3 text-[12.5px]">
                         {log.actor ? (
-                          <div>
-                            <span className="font-medium">{log.actor.name}</span>
-                            <span className="block cap text-[11px]">{log.actor.email}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-navy text-white flex items-center justify-center font-bold text-[10px] flex-none">
+                              {log.actor.name.slice(0, 1).toUpperCase()}
+                            </span>
+                            <div className="min-w-0">
+                              <span className="font-semibold text-ink block truncate">
+                                {log.actor.name}
+                              </span>
+                              {log.actor.role && (
+                                <span className="text-[10.5px] text-muted block leading-none mt-0.5">
+                                  {log.actor.role}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ) : (
-                          <span className="cap text-muted">Hệ thống</span>
+                          <span className="cap text-muted italic">Hệ thống</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        {log.ipAddress ? (
-                          <span className="font-mono text-[11px] text-muted">{log.ipAddress}</span>
-                        ) : (
-                          <span className="text-faint">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
 
+                      {/* Nút Xem chi tiết chuyển sang trang con */}
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <Link
+                          to={`/admin/audit-logs/${log.id}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-btn bg-white hover:bg-subtle border border-line text-info text-[12px] font-semibold no-underline transition-colors shadow-sm"
+                        >
+                          Xem chi tiết
+                          <Icon name="chevRight" className="w-3.5 h-3.5" />
+                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -421,9 +427,6 @@ export function AuditLogPage() {
           </Card>
         )}
       </section>
-
-      {/* Detail modal */}
-      {detail && <DetailModal log={detail} onClose={() => setDetail(null)} />}
     </>
   );
 }

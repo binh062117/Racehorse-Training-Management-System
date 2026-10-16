@@ -29,6 +29,7 @@ import {
   MyHorsesPage,
 } from './pages/HorseFlowPages';
 import { AuditLogPage } from './pages/AuditLogPage';
+import { AuditLogDetailPage } from './pages/AuditLogDetailPage';
 import { DailyCarePage } from './pages/DailyCarePage';
 
 const router = createBrowserRouter([
@@ -126,6 +127,14 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['MANAGER']}>
             <AuditLogPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/admin/audit-logs/:id',
+        element: (
+          <RequireAuth roles={['MANAGER']}>
+            <AuditLogDetailPage />
           </RequireAuth>
         ),
       },
