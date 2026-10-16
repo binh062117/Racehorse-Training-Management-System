@@ -159,6 +159,8 @@ export class TrainingService {
         planId: dto.planId ?? null,
         scheduledAt: new Date(dto.scheduledAt),
         type: dto.type.trim(),
+        distanceM: dto.distanceM ?? null,
+        surface: dto.surface?.trim() ?? null,
         notes: dto.notes?.trim() ?? null,
       },
       include: SESSION_INCLUDE,
@@ -253,6 +255,8 @@ export class TrainingService {
     if (dto.scheduledAt !== undefined)
       data.scheduledAt = new Date(dto.scheduledAt);
     if (dto.type !== undefined) data.type = dto.type.trim();
+    if (dto.distanceM !== undefined) data.distanceM = dto.distanceM;
+    if (dto.surface !== undefined) data.surface = dto.surface?.trim() ?? null;
     if (dto.notes !== undefined) data.notes = dto.notes?.trim() ?? null;
     if (dto.resultMetric !== undefined)
       data.resultMetric = dto.resultMetric.trim();

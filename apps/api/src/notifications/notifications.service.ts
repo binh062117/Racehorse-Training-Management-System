@@ -49,6 +49,15 @@ export class NotificationsService {
     return grooms.map((g) => g.id);
   }
 
+  /** All ACTIVE, non-deleted VET user ids — recipients for health & vaccination reminders. */
+  async vetIds(): Promise<string[]> {
+    const vets = await this.prisma.user.findMany({
+      where: { role: 'VET', status: 'ACTIVE', deletedAt: null },
+      select: { id: true },
+    });
+    return vets.map((v) => v.id);
+  }
+
   async list(
     q: ListNotificationsQueryDto,
     currentUser: AuthUser,

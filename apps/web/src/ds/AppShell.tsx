@@ -23,6 +23,7 @@ const NAV: NavItem[] = [
   { to: '/races', label: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
   { to: '/vaccinations', label: 'Tiêm phòng & Tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
   { to: '/health-records', label: 'Hồ sơ khám bệnh', icon: 'steth', roles: ['VET'] },
+  { to: '/daily-care', label: 'Chăm sóc hàng ngày', icon: 'check', roles: ['GROOM', 'MANAGER', 'TRAINER', 'VET', 'OWNER'] },
   { to: '/incidents', label: 'Sự cố y tế', icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
 ];
 const ADMIN_NAV: NavItem[] = [

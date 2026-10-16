@@ -257,6 +257,13 @@ export class HorsesService {
     });
     if (!existing) throw new AppException('NOT_FOUND', 'Horse not found');
 
+    if (dto.locked && (!dto.reason || !dto.reason.trim())) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Lý do khóa huấn luyện là bắt buộc khi ban hành lệnh khóa',
+      );
+    }
+
     const horse = await this.prisma.horse.update({
       where: { id },
       data: {

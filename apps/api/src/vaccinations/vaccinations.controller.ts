@@ -68,4 +68,10 @@ export class VaccinationsController {
     }
     return this.vaccinations.listUpcoming(q);
   }
+
+  @Post('check-due')
+  @Roles(Role.VET, Role.MANAGER)
+  checkDue() {
+    return this.vaccinations.checkDueAndNotify();
+  }
 }

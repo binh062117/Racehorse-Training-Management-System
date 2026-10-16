@@ -122,9 +122,33 @@ export interface TrainingSession {
   trainer: UserRef;
   scheduledAt: string;
   type: string;
+  distanceM?: number | null;
+  surface?: string | null;
   status: SessionStatus;
   resultMetric: string | null;
   resultValue: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DailyCareTask =
+  | 'FEEDING'
+  | 'CLEANING'
+  | 'BATHING'
+  | 'ICE_SOAK'
+  | 'HEALTH_CHECK';
+
+export interface DailyCareLog {
+  id: string;
+  horseId: string;
+  horse: { id: string; name: string; ownerId: string };
+  groomId: string;
+  groom: UserRef;
+  date: string;
+  taskType: DailyCareTask;
+  completed: boolean;
+  completedAt: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;

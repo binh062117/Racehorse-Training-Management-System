@@ -52,7 +52,7 @@ export class RacesController {
   }
 
   @Post(':id/entries')
-  @Roles(Role.MANAGER)
+  @Roles(Role.MANAGER, Role.TRAINER)
   addEntry(
     @Param('id', ParseUUIDPipe) raceId: string,
     @Body() dto: CreateRaceEntryDto,

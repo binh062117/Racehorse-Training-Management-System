@@ -186,6 +186,8 @@ function CreateSessionForm({
   const { t } = useTranslation();
   const [scheduledAt, setScheduledAt] = useState('');
   const [type, setType] = useState('');
+  const [distanceM, setDistanceM] = useState('');
+  const [surface, setSurface] = useState('');
   const [notes, setNotes] = useState('');
   const [planId, setPlanId] = useState('');
   const [err, setErr] = useState<unknown>(null);
@@ -210,11 +212,15 @@ function CreateSessionForm({
       await api.post(`/horses/${horseId}/sessions`, {
         scheduledAt: fromDateTimeLocal(scheduledAt),
         type: type.trim(),
+        ...(distanceM ? { distanceM: Number(distanceM) } : {}),
+        ...(surface ? { surface: surface.trim() } : {}),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
         ...(planId ? { planId } : {}),
       });
       setScheduledAt('');
       setType('');
+      setDistanceM('');
+      setSurface('');
       setNotes('');
       setPlanId('');
       onCreated();
@@ -259,6 +265,33 @@ function CreateSessionForm({
               value={type} onChange={(e) => setType(e.target.value)} placeholder="gallop, sprint, trot…" maxLength={80} disabled={busy} required
             />
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Cự ly (mét)">
+              <input
+                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+                type="number"
+                value={distanceM}
+                onChange={(e) => setDistanceM(e.target.value)}
+                placeholder="vd: 1200, 1600"
+                min={100}
+                max={10000}
+                disabled={busy}
+              />
+            </Field>
+            <Field label="Mặt sân">
+              <select
+                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+                value={surface}
+                onChange={(e) => setSurface(e.target.value)}
+                disabled={busy}
+              >
+                <option value="">Chọn mặt sân</option>
+                <option value="TURF">Cỏ (Turf)</option>
+                <option value="DIRT">Cát (Dirt)</option>
+                <option value="SYNTHETIC">Nhân tạo (Synthetic)</option>
+              </select>
+            </Field>
+          </div>
           <Field label={t('session.notes')}>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} disabled={busy} rows={2} />
           </Field>
@@ -321,6 +354,16 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
           <time className="disp text-2xl" dateTime={session.scheduledAt}>{sessionTime.format(new Date(session.scheduledAt))}</time>
           <div className="flex items-center gap-2">
             <strong>{session.type}</strong>
+            {session.distanceM != null && (
+              <span className="inline-flex items-center h-[20px] px-2 rounded-badge text-[10.5px] font-semibold bg-subtle text-ink">
+                {session.distanceM}m
+              </span>
+            )}
+            {session.surface && (
+              <span className="inline-flex items-center h-[20px] px-2 rounded-badge text-[10.5px] font-semibold bg-cream text-navy">
+                {session.surface === 'TURF' ? 'Cỏ' : session.surface === 'DIRT' ? 'Cát' : session.surface}
+              </span>
+            )}
             <Badge tone={STATUS_TONE[session.status]}>{t(`session.displayStatus.${session.status}`)}</Badge>
           </div>
         </div>

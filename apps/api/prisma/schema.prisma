@@ -86,6 +86,15 @@ enum NotificationType {
   INCIDENT_REPORTED
   FITNESS_WARNING
   AI_RISK_ALERT
+  PREVENTIVE_CARE_DUE
+}
+
+enum DailyCareTask {
+  FEEDING
+  CLEANING
+  BATHING
+  ICE_SOAK
+  HEALTH_CHECK
 }
 
 model User {
@@ -107,6 +116,7 @@ model User {
   vetRecords        HealthRecord[]
   reportedIncidents IncidentReport[]  @relation("IncidentReporter")
   feedingRecords    FeedingRecord[]   @relation("FeedingRecorder")
+  groomCareLogs     DailyCareLog[]    @relation("GroomCareLogs")
   notifications     Notification[]
   auditLogs         AuditLog[]        @relation("AuditActor")
   refreshTokens     RefreshToken[]
@@ -184,6 +194,7 @@ model Horse {
   incidents      IncidentReport[]
   vaccinations   Vaccination[]
   feedingRecords FeedingRecord[]
+  careLogs       DailyCareLog[]
   siredFoals     Horse[]           @relation("HorsePedigree_Sire")
   damFoals       Horse[]           @relation("HorsePedigree_Dam")
 
@@ -204,6 +215,8 @@ model TrainingSession {
   plan         TrainingPlan? @relation(fields: [planId], references: [id])
   scheduledAt  DateTime
   type         String
+  distanceM    Int? // Cự ly bài tập (mét), vd: 1200, 1600
+  surface      String? // Mặt sân: TURF (cỏ), DIRT (cát), SYNTHETIC (nhân tạo)
   status       SessionStatus @default(PLANNED)
   resultMetric String?
   resultValue  Float?
@@ -416,4 +429,24 @@ model AuditLog {
   @@index([entity])
   @@index([action])
   @@index([createdAt])
+}
+
+// Bảng theo dõi chăm sóc & sinh hoạt hàng ngày (Groom / Stable Hand checklist)
+model DailyCareLog {
+  id          String        @id @default(uuid())
+  horseId     String
+  horse       Horse         @relation(fields: [horseId], references: [id])
+  groomId     String
+  groom       User          @relation("GroomCareLogs", fields: [groomId], references: [id])
+  date        DateTime      @default(now())
+  taskType    DailyCareTask
+  completed   Boolean       @default(false)
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([horseId, date])
+  @@index([groomId])
+  @@index([completed])
 }
