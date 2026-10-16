@@ -5,6 +5,7 @@ import { AppException } from '../common/app-exception';
 import { PublicUser } from '../auth/auth.service';
 import { TokenService } from '../auth/token.service';
 import { MailService } from '../mail/mail.service';
+import { AuditService } from '../audit/audit.service';
 import { ListUsersQueryDto, UpdateUserDto } from './dto/users.dto';
 
 const PUBLIC_SELECT = {
@@ -28,6 +29,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
     private readonly mail: MailService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(q: ListUsersQueryDto): Promise<Paginated<PublicUser>> {
@@ -58,7 +60,11 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<PublicUser> {
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    actorId?: string,
+  ): Promise<PublicUser> {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });
@@ -94,11 +100,40 @@ export class UsersService {
       await this.mail.sendAccountApproved(updated.email, updated.name);
     }
 
+    // Determine audit action & description
+    let action = 'USER_UPDATE';
+    let description = `Cập nhật thông tin tài khoản "${updated.name}" (${updated.email})`;
+    if (
+      user.status === UserStatus.PENDING &&
+      updated.status === UserStatus.ACTIVE
+    ) {
+      action = 'USER_APPROVE';
+      description = `Phê duyệt tài khoản người dùng "${updated.name}" (${updated.email}) với vai trò ${updated.role}`;
+    } else if (dto.status === UserStatus.DISABLED) {
+      action = 'USER_DISABLE';
+      description = `Khóa tài khoản người dùng "${updated.name}" (${updated.email})`;
+    } else if (dto.role && dto.role !== user.role) {
+      action = 'USER_ROLE_ASSIGN';
+      description = `Thay đổi vai trò người dùng "${updated.name}" (${updated.email}) thành ${dto.role}`;
+    }
+
+    await this.audit.record({
+      actorId,
+      action,
+      entity: 'USER',
+      entityId: updated.id,
+      description,
+      diff: {
+        before: { name: user.name, role: user.role, status: user.status },
+        after: { name: updated.name, role: updated.role, status: updated.status },
+      },
+    });
+
     return updated;
   }
 
   /** Hard-deletes a still-PENDING registration so the email can be reused. */
-  async reject(id: string): Promise<{ message: string }> {
+  async reject(id: string, actorId?: string): Promise<{ message: string }> {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });
@@ -110,6 +145,16 @@ export class UsersService {
       );
     }
     await this.prisma.user.delete({ where: { id } });
+
+    await this.audit.record({
+      actorId,
+      action: 'USER_REJECT',
+      entity: 'USER',
+      entityId: id,
+      description: `Từ chối đăng ký tài khoản "${user.name}" (${user.email})`,
+      diff: { rejectedEmail: user.email, name: user.name },
+    });
+
     return { message: 'Registration rejected' };
   }
 
@@ -130,6 +175,16 @@ export class UsersService {
       data: { deletedAt: new Date(), status: UserStatus.DISABLED },
     });
     await this.tokens.revokeAllRefreshTokens(id);
+
+    await this.audit.record({
+      actorId: currentUserId,
+      action: 'USER_DELETE',
+      entity: 'USER',
+      entityId: id,
+      description: `Xóa tài khoản người dùng "${user.name}" (${user.email})`,
+      diff: { email: user.email, name: user.name, role: user.role },
+    });
+
     return { message: 'User deleted' };
   }
 }

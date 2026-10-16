@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -41,8 +42,12 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: Request) {
+    const ipAddress =
+      ((req.headers['x-forwarded-for'] as string) || req.ip)?.split(',')[0].trim() ||
+      null;
+    const userAgent = (req.headers['user-agent'] as string) || null;
+    return this.auth.login(dto, { ipAddress, userAgent });
   }
 
   @Public()

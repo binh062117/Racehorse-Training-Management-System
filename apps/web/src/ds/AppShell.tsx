@@ -27,6 +27,7 @@ const NAV: NavItem[] = [
 ];
 const ADMIN_NAV: NavItem[] = [
   { to: '/admin/users', label: 'Phân quyền (RBAC)', icon: 'user', roles: ['MANAGER'] },
+  { to: '/admin/audit-logs', label: 'Nhật ký hệ thống', icon: 'eye', roles: ['MANAGER'] },
 ];
 
 function Sidebar() {

@@ -203,3 +203,30 @@ export interface OtpRequiredResponse {
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
 }
+
+export interface AuditLog {
+  id: string;
+  actorId: string | null;
+  actor: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role | null;
+  } | null;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  description: string;
+  diff: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditStats {
+  totalLogs: number;
+  todayLogs: number;
+  authEventsToday: number;
+  uniqueActorsCount: number;
+  topActions: { action: string; count: number }[];
+}

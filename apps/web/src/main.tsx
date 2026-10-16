@@ -28,6 +28,7 @@ import {
   HorseRaceHistoryPage,
   MyHorsesPage,
 } from './pages/HorseFlowPages';
+import { AuditLogPage } from './pages/AuditLogPage';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -108,6 +109,14 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['MANAGER']}>
             <AdminUsersPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/admin/audit-logs',
+        element: (
+          <RequireAuth roles={['MANAGER']}>
+            <AuditLogPage />
           </RequireAuth>
         ),
       },

@@ -16,6 +16,7 @@ import {
   ResetPasswordDto,
   VerifyOtpDto,
 } from './dto/auth.dto';
+import { AuditService } from '../audit/audit.service';
 
 const BCRYPT_ROUNDS = 10;
 
@@ -51,6 +52,7 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly audit: AuditService,
   ) {
     this.googleClient = new OAuth2Client(
       this.config.get<string>('GOOGLE_CLIENT_ID'),
@@ -109,7 +111,10 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto): Promise<{
+  async login(
+    dto: LoginDto,
+    meta?: { ipAddress?: string | null; userAgent?: string | null },
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
     user: PublicUser;
@@ -121,20 +126,70 @@ export class AuthService {
       user?.passwordHash &&
       (await bcrypt.compare(dto.password, user.passwordHash));
     if (!user || !ok) {
+      await this.audit.record({
+        action: 'AUTH_LOGIN_FAILED',
+        entity: 'AUTH',
+        description: `Đăng nhập thất bại: Sai email hoặc mật khẩu (${dto.email})`,
+        diff: { email: dto.email, reason: 'INVALID_CREDENTIALS' },
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+      });
       throw new AppException('UNAUTHENTICATED', 'Invalid email or password');
     }
     if (!user.emailVerifiedAt) {
+      await this.audit.record({
+        actorId: user.id,
+        action: 'AUTH_LOGIN_FAILED',
+        entity: 'AUTH',
+        entityId: user.id,
+        description: `Đăng nhập thất bại: Email chưa xác thực OTP (${user.email})`,
+        diff: { email: dto.email, reason: 'EMAIL_NOT_VERIFIED' },
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+      });
       throw new AppException('EMAIL_NOT_VERIFIED', 'Email not verified');
     }
     if (user.status === UserStatus.PENDING) {
+      await this.audit.record({
+        actorId: user.id,
+        action: 'AUTH_LOGIN_FAILED',
+        entity: 'AUTH',
+        entityId: user.id,
+        description: `Đăng nhập thất bại: Tài khoản đang chờ quản lý phê duyệt (${user.email})`,
+        diff: { email: dto.email, reason: 'ACCOUNT_PENDING' },
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+      });
       throw new AppException(
         'ACCOUNT_PENDING',
         'Account awaiting manager approval',
       );
     }
     if (user.status !== UserStatus.ACTIVE) {
+      await this.audit.record({
+        actorId: user.id,
+        action: 'AUTH_LOGIN_FAILED',
+        entity: 'AUTH',
+        entityId: user.id,
+        description: `Đăng nhập thất bại: Tài khoản đã bị vô hiệu hóa (${user.email})`,
+        diff: { email: dto.email, reason: 'ACCOUNT_DISABLED' },
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+      });
       throw new AppException('ACCOUNT_DISABLED', 'Account is disabled');
     }
+
+    await this.audit.record({
+      actorId: user.id,
+      action: 'AUTH_LOGIN',
+      entity: 'AUTH',
+      entityId: user.id,
+      description: `Đăng nhập thành công tài khoản "${user.name}" (${user.email})`,
+      diff: { email: user.email, role: user.role },
+      ipAddress: meta?.ipAddress,
+      userAgent: meta?.userAgent,
+    });
+
     return {
       accessToken: await this.tokens.signAccessToken(user.id),
       refreshToken: await this.tokens.issueRefreshToken(user.id),

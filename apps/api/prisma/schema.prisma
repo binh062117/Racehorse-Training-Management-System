@@ -108,6 +108,7 @@ model User {
   reportedIncidents IncidentReport[]  @relation("IncidentReporter")
   feedingRecords    FeedingRecord[]   @relation("FeedingRecorder")
   notifications     Notification[]
+  auditLogs         AuditLog[]        @relation("AuditActor")
   refreshTokens     RefreshToken[]
   authTokens        AuthToken[]
   otpCodes          OtpCode[]
@@ -394,4 +395,25 @@ model FeedingRecord {
   createdAt    DateTime @default(now())
 
   @@index([horseId, date])
+}
+
+// Nhật ký thao tác hệ thống (Audit Log) — ghi lại mọi thay đổi nhạy cảm và hành động quan trọng
+// Đảm bảo an toàn thông tin, bảo mật, minh bạch cho vai trò Quản lý (MANAGER).
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorId     String?
+  actor       User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action      String   // vd: USER_APPROVE, USER_ROLE_ASSIGN, HORSE_LOCK, HORSE_UNLOCK, AUTH_LOGIN, AUTH_LOGIN_FAILED,...
+  entity      String   // vd: USER, HORSE, TRAINING_SESSION, TRAINING_PLAN, HEALTH_RECORD, INCIDENT_REPORT, AUTH,...
+  entityId    String?  // ID của đối tượng chịu ảnh hưởng
+  description String   // Diễn giải thao tác bằng ngôn ngữ đọc hiểu
+  diff        Json?    // Chi tiết thay đổi trước/sau hoặc thông số đính kèm
+  ipAddress   String?  // Địa chỉ IP của client thực hiện thao tác
+  userAgent   String?  // Chuỗi thông tin trình duyệt / thiết bị của client
+  createdAt   DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity])
+  @@index([action])
+  @@index([createdAt])
 }

@@ -37,8 +37,8 @@ export class HorsesController {
 
   @Post()
   @Roles(Role.MANAGER)
-  create(@Body() dto: CreateHorseDto) {
-    return this.horses.create(dto);
+  create(@Body() dto: CreateHorseDto, @CurrentUser() user: AuthUser) {
+    return this.horses.create(dto, user.id);
   }
 
   @Get()
@@ -74,21 +74,32 @@ export class HorsesController {
 
   @Patch(':id')
   @Roles(Role.MANAGER)
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateHorseDto) {
-    return this.horses.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateHorseDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.update(id, dto, user.id);
   }
 
   @Delete(':id')
   @Roles(Role.MANAGER)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.horses.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.remove(id, user.id);
   }
 
   @Patch(':id/lock')
   @Roles(Role.VET)
   @UseGuards(HorseOwnershipGuard)
-  lock(@Param('id', ParseUUIDPipe) id: string, @Body() dto: LockHorseDto) {
-    return this.horses.lock(id, dto);
+  lock(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: LockHorseDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.lock(id, dto, user.id);
   }
 
   @Post(':id/photo')
