@@ -16,6 +16,37 @@ remainder) **xong** — toàn bộ `CLAUDE_CODE_BACKEND_FULL.md` (Sprint 0-3) đ
 
 ---
 
+## UC-13 Overall training progress + UC-16 Record injury location - 2026-10-19
+
+Branch `feat/training-progress-injury-location`.
+
+**UC-13 — View overall training progress**
+- API mới `GET /training-progress?from=&to=` (TrainingProgressController,
+  `TrainingService.progress`): tổng hợp server-side theo từng ngựa (groupBy
+  session theo status, số buổi quá hạn, giáo án đang chạy, buổi DONE gần nhất,
+  buổi PLANNED kế tiếp) + summary toàn CLB. OWNER chỉ thấy ngựa của mình.
+  Thay cho ghi chú cũ "UC-13 dạng list, không phải aggregate".
+- Trang `/training-progress` (`TrainingProgressPage.tsx`, mọi role) + mục
+  sidebar "Tiến độ huấn luyện" + quick action của TRAINER trên Dashboard.
+  Khoảng thời gian 30/90 ngày/toàn bộ, lọc quá hạn / chưa có giáo án / khóa tập.
+- E2E mới `test/training-progress.e2e-spec.ts`.
+
+**UC-16 — Record injury location (frontend; API có từ Phase 10)**
+- `components/injury/InjuryLocations.tsx`: panel xem (sơ đồ `HorseMap` +
+  danh sách) và modal ghi nhận (chọn vùng trên sơ đồ / chip, bên trái/phải,
+  vị trí khác tự nhập, ghi chú). `bodyRegion` = tên vùng trong `BODY_ZONES`,
+  `side` = `LEFT`/`RIGHT` để vẽ lại được trên sơ đồ.
+- Gắn vào từng hồ sơ khám (HealthTab) và từng sự cố (IncidentsPage). Chỉ VET
+  ghi; các role khác xem.
+- Backend: `RECORD_INCLUDE`/`INCIDENT_INCLUDE` thêm `_count.injuryLocations`
+  để nút hiển thị số vị trí mà không cần gọi thêm API.
+
+Verification: API `npm run build` + eslint PASS; web `npm run build` + lint PASS
+(không có cảnh báo mới). **E2E chưa chạy** — Postgres local (5433) không chạy
+lúc làm. Cần `prisma generate` + `npm install` (web) nếu máy còn client/deps cũ.
+
+---
+
 ## Horse Gender Integration — Xem & Tạo ngựa - 2026-10-05
 
 Bổ sung hiển thị và nhập liệu **Giới tính ngựa (Horse Gender)** (`MALE` / `FEMALE`) trên toàn bộ các trang liên quan:

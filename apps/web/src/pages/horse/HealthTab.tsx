@@ -12,6 +12,7 @@ import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { CreateHealthRecordModal } from '../../components/health/CreateHealthRecordModal';
 import { AiInsightCard } from '../../components/horse/AiInsightCard';
+import { InjuryLocationsPanel } from '../../components/injury/InjuryLocations';
 import { formatDate } from '../../lib/format';
 import { Badge, Btn, Card, Field, Icon, Textarea, healthTone } from '../../ds/ui';
 
@@ -103,6 +104,8 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
   const [treatment, setTreatment] = useState(record.treatment ?? '');
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [showInjuries, setShowInjuries] = useState(false);
+  const [injuryCount, setInjuryCount] = useState(record._count?.injuryLocations ?? 0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const save = async (e: FormEvent) => {
@@ -164,6 +167,9 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
             <span className="cap ml-2.5">Bác sĩ: {record.vet.name}</span>
           </div>
           <div className="flex gap-1.5">
+            <Btn sm onClick={() => setShowInjuries((v) => !v)} aria-expanded={showInjuries}>
+              <Icon name="pin" className="w-3.5 h-3.5" />{t('injury.toggle', { count: injuryCount })}
+            </Btn>
             {record.attachmentPath && <Btn sm onClick={() => void download()}>{t('health.openAttachment')}</Btn>}
             {isVet && !editing && <Btn sm onClick={() => setEditing(true)}>{t('common.update')}</Btn>}
           </div>
@@ -178,6 +184,12 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
           <div className="mb-2">
             <span className="lbl">{t('health.treatment')}</span>
             <p className="mt-1 leading-relaxed">{record.treatment}</p>
+          </div>
+        )}
+
+        {showInjuries && (
+          <div className="mt-3">
+            <InjuryLocationsPanel source="health-records" parentId={record.id} canRecord={isVet} onCountChange={setInjuryCount} />
           </div>
         )}
 

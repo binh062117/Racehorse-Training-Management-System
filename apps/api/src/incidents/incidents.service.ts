@@ -22,6 +22,8 @@ import {
 const INCIDENT_INCLUDE = {
   reportedBy: { select: { id: true, name: true, email: true } },
   horse: { select: { id: true, name: true, ownerId: true } },
+  // UC-16 — lets the UI show "n injury locations" without an extra request.
+  _count: { select: { injuryLocations: true } },
 } satisfies Prisma.IncidentReportInclude;
 
 type IncidentWithRelations = Prisma.IncidentReportGetPayload<{
