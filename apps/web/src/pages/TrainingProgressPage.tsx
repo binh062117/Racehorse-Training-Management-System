@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { TrainingProgress, TrainingProgressRow } from '../lib/types';
@@ -17,8 +18,7 @@ import { Badge, Bar, Btn, Card, Chip, HeroStats, Icon, Seg, fitColor, healthTone
 type Range = '30' | '90' | 'all';
 type Filter = 'ALL' | 'OVERDUE' | 'NO_PLAN' | 'LOCKED';
 
-const RANGES: [Range, string][] = [['30', '30 ngày'], ['90', '90 ngày'], ['all', 'Toàn bộ']];
-const HEALTH_LABEL: Record<string, string> = { FIT: 'Khỏe mạnh', MONITORING: 'Theo dõi', INJURED: 'Chấn thương', QUARANTINED: 'Cách ly' };
+const FILTERS: Filter[] = ['ALL', 'OVERDUE', 'NO_PLAN', 'LOCKED'];
 const DAY_MS = 86_400_000;
 
 const matches: Record<Filter, (r: TrainingProgressRow) => boolean> = {
@@ -28,25 +28,33 @@ const matches: Record<Filter, (r: TrainingProgressRow) => boolean> = {
   LOCKED: (r) => r.horse.locked,
 };
 
+/** Start of the window, fixed to the day so the cache key stays stable. */
+function rangeStart(range: Range): string | null {
+  if (range === 'all') return null;
+  const d = new Date(Date.now() - Number(range) * DAY_MS);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
 export function TrainingProgressPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [range, setRange] = useState<Range>('30');
   const [filter, setFilter] = useState<Filter>('ALL');
   const [search, setSearch] = useState('');
 
-  usePageChrome({ crumbs: ['Huấn luyện', 'Tiến độ tổng quan'], search: 'Tìm theo tên ngựa, chủ sở hữu…', onSearch: setSearch });
+  usePageChrome({ crumbs: [t('progress.crumbTraining'), t('progress.crumb')], search: t('progress.search'), onSearch: setSearch });
 
-  const { data, loading, error } = useCachedResource(`training-progress:${user?.id ?? ''}:${range}`, () =>
-    api.get<TrainingProgress>('/training-progress', {
-      params: range === 'all' ? {} : { from: new Date(Date.now() - Number(range) * DAY_MS).toISOString() },
-    }).then((r) => r.data),
+  const from = rangeStart(range);
+  const { data, loading, error } = useCachedResource(`training-progress:${user?.id ?? ''}:${from ?? 'all'}`, () =>
+    api.get<TrainingProgress>('/training-progress', { params: from ? { from } : {} }).then((r) => r.data),
   );
   const rows = useMemo(() => data?.horses ?? [], [data]);
   const summary = data?.summary;
 
   const counts = useMemo(() => {
     const c = { ALL: 0, OVERDUE: 0, NO_PLAN: 0, LOCKED: 0 } satisfies Record<Filter, number>;
-    for (const r of rows) for (const f of Object.keys(c) as Filter[]) if (matches[f](r)) c[f] += 1;
+    for (const r of rows) for (const f of FILTERS) if (matches[f](r)) c[f] += 1;
     return c;
   }, [rows]);
 
@@ -64,41 +72,46 @@ export function TrainingProgressPage() {
       <section className="hero px-8 py-7 flex flex-col gap-6">
         <div className="flex flex-wrap gap-6 items-end">
           <div className="flex-[1_1_360px] min-w-0">
-            <div className="lbl">Huấn luyện · Racehorse Club</div>
-            <h1 className="disp text-[56px] mt-2">Tiến độ huấn luyện</h1>
+            <div className="lbl">{t('progress.kicker')}</div>
+            <h1 className="disp text-[56px] mt-2">{t('progress.title')}</h1>
             <p className="text-hero-muted mt-2.5 max-w-[560px]">
-              {user?.role === 'OWNER'
-                ? 'Tổng quan tiến độ tập luyện của các chiến mã bạn sở hữu.'
-                : 'Tổng quan buổi tập đã hoàn thành, sắp tới và quá hạn của toàn bộ chiến mã trong câu lạc bộ.'}
+              {user?.role === 'OWNER' ? t('progress.descOwner') : t('progress.descStaff')}
             </p>
           </div>
-          <Seg dark options={RANGES} value={range} onChange={(k) => setRange(k as Range)} />
+          <div className="flex flex-col items-end gap-1.5">
+            <Seg dark value={range} onChange={(k) => setRange(k as Range)}
+              options={[['30', t('progress.range30')], ['90', t('progress.range90')], ['all', t('progress.rangeAll')]]} />
+            <span className="text-[12px] text-hero-muted">
+              {from ? t('progress.rangeFrom', { date: formatDate(from) }) : t('progress.rangeAllLabel')}
+            </span>
+          </div>
         </div>
         <HeroStats items={[
-          { label: 'Chiến mã', value: dash ?? summary?.horses ?? 0 },
-          { label: 'Có giáo án đang chạy', value: dash ?? summary?.horsesWithActivePlan ?? 0, color: '#9fd9b1' },
-          { label: 'Buổi đã hoàn thành', value: dash ?? s?.done ?? 0, small: s ? `/ ${s.total - s.cancelled}` : undefined },
-          { label: 'Tỷ lệ hoàn thành', value: dash ?? (summary?.completionRate ?? '—'), small: summary?.completionRate != null ? '%' : undefined },
-          { label: 'Buổi quá hạn', value: dash ?? s?.overdue ?? 0, color: s?.overdue ? '#f3d29a' : undefined },
+          { label: t('progress.statHorses'), value: dash ?? summary?.horses ?? 0 },
+          { label: t('progress.statWithPlan'), value: dash ?? summary?.horsesWithActivePlan ?? 0, color: '#9fd9b1' },
+          { label: t('progress.statDone'), value: dash ?? s?.done ?? 0, small: s ? `/ ${s.total - s.cancelled}` : undefined },
+          { label: t('progress.statRate'), value: dash ?? (summary?.completionRate ?? '—'), small: summary?.completionRate != null ? '%' : undefined },
+          { label: t('progress.statOverdue'), value: dash ?? s?.overdue ?? 0, color: s?.overdue ? '#f3d29a' : undefined },
         ]} />
       </section>
 
-      <div className="flex flex-wrap gap-2.5 items-center" role="group" aria-label="Lọc chiến mã">
-        <Chip on={filter === 'ALL'} onClick={() => setFilter('ALL')}>Tất cả <span className="opacity-70">{counts.ALL}</span></Chip>
-        <Chip on={filter === 'OVERDUE'} onClick={() => setFilter('OVERDUE')}>Có buổi quá hạn <span className="opacity-70">{counts.OVERDUE}</span></Chip>
-        <Chip on={filter === 'NO_PLAN'} onClick={() => setFilter('NO_PLAN')}>Chưa có giáo án đang chạy <span className="opacity-70">{counts.NO_PLAN}</span></Chip>
-        <Chip on={filter === 'LOCKED'} onClick={() => setFilter('LOCKED')}>Đang khóa tập <span className="opacity-70">{counts.LOCKED}</span></Chip>
-        <span className="cap ml-auto">Tỷ lệ hoàn thành = buổi đã xong / buổi không bị hủy trong khoảng thời gian đã chọn.</span>
+      <div className="flex flex-wrap gap-2.5 items-center" role="group" aria-label={t('progress.filterAria')}>
+        {FILTERS.map((f) => (
+          <Chip key={f} on={filter === f} onClick={() => setFilter(f)}>
+            {t(`progress.filters.${f}`)} <span className="opacity-70">{counts[f]}</span>
+          </Chip>
+        ))}
+        <span className="cap ml-auto">{t('progress.rateHint')}</span>
       </div>
 
       {loading && !data ? (
-        <p className="cap">Đang tải tiến độ huấn luyện…</p>
+        <p className="cap">{t('progress.loading')}</p>
       ) : error ? (
         <ErrorText err={error} />
       ) : visible.length === 0 ? (
         <Card className="px-5 py-10 text-center flex flex-col items-center gap-3">
           <Icon name="reports" className="w-7 h-7 text-muted" />
-          <p className="cap">{rows.length === 0 ? 'Chưa có chiến mã nào để theo dõi tiến độ.' : 'Không có chiến mã nào phù hợp với bộ lọc.'}</p>
+          <p className="cap">{rows.length === 0 ? t('progress.empty') : t('progress.noMatch')}</p>
         </Card>
       ) : (
         <Card>
@@ -106,9 +119,10 @@ export function TrainingProgressPage() {
             <table className="w-full min-w-[1080px] border-collapse">
               <thead>
                 <tr className="text-left">
-                  {['Chiến mã', 'Sức khỏe', 'Giáo án', 'Tiến độ buổi tập', 'Quá hạn', 'Buổi gần nhất', 'Buổi kế tiếp', ''].map((th, i) => (
-                    <th key={i} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
+                  {(['horse', 'health', 'plans', 'progress', 'overdue', 'last', 'next'] as const).map((k) => (
+                    <th key={k} className="h-[42px] px-4 bg-cream lbl border-b border-line">{t(`progress.cols.${k}`)}</th>
                   ))}
+                  <th className="h-[42px] px-4 bg-cream border-b border-line" />
                 </tr>
               </thead>
               <tbody>
@@ -123,6 +137,7 @@ export function TrainingProgressPage() {
 }
 
 function ProgressRow({ row }: { row: TrainingProgressRow }) {
+  const { t } = useTranslation();
   const { horse, plans, sessions, completionRate, lastSession, nextSession } = row;
   const base = sessions.total - sessions.cancelled;
   return (
@@ -135,15 +150,15 @@ function ProgressRow({ row }: { row: TrainingProgressRow }) {
       </td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap gap-1">
-          <Badge tone={healthTone[horse.healthStatus]}>{HEALTH_LABEL[horse.healthStatus] ?? horse.healthStatus}</Badge>
-          {horse.locked && <Badge tone="lock"><Icon name="lock" className="w-3 h-3" />Khóa tập</Badge>}
+          <Badge tone={healthTone[horse.healthStatus]}>{t(`horseStatusBadge.${horse.healthStatus}`)}</Badge>
+          {horse.locked && <Badge tone="lock"><Icon name="lock" className="w-3 h-3" />{t('progress.locked')}</Badge>}
         </div>
       </td>
       <td className="px-4 py-3">
         {plans.active > 0
-          ? <Badge tone="ok">{plans.active} đang chạy</Badge>
-          : <Badge tone="neu">Không có</Badge>}
-        <div className="cap mt-1">Tổng {plans.total} giáo án</div>
+          ? <Badge tone="ok">{t('progress.activePlans', { count: plans.active })}</Badge>
+          : <Badge tone="neu">{t('progress.noPlan')}</Badge>}
+        <div className="cap mt-1">{t('progress.totalPlans', { count: plans.total })}</div>
       </td>
       <td className="px-4 py-3 min-w-[200px]">
         <div className="flex items-center gap-2">
@@ -151,11 +166,14 @@ function ProgressRow({ row }: { row: TrainingProgressRow }) {
           <b className="num text-[13px]" style={{ color: fitColor(completionRate) }}>{completionRate != null ? `${completionRate}%` : '—'}</b>
         </div>
         <div className="cap mt-1">
-          {sessions.done}/{base} đã xong · {sessions.planned} chờ{sessions.cancelled > 0 ? ` · ${sessions.cancelled} hủy` : ''}
+          {t('progress.doneOf', { done: sessions.done, base, planned: sessions.planned })}
+          {sessions.cancelled > 0 && t('progress.cancelled', { count: sessions.cancelled })}
         </div>
       </td>
       <td className="px-4 py-3">
-        {sessions.overdue > 0 ? <Badge tone="warn"><Icon name="clock" className="w-3 h-3" />{sessions.overdue} buổi</Badge> : <span className="cap">—</span>}
+        {sessions.overdue > 0
+          ? <Badge tone="warn"><Icon name="clock" className="w-3 h-3" />{t('progress.overdueCount', { count: sessions.overdue })}</Badge>
+          : <span className="cap">—</span>}
       </td>
       <td className="px-4 py-3">
         {lastSession ? (
@@ -165,7 +183,7 @@ function ProgressRow({ row }: { row: TrainingProgressRow }) {
               <div className="cap">{lastSession.resultMetric ?? '—'} = {lastSession.resultValue ?? '—'}</div>
             )}
           </>
-        ) : <span className="cap">Chưa có</span>}
+        ) : <span className="cap">{t('progress.noneYet')}</span>}
       </td>
       <td className="px-4 py-3">
         {nextSession ? (
@@ -173,9 +191,9 @@ function ProgressRow({ row }: { row: TrainingProgressRow }) {
             <div className="text-[13px]">{formatDateTime(nextSession.scheduledAt)}</div>
             <div className="cap">{nextSession.type}</div>
           </>
-        ) : <span className="cap">Chưa lên lịch</span>}
+        ) : <span className="cap">{t('progress.notScheduled')}</span>}
       </td>
-      <td className="px-4 py-3 text-right"><Btn sm to={`/horses/${horse.id}?tab=sessions`}>Buổi tập ›</Btn></td>
+      <td className="px-4 py-3 text-right"><Btn sm to={`/horses/${horse.id}?tab=sessions`}>{t('progress.sessionsBtn')}</Btn></td>
     </tr>
   );
 }

@@ -168,7 +168,7 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
           </div>
           <div className="flex gap-1.5">
             <Btn sm onClick={() => setShowInjuries((v) => !v)} aria-expanded={showInjuries}>
-              <Icon name="pin" className="w-3.5 h-3.5" />Vị trí chấn thương ({injuryCount})
+              <Icon name="pin" className="w-3.5 h-3.5" />{t('injury.toggle', { count: injuryCount })}
             </Btn>
             {record.attachmentPath && <Btn sm onClick={() => void download()}>{t('health.openAttachment')}</Btn>}
             {isVet && !editing && <Btn sm onClick={() => setEditing(true)}>{t('common.update')}</Btn>}

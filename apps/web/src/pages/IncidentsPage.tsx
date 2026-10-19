@@ -305,7 +305,7 @@ function IncidentRow({ incident, canAdvance, onChanged }: { incident: Incident; 
               </Btn>
             ) : <span className="cap">{formatDate(incident.updatedAt)}</span>}
             <Btn sm onClick={() => setShowInjuries((v) => !v)} aria-expanded={showInjuries}>
-              <Icon name="pin" className="w-3.5 h-3.5" />Vị trí chấn thương ({injuryCount})
+              <Icon name="pin" className="w-3.5 h-3.5" />{t('injury.toggle', { count: injuryCount })}
             </Btn>
           </div>
         </td>
