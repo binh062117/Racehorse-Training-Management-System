@@ -26,7 +26,7 @@ const NAV: NavItem[] = [
   { to: '/incidents', label: 'Sự cố y tế', icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
 ];
 const ADMIN_NAV: NavItem[] = [
-  { to: '/admin/users', label: 'Phân quyền (RBAC)', icon: 'user', roles: ['MANAGER'] },
+  { to: '/admin/users', label: 'Phân quyền (RBAC)', icon: '/icons/manager-horse-head.png', roles: ['MANAGER'] },
 ];
 
 function Sidebar() {
@@ -51,7 +51,12 @@ function Sidebar() {
           <div className="px-3 pt-3.5 pb-1.5 text-[10.5px] font-semibold tracking-[.08em] uppercase text-[#7c8aa0]">Quản trị</div>
           {ADMIN_NAV.filter(visible).map(({ to, label, icon }) => (
             <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-2.5 h-10 px-3 rounded-btn no-underline ${isActive ? 'bg-white/[.12] text-white font-semibold ring-1 ring-inset ring-white/[.08]' : 'text-hero-line font-medium hover:bg-white/[.07] hover:text-white'}`}>
-              <Icon name={icon} />{label}
+              {icon.startsWith('/') ? (
+                <span className="w-4 h-4 rounded-full bg-white flex-none inline-flex items-center justify-center overflow-hidden">
+                  <img src={icon} alt="" className="w-full h-full object-contain" />
+                </span>
+              ) : <Icon name={icon} />}
+              {label}
             </NavLink>
           ))}
         </>
