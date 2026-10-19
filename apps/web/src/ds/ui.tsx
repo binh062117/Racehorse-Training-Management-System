@@ -1,4 +1,6 @@
-import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
+import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
 /* ---------- icons (stroke, 24px grid) ---------- */
@@ -49,7 +51,8 @@ export function Badge({ tone = 'neu', className = '', children }: { tone?: Tone;
 export const healthTone: Record<string, Tone> = { FIT: 'ok', MONITORING: 'warn', QUARANTINED: 'bad', INJURED: 'bad' };
 export const careerTone: Record<string, Tone> = { ACTIVE: 'ok', RESTING: 'warn', RETIRED: 'neu' };
 export const fitColor = (v: number | null | undefined) => (v == null ? '#9ca3af' : v >= 80 ? '#3a6b4a' : v >= 60 ? '#8a6218' : '#8a2020');
-export function LockBadge({ children = 'Locked', className = '' }: { children?: ReactNode; className?: string }) {
+export function LockBadge({ children = i18n.t("ui.locked"), className = '' }: { children?: ReactNode; className?: string }) {
+  useTranslation();
   return <Badge tone="lock" className={className}><Icon name="lock" className="w-3.5 h-3.5" />{children}</Badge>;
 }
 
@@ -179,6 +182,22 @@ const inputCls = (err?: boolean, ro?: boolean) => `h-10 w-full rounded-btn borde
 export function Input({ err, ro, className = '', ...rest }: InputHTMLAttributes<HTMLInputElement> & { err?: boolean; ro?: boolean }) {
   return <input className={`${inputCls(err, ro)} ${className}`} readOnly={ro} {...rest} />;
 }
+/** Keep native file selection while localizing browser-provided control labels. */
+export const FileInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function FileInput({ className = '', onChange, ...rest }, ref) {
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  return (
+    <label className={`relative flex flex-wrap items-center gap-2 min-w-0 max-w-full rounded-btn focus-within:ring-1 focus-within:ring-info ${className}`}>
+      <span className="rounded-btn border border-line bg-white px-3 py-2 font-medium">{t('fileInput.choose')}</span>
+      <span className="text-muted break-all" aria-live="polite">{name || t('fileInput.empty')}</span>
+      <input {...rest} ref={ref} type="file" aria-label={rest['aria-label'] || t('fileInput.choose')}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(event) => {
+          onChange?.(event);
+          setName(Array.from(event.currentTarget.files ?? []).map((file) => file.name).join(', '));
+        }} />
+    </label>
+  );
+});
 export function Textarea({ className = '', ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={`w-full min-h-[88px] rounded-btn border border-line bg-white px-3 py-2.5 text-[13px] leading-[19px] outline-none focus:border-info focus:ring-1 focus:ring-info resize-y ${className}`} {...rest} />;
 }
@@ -224,8 +243,9 @@ export function Bar({ pct, color = '#1a4b8a', className = 'w-16' }: { pct: numbe
   return <span className={`inline-block h-1.5 rounded bg-line-soft overflow-hidden flex-none ${className}`}><i className="block h-full rounded" style={{ width: pct + '%', background: color }} /></span>;
 }
 export function Sev({ level, dark }: { level: 0 | 1 | 2 | 3; dark?: boolean }) {
+  useTranslation();
   const c = ['#3a6b4a', '#8a6218', '#8a2020', '#5e1414'][level];
-  const n = ['Thấp', 'Trung bình', 'Cao', 'Khẩn cấp'][level];
+  const n = [i18n.t("ui.low"), i18n.t("incidents.severities.MEDIUM"), i18n.t("ui.high"), i18n.t("ui.critical")][level];
   return (
     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.05em]" style={{ color: dark ? '#f3b4b4' : c }}>
       {n}<i className="inline-flex gap-0.5">{[0, 1, 2, 3].map((k) => <b key={k} className="w-[5px] h-3 rounded-[1px]" style={{ background: k <= level ? (dark ? '#f3b4b4' : c) : (dark ? 'rgba(255,255,255,.2)' : '#e2e0db') }} />)}</i>
@@ -253,8 +273,9 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
   );
 }
 export function Tabs({ items }: { items: [string, ReactNode, boolean?][] }) {
+  useTranslation();
   return (
-    <nav className="flex gap-1 border-b border-line overflow-x-auto" aria-label="Mục">
+    <nav className="flex gap-1 border-b border-line overflow-x-auto" aria-label={i18n.t("ui.sections")}>
       {items.map(([to, label, ext]) => (
         <NavLink key={to} to={to} end className={({ isActive }) => `inline-flex items-center gap-2 h-10 px-3.5 -mb-px border-b-2 whitespace-nowrap no-underline ${isActive ? 'text-info border-info font-semibold' : 'text-muted border-transparent font-medium hover:text-ink'}`}>
           {label}{ext && <Icon name="external" className="w-3.5 h-3.5" />}
@@ -293,12 +314,13 @@ export function Modal({ open, onClose, width = 560, labelledBy, children }: { op
   );
 }
 export function ModalHead({ icon, tone = 'info', title, sub, onClose, id }: { icon?: string; tone?: 'bad' | 'info' | 'ok' | 'warn'; title: ReactNode; sub?: ReactNode; onClose?: () => void; id?: string }) {
+  useTranslation();
   const t = { bad: 'bg-bad-bg text-bad', info: 'bg-info-bg text-info', ok: 'bg-ok-bg text-ok', warn: 'bg-warn-bg text-warn' }[tone];
   return (
     <div className="flex items-start gap-3 px-6 pt-5 pb-4">
       {icon && <span className={`w-10 h-10 rounded-card flex items-center justify-center flex-none ${t}`}><Icon name={icon} className="w-5 h-5" /></span>}
       <div className="flex-1"><h2 id={id} className="text-base font-semibold">{title}</h2>{sub && <p className="text-muted mt-1">{sub}</p>}</div>
-      <button type="button" aria-label="Đóng" onClick={onClose} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream"><Icon name="x" /></button>
+      <button type="button" aria-label={i18n.t("ui.close")} onClick={onClose} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream"><Icon name="x" /></button>
     </div>
   );
 }

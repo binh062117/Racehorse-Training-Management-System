@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -11,6 +13,7 @@ import { usePageChrome } from '../ds/AppShell';
 import { Badge, Btn, Card, Chip, HeroStats, Icon } from '../ds/ui';
 
 export function TrainingPlansPage() {
+  useTranslation();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -34,7 +37,7 @@ export function TrainingPlansPage() {
   );
   const plans = data?.data ?? [];
 
-  usePageChrome({ crumbs: ['Huấn luyện', 'Giáo án'], search: 'Tìm theo tên ngựa, mục tiêu, HLV…', onSearch: setSearch });
+  usePageChrome({ crumbs: [i18n.t("ui.training"), i18n.t("session.planSummary")], search: i18n.t("ui.searchHorseGoalOrTrainer"), onSearch: setSearch });
 
   const now = new Date();
   const totalCount = plans.length;
@@ -57,48 +60,48 @@ export function TrainingPlansPage() {
   });
 
   const subtitle = {
-    TRAINER: 'Lập giáo án chi tiết (cự ly, khối lượng, mặt sân) theo từng giai đoạn cho từng chiến mã.',
-    MANAGER: 'Theo dõi tổng quan tiến độ giáo án huấn luyện của toàn bộ câu lạc bộ.',
-    OWNER: 'Xem lịch trình và giáo án huấn luyện của các chiến mã thuộc sở hữu.',
-  }[role ?? ''] ?? 'Theo dõi giáo án huấn luyện.';
+    TRAINER: i18n.t("ui.createPhasedTrainingPlansWithDistanceWorkloadAndSurfaceDetailsForEachH"),
+    MANAGER: i18n.t("ui.trackTrainingPlansAcrossTheClub"),
+    OWNER: i18n.t("ui.viewTrainingSchedulesAndPlansForYourHorses"),
+  }[role ?? ''] ?? i18n.t("ui.viewTrainingPlans");
 
   return (
     <>
       <section className="hero px-8 py-7 flex flex-col gap-6">
         <div className="flex flex-wrap gap-6 items-end">
           <div className="flex-[1_1_360px] min-w-0">
-            <div className="lbl">Mùa giải 2026 · Racehorse Club</div>
-            <h1 className="disp text-[56px] mt-2">Giáo án huấn luyện</h1>
+            <div className="lbl">{i18n.t("ui.2026SeasonRacehorseClub")}</div>
+            <h1 className="disp text-[56px] mt-2">{i18n.t("nav.plansTrainer")}</h1>
             <p className="text-hero-muted mt-2.5 max-w-[520px]">{subtitle}</p>
           </div>
           {canCreate && (
-            <Btn v="light" onClick={() => setCreateOpen(true)}><Icon name="plus" />Tạo giáo án mới</Btn>
+            <Btn v="light" onClick={() => setCreateOpen(true)}><Icon name="plus" />{i18n.t("ui.createTrainingPlan")}</Btn>
           )}
         </div>
         <HeroStats items={[
-          { label: 'Tổng số giáo án', value: totalCount },
-          { label: 'Đang triển khai', value: activeCount, color: '#9fd9b1' },
-          { label: 'Đã hoàn thành', value: completedCount },
-          { label: 'Chiến mã có giáo án', value: uniqueHorsesCount },
+          { label: i18n.t("ui.totalPlans"), value: totalCount },
+          { label: i18n.t("ui.inProgress"), value: activeCount, color: '#9fd9b1' },
+          { label: i18n.t("ui.completed"), value: completedCount },
+          { label: i18n.t("ui.horsesWithPlans"), value: uniqueHorsesCount },
         ]} />
       </section>
 
       <div className="flex flex-wrap gap-2.5 items-center">
-        <Chip on={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')}>Tất cả <span className="text-muted">{totalCount}</span></Chip>
-        <Chip on={statusFilter === 'ACTIVE'} onClick={() => setStatusFilter('ACTIVE')}>Đang áp dụng <span className="text-muted">{activeCount}</span></Chip>
-        <Chip on={statusFilter === 'COMPLETED'} onClick={() => setStatusFilter('COMPLETED')}>Đã kết thúc <span className="text-muted">{completedCount}</span></Chip>
+        <Chip on={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')}>{i18n.t("incidents.filters.ALL")}{' '}<span className="text-muted">{totalCount}</span></Chip>
+        <Chip on={statusFilter === 'ACTIVE'} onClick={() => setStatusFilter('ACTIVE')}>{i18n.t("ui.active2")}{' '}<span className="text-muted">{activeCount}</span></Chip>
+        <Chip on={statusFilter === 'COMPLETED'} onClick={() => setStatusFilter('COMPLETED')}>{i18n.t("ui.ended")}{' '}<span className="text-muted">{completedCount}</span></Chip>
       </div>
 
       {loading && plans.length === 0 ? (
-        <p className="cap">Đang tải danh sách giáo án huấn luyện…</p>
+        <p className="cap">{i18n.t("ui.loadingTrainingPlans")}</p>
       ) : loadErr ? (
         <ErrorText err={loadErr} />
       ) : filteredPlans.length === 0 ? (
         <Card className="px-5 py-10 text-center flex flex-col items-center gap-3">
           <Icon name="plans" className="w-7 h-7 text-muted" />
-          <p className="cap">{plans.length === 0 ? 'Chưa có kế hoạch huấn luyện nào được thiết lập.' : 'Không tìm thấy giáo án nào phù hợp với bộ lọc.'}</p>
+          <p className="cap">{plans.length === 0 ? i18n.t("ui.noTrainingPlansHaveBeenCreated") : i18n.t("ui.noTrainingPlansMatchTheCurrentFilters")}</p>
           {canCreate && plans.length === 0 && (
-            <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />Tạo giáo án đầu tiên</Btn>
+            <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{i18n.t("ui.createTheFirstPlan")}</Btn>
           )}
         </Card>
       ) : (
@@ -107,7 +110,7 @@ export function TrainingPlansPage() {
             <table className="w-full min-w-[900px] border-collapse">
               <thead>
                 <tr className="text-left">
-                  {['Chiến mã', 'Mục tiêu giáo án', 'HLV phụ trách', 'Thời gian', 'Trạng thái', ''].map((t) => (
+                  {[i18n.t("horseFlow.horse"), i18n.t("ui.trainingGoal"), i18n.t("ui.assignedTrainer"), i18n.t("horseFlow.time"), i18n.t("horse.status"), ''].map((t) => (
                     <th key={t} className="h-[42px] px-4 bg-cream lbl border-b border-line">{t}</th>
                   ))}
                 </tr>
@@ -128,12 +131,12 @@ export function TrainingPlansPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-[13px]">{formatDate(plan.startDate)}</div>
-                        <div className="cap">đến {plan.endDate ? formatDate(plan.endDate) : 'Dài hạn'}</div>
+                        <div className="cap">{i18n.t("ui.to")}{' '}{plan.endDate ? formatDate(plan.endDate) : i18n.t("ui.openEnded")}</div>
                       </td>
                       <td className="px-4 py-3">
-                        {isOngoing ? <Badge tone="ok"><Icon name="check" className="w-3.5 h-3.5" />Đang áp dụng</Badge> : <Badge tone="neu">Đã hoàn thành</Badge>}
+                        {isOngoing ? <Badge tone="ok"><Icon name="check" className="w-3.5 h-3.5" />{i18n.t("ui.active2")}</Badge> : <Badge tone="neu">{i18n.t("ui.completed")}</Badge>}
                       </td>
-                      <td className="px-4 py-3 text-right"><Btn sm to={`/horses/${plan.horseId}`}>Hồ sơ ngựa ›</Btn></td>
+                      <td className="px-4 py-3 text-right"><Btn sm to={`/horses/${plan.horseId}`}>{i18n.t("ui.horseProfile2")}</Btn></td>
                     </tr>
                   );
                 })}

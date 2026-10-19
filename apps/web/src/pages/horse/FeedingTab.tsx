@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import type { FeedingRecord, Horse, Paginated } from '../../lib/types';
@@ -13,6 +15,7 @@ interface FormPrefill {
 }
 
 export function FeedingTab({ horse }: { horse: Horse }) {
+  useTranslation();
   const { user } = useAuth();
   const isGroom = user?.role === 'GROOM';
   const canSuggest = isGroom || user?.role === 'VET' || user?.role === 'MANAGER';
@@ -41,14 +44,14 @@ export function FeedingTab({ horse }: { horse: Horse }) {
     <div className="flex flex-col gap-5">
       <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h2 className="text-[15px] font-semibold">Khẩu phần ăn</h2>
+          <h2 className="text-[15px] font-semibold">{i18n.t("ui.feeding")}</h2>
           <p className="cap mt-0.5">
-            {isGroom ? 'Ghi lại loại thức ăn và khối lượng mỗi lần cho ăn, phục vụ phân tích dinh dưỡng của AI.' : 'Lịch sử khẩu phần ăn của chiến mã.'}
+            {isGroom ? i18n.t("ui.recordFeedTypeAndQuantityForEachFeedingToSupportAiNutritionAnalysis") : i18n.t("ui.feedingHistoryForThisHorse")}
           </p>
         </div>
         {isGroom && (
           <Btn v="p" onClick={() => { setPrefill(null); setShowForm((s) => !s); }}>
-            <Icon name="plus" />{showForm ? 'Đóng' : 'Ghi nhận khẩu phần'}
+            <Icon name="plus" />{showForm ? i18n.t("ui.close") : i18n.t("ui.recordFeeding")}
           </Btn>
         )}
       </div>
@@ -70,18 +73,18 @@ export function FeedingTab({ horse }: { horse: Horse }) {
       )}
 
       {loading ? (
-        <p className="cap">Đang tải...</p>
+        <p className="cap">{i18n.t("ui.loading")}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
-        <Card className="px-5 py-10 text-center"><p className="cap">Chưa có bản ghi khẩu phần ăn nào.</p></Card>
+        <Card className="px-5 py-10 text-center"><p className="cap">{i18n.t("ui.noFeedingRecordsYet")}</p></Card>
       ) : (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead>
                 <tr className="text-left">
-                  {['Ngày', 'Loại thức ăn', 'Khối lượng', 'Ghi chú', 'Người ghi'].map((th) => (
+                  {[i18n.t("horseFlow.date"), i18n.t("ui.feedType"), i18n.t("ui.quantity"), i18n.t("session.notes"), i18n.t("ui.recordedBy")].map((th) => (
                     <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
                   ))}
                 </tr>
@@ -106,6 +109,7 @@ export function FeedingTab({ horse }: { horse: Horse }) {
 }
 
 function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; initial: FormPrefill | null; onCreated: () => void }) {
+  useTranslation();
   const [feedType, setFeedType] = useState(initial?.feedType ?? '');
   const [quantityKg, setQuantityKg] = useState(initial?.quantityKg ?? '');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -136,21 +140,21 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
     <form onSubmit={submit}>
       <Card className="p-5 flex flex-col gap-4">
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
-          <Field label="Loại thức ăn">
-            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required placeholder="Ví dụ: Cỏ khô Alfalfa, Cám hỗn hợp..." />
+          <Field label={i18n.t("ui.feedType")}>
+            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required placeholder={i18n.t("ui.exampleAlfalfaHayMixedFeed")} />
           </Field>
-          <Field label="Khối lượng (kg)">
+          <Field label={i18n.t("ui.quantityKg")}>
             <Input type="number" step="0.1" min="0.1" max="100" value={quantityKg} onChange={(e) => setQuantityKg(e.target.value)} required />
           </Field>
-          <Field label="Ngày">
+          <Field label={i18n.t("horseFlow.date")}>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
           </Field>
-          <Field label="Ghi chú (tuỳ chọn)">
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder="Ví dụ: ăn ít hơn bình thường..." />
+          <Field label={i18n.t("ui.notesOptional")}>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder={i18n.t("ui.exampleAteLessThanUsual")} />
           </Field>
         </div>
         <ErrorText err={error} />
-        <Btn v="p" type="submit" disabled={saving} className="self-start">{saving ? 'Đang lưu...' : 'Lưu khẩu phần'}</Btn>
+        <Btn v="p" type="submit" disabled={saving} className="self-start">{saving ? i18n.t("horseFlow.saving") : i18n.t("ui.saveFeeding")}</Btn>
       </Card>
     </form>
   );

@@ -1,3 +1,4 @@
+import i18n, { setLanguage } from '../i18n';
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode,
 } from 'react';
@@ -5,7 +6,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, formatNotificationMessage } from '../lib/format';
 import type { Notification, Paginated, Role } from '../lib/types';
 import { Icon } from './ui';
 
@@ -16,40 +17,41 @@ interface NavItem {
   roles?: Role[];
 }
 
-const NAV: NavItem[] = [
-  { to: '/dashboard', label: 'Tổng quan', icon: 'dashboard' },
-  { to: '/horses', label: 'Ngựa đua', icon: 'horse' },
-  { to: '/plans', label: 'Giáo án huấn luyện', icon: 'plans' },
-  { to: '/races', label: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
-  { to: '/vaccinations', label: 'Tiêm phòng & Tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
-  { to: '/health-records', label: 'Hồ sơ khám bệnh', icon: 'steth', roles: ['VET'] },
-  { to: '/incidents', label: 'Sự cố y tế', icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
-];
-const ADMIN_NAV: NavItem[] = [
-  { to: '/admin/users', label: 'Phân quyền (RBAC)', icon: 'user', roles: ['MANAGER'] },
-];
+const NAV: () => NavItem[] = () => ([
+  { to: '/dashboard', label: i18n.t("nav.dashboard"), icon: 'dashboard' },
+  { to: '/horses', label: i18n.t("nav.horses"), icon: 'horse' },
+  { to: '/plans', label: i18n.t("nav.plansTrainer"), icon: 'plans' },
+  { to: '/races', label: i18n.t("nav.races"), icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
+  { to: '/vaccinations', label: i18n.t("nav.vaccinations"), icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
+  { to: '/health-records', label: i18n.t("nav.healthRecords"), icon: 'steth', roles: ['VET'] },
+  { to: '/incidents', label: i18n.t("nav.incidents"), icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
+]);
+const ADMIN_NAV: () => NavItem[] = () => ([
+  { to: '/admin/users', label: i18n.t("nav.rbac"), icon: 'user', roles: ['MANAGER'] },
+]);
 
 function Sidebar() {
+  useTranslation();
   const { user } = useAuth();
   const role = user?.role ?? null;
   const visible = (item: NavItem) => !item.roles || (role && item.roles.includes(role));
   return (
-    <nav aria-label="Điều hướng chính" className="flex flex-col gap-0.5 px-3 py-[18px] text-hero-line bg-navy flex-[1_1_240px] max-w-full md:flex-[0_0_240px]"
+    <nav aria-label={i18n.t("dashboard.navigation")} className="flex flex-col gap-0.5 px-3 py-[18px] text-hero-line bg-navy flex-[1_1_240px] max-w-full md:flex-[0_0_240px]"
       style={{ backgroundImage: 'radial-gradient(120% 60% at 0% 100%, rgba(90,135,200,.14), transparent 60%)' }}>
       <Link to="/dashboard" className="flex items-center gap-2.5 px-2 pb-[18px] no-underline">
         <span className="w-[34px] h-[34px] rounded-full bg-cream text-navy flex items-center justify-center text-xs font-bold tracking-wider">RH</span>
-        <span><span className="block text-white font-semibold text-[13.5px] leading-[18px]">Racehorse Club</span><span className="block text-[11px] leading-[14px] text-slate-400">Training &amp; Management</span></span>
+        <span><span className="block text-white font-semibold text-[13.5px] leading-[18px]">{i18n.t("ui.racehorseClub")}</span><span className="block text-[11px] leading-[14px] text-slate-400">{i18n.t("ui.trainingManagement")}</span></span>
       </Link>
-      <div className="px-3 pt-2.5 pb-1.5 text-[10.5px] font-semibold tracking-[.08em] uppercase text-[#7c8aa0]">Vận hành</div>
-      {NAV.filter(visible).map(({ to, label, icon }) => (
+      <div className="px-3 pt-2.5 pb-1.5 text-[10.5px] font-semibold tracking-[.08em] uppercase text-[#7c8aa0]">{i18n.t("ui.operations")}</div>
+      {NAV().filter(visible).map(({ to, label, icon }) => (
         <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-2.5 h-10 px-3 rounded-btn no-underline ${isActive ? 'bg-white/[.12] text-white font-semibold ring-1 ring-inset ring-white/[.08]' : 'text-hero-line font-medium hover:bg-white/[.07] hover:text-white'}`}>
           <Icon name={icon} />{label}
         </NavLink>
       ))}
-      {ADMIN_NAV.some(visible) && (
+      {ADMIN_NAV().some(visible) && (
         <>
-          <div className="px-3 pt-3.5 pb-1.5 text-[10.5px] font-semibold tracking-[.08em] uppercase text-[#7c8aa0]">Quản trị</div>
-          {ADMIN_NAV.filter(visible).map(({ to, label, icon }) => (
+          <div className="px-3 pt-3.5 pb-1.5 text-[10.5px] font-semibold tracking-[.08em] uppercase text-[#7c8aa0]">{i18n.t("ui.administration")}</div>
+          {ADMIN_NAV().filter(visible).map(({ to, label, icon }) => (
             <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-2.5 h-10 px-3 rounded-btn no-underline ${isActive ? 'bg-white/[.12] text-white font-semibold ring-1 ring-inset ring-white/[.08]' : 'text-hero-line font-medium hover:bg-white/[.07] hover:text-white'}`}>
               <Icon name={icon} />{label}
             </NavLink>
@@ -72,6 +74,7 @@ function useOutside(ref: React.RefObject<HTMLElement | null>, onOut: () => void)
 const POLL_MS = 20_000;
 
 function Notifications() {
+  useTranslation();
   const [items, setItems] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -118,22 +121,22 @@ function Notifications() {
 
   return (
     <div className="relative" ref={ref}>
-      <button type="button" aria-label={`Thông báo (${unreadCount} chưa đọc)`} aria-expanded={open} onClick={() => setOpen(!open)}
+      <button type="button" aria-label={i18n.t('ui.unreadCount', { count: unreadCount })} aria-expanded={open} onClick={() => setOpen(!open)}
         className={`relative w-10 h-10 rounded-btn border bg-white inline-flex items-center justify-center ${unreadCount > 0 ? 'border-bad text-bad animate-live' : 'border-line text-ink'}`}>
         <Icon name="bell" />{unreadCount > 0 && <span className="absolute top-2 right-[9px] w-2 h-2 rounded-full bg-bad border-2 border-white" />}
       </button>
       {open && (
         <div className="absolute right-0 top-12 z-40 w-[360px] bg-white border border-line rounded-xl shadow-pop overflow-hidden">
-          <div className="flex items-center px-4 py-3.5 border-b border-line-soft"><span className="flex-1 font-semibold text-[15px]">Cảnh báo AI</span>
-            <Link to="/notifications" onClick={() => setOpen(false)} className="text-[11.5px] font-semibold text-info no-underline">Xem tất cả</Link></div>
+          <div className="flex items-center px-4 py-3.5 border-b border-line-soft"><span className="flex-1 font-semibold text-[15px]">{i18n.t("ui.aiAlerts")}</span>
+            <Link to="/notifications" onClick={() => setOpen(false)} className="text-[11.5px] font-semibold text-info no-underline">{i18n.t("dashboard.viewAll")}</Link></div>
           {items.length === 0 ? (
-            <div className="px-4 py-6 text-center text-muted text-[12.5px]">Chưa có cảnh báo nào.</div>
+            <div className="px-4 py-6 text-center text-muted text-[12.5px]">{i18n.t("ui.noAlertsYet")}</div>
           ) : items.map((n) => (
             <button key={n.id} type="button" onClick={() => void markReadAndGo(n)}
               className={`w-full text-left flex gap-3 px-4 py-3 border-b border-line-soft ${!n.read ? 'bg-subtle' : 'bg-white'}`}>
               <span className="w-8 h-8 rounded-btn flex items-center justify-center flex-none bg-bad-bg text-bad"><Icon name="alert" /></span>
-              <span className="flex-1 min-w-0"><span className="block font-semibold line-clamp-2">{n.message}</span><span className="cap num">{formatDateTime(n.createdAt)}</span></span>
-              {!n.read && <span className="w-2 h-2 rounded-full bg-info mt-1.5 flex-none" aria-label="Chưa đọc" />}
+              <span className="flex-1 min-w-0"><span className="block font-semibold line-clamp-2">{formatNotificationMessage(n.message)}</span><span className="cap num">{formatDateTime(n.createdAt)}</span></span>
+              {!n.read && <span className="w-2 h-2 rounded-full bg-info mt-1.5 flex-none" aria-label={i18n.t("notificationsPage.unread")} />}
             </button>
           ))}
         </div>
@@ -165,9 +168,9 @@ function UserMenu() {
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1 text-muted text-[12px]">
-        <button type="button" className="hover:text-ink disabled:text-navy disabled:font-semibold" onClick={() => i18n.changeLanguage('vi')} disabled={i18n.language === 'vi'}>VI</button>
+        <button type="button" className="hover:text-ink disabled:text-navy disabled:font-semibold" onClick={() => setLanguage('vi')} disabled={i18n.language === 'vi'}>VI</button>
         <span aria-hidden>/</span>
-        <button type="button" className="hover:text-ink disabled:text-navy disabled:font-semibold" onClick={() => i18n.changeLanguage('en')} disabled={i18n.language === 'en'}>EN</button>
+        <button type="button" className="hover:text-ink disabled:text-navy disabled:font-semibold" onClick={() => setLanguage('en')} disabled={i18n.language === 'en'}>EN</button>
       </div>
       <div className="relative" ref={ref}>
         <button type="button" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)} className="flex items-center gap-2.5 h-11 pl-1.5 pr-2.5 rounded-btn border border-line bg-white text-left">
@@ -197,7 +200,8 @@ const DEFAULT_CHROME: Chrome = { crumbs: [], wide: true };
 /** Shown for a route that hasn't been migrated to call usePageChrome() yet. */
 function fallbackCrumb(pathname: string): string {
   const seg = pathname.split('/').filter(Boolean)[0] ?? 'dashboard';
-  return seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ');
+  const keys: Record<string, string> = { dashboard: 'nav.dashboard', horses: 'nav.horses', plans: 'nav.plans', races: 'nav.races', vaccinations: 'nav.vaccinations', 'health-records': 'nav.healthRecords', incidents: 'nav.incidents', notifications: 'nav.notifications', admin: 'nav.users', 'my-horses': 'nav.horsesOwner' };
+  return i18n.t(keys[seg] ?? 'app.title');
 }
 const ChromeContext = createContext<{ setChrome: (c: Partial<Chrome>) => void } | null>(null);
 
@@ -221,6 +225,7 @@ export function usePageChrome(chrome: Partial<Chrome>) {
  * previous page's stale breadcrumb/search box.
  */
 export function AppShell({ children }: { children: ReactNode }) {
+  useTranslation();
   const location = useLocation();
   const [, forceRender] = useReducer((n: number) => n + 1, 0);
   const chromeRef = useRef<Chrome>(DEFAULT_CHROME);

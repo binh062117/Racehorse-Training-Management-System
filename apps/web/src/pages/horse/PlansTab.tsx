@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import type { Horse, Paginated, TrainingPlan } from '../../lib/types';
@@ -12,6 +14,7 @@ interface Props {
 }
 
 export function PlansTab({ horse }: Props) {
+  useTranslation();
   const { user } = useAuth();
   const canCreate = user?.role === 'TRAINER';
 
@@ -43,35 +46,33 @@ export function PlansTab({ horse }: Props) {
     <div className="flex flex-col gap-4">
       {horse.status === 'RETIRED' && (
         <Alert tone="info" icon="info">
-          Chiến mã <strong>{horse.name}</strong> đã giải nghệ (RETIRED). Hệ thống không hỗ trợ lập giáo án huấn luyện mới.
-        </Alert>
+          {i18n.t("horseFlow.horse")}{' '}<strong>{horse.name}</strong> {' '}{i18n.t("ui.isRetiredNewTrainingPlansCannotBeCreated")}</Alert>
       )}
       {horse.healthStatus === 'QUARANTINED' && (
         <Alert tone="bad" icon="alert">
-          Chiến mã đang trong diện <strong>Cách ly y tế (QUARANTINED)</strong>. Cần chờ Bác sĩ thú y gỡ cách ly trước khi lên giáo án huấn luyện.
-        </Alert>
+          {i18n.t("ui.thisHorseIsIn")}{' '}<strong>{i18n.t("ui.medicalQuarantine")}</strong>{i18n.t("ui.waitForVeterinaryClearanceBeforeCreatingATrainingPlan")}</Alert>
       )}
 
       <div className="flex justify-between items-center flex-wrap gap-2.5">
         <div>
-          <h3 className="text-[15px] font-semibold">Giáo án &amp; Kế hoạch Huấn luyện</h3>
+          <h3 className="text-[15px] font-semibold">{i18n.t("ui.trainingPlans")}</h3>
           <p className="cap mt-0.5">
-            Mục tiêu huấn luyện và phân kỳ bài tập cho {horse.name}.
-            {horse.fitnessScore != null && <span className="ml-2 font-semibold text-brand-blue">· Thể lực hiện tại: {horse.fitnessScore}/100</span>}
+            {i18n.t("ui.trainingGoalsAndPhasesFor")}{' '}{horse.name}.
+            {horse.fitnessScore != null && <span className="ml-2 font-semibold text-brand-blue">{i18n.t("ui.currentFitnessScore")}{' '}{horse.fitnessScore}/100</span>}
           </p>
         </div>
-        {canCreate && isEligible && <Btn v="p" sm onClick={() => setCreateOpen(true)}><Icon name="plus" />Tạo giáo án mới</Btn>}
+        {canCreate && isEligible && <Btn v="p" sm onClick={() => setCreateOpen(true)}><Icon name="plus" />{i18n.t("ui.createTrainingPlan")}</Btn>}
       </div>
 
       <ErrorText err={err} />
 
       {loading && plans.length === 0 ? (
-        <p className="cap">Đang tải kế hoạch huấn luyện…</p>
+        <p className="cap">{i18n.t("ui.loadingTrainingPlans2")}</p>
       ) : plans.length === 0 ? (
         <Card className="px-5 py-10 text-center flex flex-col items-center gap-3">
           <Icon name="plans" className="w-6 h-6 text-muted" />
-          <p className="cap">Chiến mã này chưa có kế hoạch huấn luyện nào.</p>
-          {canCreate && <Btn v="p" sm onClick={() => setCreateOpen(true)}><Icon name="plus" />Thiết lập giáo án đầu tiên</Btn>}
+          <p className="cap">{i18n.t("ui.thisHorseHasNoTrainingPlansYet")}</p>
+          {canCreate && <Btn v="p" sm onClick={() => setCreateOpen(true)}><Icon name="plus" />{i18n.t("ui.createTheFirstPlan2")}</Btn>}
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
@@ -82,13 +83,13 @@ export function PlansTab({ horse }: Props) {
                 <div className="flex justify-between items-start flex-wrap gap-2">
                   <div>
                     <h4 className="text-[15px] font-semibold">{p.goal}</h4>
-                    <p className="cap mt-1">Huấn luyện viên phụ trách: <strong>{p.trainer?.name ?? '—'}</strong> ({p.trainer?.email})</p>
+                    <p className="cap mt-1">{i18n.t("ui.assignedTrainer2")}{' '}<strong>{p.trainer?.name ?? '—'}</strong> ({p.trainer?.email})</p>
                   </div>
-                  {isOngoing ? <Badge tone="ok"><Icon name="check" className="w-3.5 h-3.5" />Đang áp dụng</Badge> : <Badge tone="neu">Đã hoàn thành</Badge>}
+                  {isOngoing ? <Badge tone="ok"><Icon name="check" className="w-3.5 h-3.5" />{i18n.t("ui.active2")}</Badge> : <Badge tone="neu">{i18n.t("ui.completed")}</Badge>}
                 </div>
                 <div className="flex items-center gap-4 mt-3 pt-2.5 border-t border-line-soft text-[12.5px]">
-                  <div><span className="text-muted">Bắt đầu: </span><strong>{formatDate(p.startDate)}</strong></div>
-                  <div><span className="text-muted">Kết thúc: </span><strong>{p.endDate ? formatDate(p.endDate) : 'Không giới hạn'}</strong></div>
+                  <div><span className="text-muted">{i18n.t("ui.start")}{' '}</span><strong>{formatDate(p.startDate)}</strong></div>
+                  <div><span className="text-muted">{i18n.t("ui.end")}{' '}</span><strong>{p.endDate ? formatDate(p.endDate) : i18n.t("ui.openEnded2")}</strong></div>
                 </div>
               </Card>
             );

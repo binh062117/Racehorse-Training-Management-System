@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +17,7 @@ export function HealthSchedulePage() {
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [careType, setCareType] = useState<'ALL' | 'VACCINATION' | 'DEWORMING'>('ALL');
 
-  usePageChrome({ crumbs: ['Sức khỏe', t('healthSchedule.title')] });
+  usePageChrome({ crumbs: [i18n.t("ui.health"), t('healthSchedule.title')] });
 
   const vaccinationParams = {
     limit: 100,

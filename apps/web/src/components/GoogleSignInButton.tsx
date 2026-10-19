@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface GoogleCredentialResponse {
   credential: string;
@@ -24,6 +25,7 @@ export function GoogleSignInButton({
 }: {
   onToken: (idToken: string) => void;
 }) {
+  const { i18n } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as
     | string
@@ -43,6 +45,7 @@ export function GoogleSignInButton({
         theme: 'outline',
         size: 'large',
         width: 320,
+        locale: i18n.language,
       });
     };
 
@@ -63,7 +66,7 @@ export function GoogleSignInButton({
     return () => {
       cancelled = true;
     };
-  }, [clientId, onToken]);
+  }, [clientId, onToken, i18n.language]);
 
   if (!clientId) return null;
   return <div ref={ref} />;

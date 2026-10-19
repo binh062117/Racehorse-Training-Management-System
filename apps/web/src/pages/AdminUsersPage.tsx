@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
@@ -18,7 +19,7 @@ export function AdminUsersPage() {
   const [err, setErr] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
-  usePageChrome({ crumbs: ['Quản trị', t('nav.users')] });
+  usePageChrome({ crumbs: [i18n.t("ui.administration"), t('nav.users')] });
 
   const load = useCallback(async () => {
     try {
@@ -44,14 +45,14 @@ export function AdminUsersPage() {
     <>
       <section className="hero px-8 py-7 flex flex-col gap-6">
         <div>
-          <div className="lbl">Quản trị hệ thống</div>
+          <div className="lbl">{i18n.t("nav.admin")}</div>
           <h1 className="disp text-[56px] mt-2">{t('nav.users')}</h1>
         </div>
         <HeroStats items={[
-          { label: 'Tổng tài khoản', value: users.length },
-          { label: 'Chờ duyệt', value: pending, color: pending > 0 ? '#f3d29a' : undefined },
-          { label: 'Đang hoạt động', value: active, color: '#9fd9b1' },
-          { label: 'Đã khóa', value: disabled },
+          { label: i18n.t("ui.totalAccounts"), value: users.length },
+          { label: i18n.t("user.statusLabel.PENDING"), value: pending, color: pending > 0 ? '#f3d29a' : undefined },
+          { label: i18n.t("dashboard.activeHorses"), value: active, color: '#9fd9b1' },
+          { label: i18n.t("ui.locked"), value: disabled },
         ]} />
       </section>
 

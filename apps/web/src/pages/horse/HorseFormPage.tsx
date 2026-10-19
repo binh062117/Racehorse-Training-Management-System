@@ -1,3 +1,4 @@
+import i18n from '../../i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,7 @@ import { ErrorText } from '../../components/ErrorText';
 import { api } from '../../lib/api';
 import type { Horse, HorseGender, HorseStatus, Paginated, User } from '../../lib/types';
 import { usePageChrome } from '../../ds/AppShell';
-import { Btn, Card, Field, Input } from '../../ds/ui';
+import { FileInput, Btn, Card, Field, Input } from '../../ds/ui';
 
 const HORSE_STATUSES: HorseStatus[] = ['ACTIVE', 'RESTING', 'RETIRED'];
 const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
@@ -87,7 +88,7 @@ export function HorseFormPage() {
     };
   }, [id]);
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')] });
+  usePageChrome({ crumbs: [[i18n.t("nav.horses"), '/horses'], id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')] });
 
   const setValue = <K extends keyof HorseFormState>(key: K, value: HorseFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -177,7 +178,7 @@ export function HorseFormPage() {
               </select>
             </Field>
             <Field label={t('horseFlow.photo')}>
-              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} className="text-[12.5px]" />
+              <FileInput type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} className="text-[12.5px]" />
             </Field>
           </div>
         </Card>

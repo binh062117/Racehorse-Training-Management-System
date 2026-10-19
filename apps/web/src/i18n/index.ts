@@ -25,6 +25,13 @@ void i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
+function updateDocumentLanguage() {
+  document.documentElement.lang = i18n.language === 'vi' ? 'vi' : 'en';
+  document.title = i18n.t('app.title');
+}
+i18n.on('languageChanged', updateDocumentLanguage);
+updateDocumentLanguage();
+
 export function setLanguage(lang: 'vi' | 'en'): void {
   try {
     localStorage.setItem(STORAGE_KEY, lang);

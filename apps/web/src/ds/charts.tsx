@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { useState } from 'react';
 import { Tip } from './ui';
 
@@ -28,6 +30,7 @@ export function LineChart({
 }: {
   values: number[]; labels: (string | null)[]; min?: number; max?: number; ticks?: number[]; W?: number; H?: number; target?: number; zonesBg?: boolean; color?: string; unit?: string; describe?: string;
 }) {
+  useTranslation();
   const [h, setH] = useState(values.length - 1);
   const left = 40, right = W - 10, top = 20, bottom = H - 30;
   const x = (i: number) => left + (i * (right - left)) / (values.length - 1);
@@ -41,8 +44,8 @@ export function LineChart({
         {zonesBg && <>
           <rect x={left} y={y(100)} width={right - left} height={y(80) - y(100)} fill="#edf7f0" opacity={0.6} />
           <rect x={left} y={y(80)} width={right - left} height={y(60) - y(80)} fill="#fdf6e8" opacity={0.6} />
-          <text x={right - 4} y={y(100) + 14} textAnchor="end" fontFamily={FONT} fontSize="10.5" fontWeight="600" fill="#3a6b4a">Tốt ≥ 80</text>
-          <text x={right - 4} y={y(80) + 14} textAnchor="end" fontFamily={FONT} fontSize="10.5" fontWeight="600" fill="#8a6218">Theo dõi 60–79</text>
+          <text x={right - 4} y={y(100) + 14} textAnchor="end" fontFamily={FONT} fontSize="10.5" fontWeight="600" fill="#3a6b4a">{i18n.t("ui.good80")}</text>
+          <text x={right - 4} y={y(80) + 14} textAnchor="end" fontFamily={FONT} fontSize="10.5" fontWeight="600" fill="#8a6218">{i18n.t("ui.monitoring6079")}</text>
         </>}
         {ticks.map((t) => <g key={t}><line x1={left} x2={right} y1={y(t)} y2={y(t)} stroke="#eceae4" /><text x={left - 8} y={y(t) + 4} textAnchor="end" fontFamily={FONT} fontSize="11" fill="#6b7280">{t}</text></g>)}
         {target != null && <line x1={left} x2={right} y1={y(target)} y2={y(target)} stroke="#6b7280" strokeWidth="1.5" strokeDasharray="6 5" />}
@@ -91,10 +94,15 @@ export function HorseMap({
 }: {
   zone?: string | null; side?: 'L' | 'R'; onZone?: (key: string) => void; readOnly?: boolean; label?: string; zones?: BodyZone[];
 }) {
+  useTranslation();
   const zn = zones.find((z) => z.key === zone);
+  const zoneKeys: Record<string, string> = { head: 'bodyHead', neck: 'bodyNeck', sh: 'bodyShoulder', back: 'bodyBack', hip: 'bodyHip', belly: 'bodyBelly', fu: 'bodyForeleg', ft: 'bodyFrontTendon', fh: 'bodyFrontHoof', hock: 'bodyHock', ht: 'bodyHindTendon', hh: 'bodyHindHoof' };
+  // Preserve canonical names used by injury data; translate only their display.
+  const zoneName = (z: BodyZone) => BODY_ZONES.some((base) => base.key === z.key && base.name === z.name)
+    ? i18n.t(`ui.${zoneKeys[z.key]}`) : z.name;
   return (
     <svg viewBox="0 0 420 270" className="w-full h-auto block bg-[#fbfaf7] rounded-card" role="img"
-      aria-label={`Sơ đồ ngựa bên ${side === 'L' ? 'trái' : 'phải'}${zn ? ', vị trí: ' + zn.name : ''}`}>
+      aria-label={i18n.t('ui.horseMap', { side: i18n.t(side === 'L' ? 'ui.left' : 'ui.right'), location: zn ? i18n.t('ui.location') + ' ' + zoneName(zn) : '' })}>
       <g transform={side === 'R' ? 'translate(420 0) scale(-1 1)' : undefined}>
         <path d={HORSE_FAR} fill="#d9dde3" />
         <path d={HORSE_TAIL} fill="#9aa5b3" />
@@ -108,7 +116,7 @@ export function HorseMap({
               <circle cx={z.x} cy={z.y} r="16" fill="transparent" />
               {on && <circle cx={z.x} cy={z.y} r="9" fill="none" stroke="#8a2020" strokeWidth="2"><animate attributeName="r" from="9" to="22" dur="1.6s" repeatCount="indefinite" /><animate attributeName="opacity" from=".6" to="0" dur="1.6s" repeatCount="indefinite" /></circle>}
               <circle cx={z.x} cy={z.y} r={on ? 9 : 5} fill={on ? '#8a2020' : '#fff'} stroke={on ? '#fff' : '#8a2020'} strokeWidth={on ? 2.5 : 2} opacity={on ? 1 : 0.75}>
-                <title>{z.name}</title>
+                <title>{zoneName(z)}</title>
               </circle>
             </g>
           );

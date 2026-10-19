@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import type { Horse } from '../../lib/types';
@@ -12,6 +14,7 @@ interface DeleteHorseModalProps {
 }
 
 export function DeleteHorseModal({ horse, isOpen, onClose, onDeleted }: DeleteHorseModalProps) {
+  useTranslation();
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -33,19 +36,18 @@ export function DeleteHorseModal({ horse, isOpen, onClose, onDeleted }: DeleteHo
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="delete-horse-title">
-      <ModalHead icon="alert" tone="bad" title="Xác nhận xóa hồ sơ ngựa" id="delete-horse-title" onClose={() => !busy && onClose()} />
+      <ModalHead icon="alert" tone="bad" title={i18n.t("ui.confirmHorseDeletion")} id="delete-horse-title" onClose={() => !busy && onClose()} />
       <ModalBody>
         <p>
-          Bạn có chắc chắn muốn xóa hồ sơ ngựa <strong>{horse.name}</strong> ({horse.breed ?? 'Chưa rõ giống'}) thuộc quyền sở hữu của <strong>{horse.owner.name}</strong>?
+          {i18n.t("ui.areYouSureYouWantToDeleteTheHorseProfile")}{' '}<strong>{horse.name}</strong> ({horse.breed ?? i18n.t("ui.unknownBreed2")}{i18n.t("ui.ownedBy")}{' '}<strong>{horse.owner.name}</strong>?
         </p>
-        <Alert tone="warn" icon="alert" title="Lưu ý">
-          Đây là hành động xóa mềm (soft-delete). Con ngựa này sẽ bị ẩn khỏi danh sách của câu lạc bộ, nhưng toàn bộ lịch sử thi đấu, giáo án tập luyện và hồ sơ bệnh án liên quan vẫn được lưu trữ bảo toàn.
-        </Alert>
+        <Alert tone="warn" icon="alert" title={i18n.t("ui.pleaseNote")}>
+          {i18n.t("ui.theHorseWillBeHiddenFromTheClubListItsRaceHistoryTrainingPlansAndMedic")}</Alert>
         <ErrorText err={err} />
       </ModalBody>
       <ModalFoot>
-        <Btn onClick={onClose} disabled={busy}>Hủy</Btn>
-        <Btn v="d" onClick={() => void handleDelete()} disabled={busy}>{busy ? 'Đang xóa...' : 'Xác nhận xóa'}</Btn>
+        <Btn onClick={onClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
+        <Btn v="d" onClick={() => void handleDelete()} disabled={busy}>{busy ? i18n.t("ui.deleting") : i18n.t("ui.confirmDeletion")}</Btn>
       </ModalFoot>
     </Modal>
   );

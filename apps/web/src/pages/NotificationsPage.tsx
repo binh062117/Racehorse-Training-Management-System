@@ -1,8 +1,9 @@
+import i18n from '../i18n';
 import { useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { ErrorText } from '../components/ErrorText';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, formatNotificationMessage } from '../lib/format';
 import { useAuth } from '../auth/useAuth';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Notification, Paginated } from '../lib/types';
@@ -65,7 +66,7 @@ export function NotificationsPage() {
   return (
     <>
       <section className="hero px-8 py-7 flex flex-col gap-2">
-        <div className="lbl">Cảnh báo AI</div>
+        <div className="lbl">{i18n.t("ui.aiAlerts")}</div>
         <h1 className="disp text-[48px] mt-1">{t('notificationsPage.title')}</h1>
         <p className="text-hero-muted">{t('notificationsPage.description')}</p>
       </section>
@@ -91,10 +92,10 @@ export function NotificationsPage() {
                 className={`block w-full px-5 py-3.5 border-b border-line-soft last:border-0 text-left ${notification.read ? 'bg-white cursor-default' : 'bg-subtle cursor-pointer'}`}
               >
                 <span className="flex justify-between gap-3">
-                  <strong>{notification.message}</strong>
+                  <strong>{formatNotificationMessage(notification.message)}</strong>
                   <span className="flex items-center gap-2 flex-none">
                     {!notification.read && <Badge tone="warn">{t('notificationsPage.unread')}</Badge>}
-                    <Btn sm v="d" disabled={updatingId !== null} onClick={(e) => void remove(notification, e)}>Xoá</Btn>
+                    <Btn sm v="d" disabled={updatingId !== null} onClick={(e) => void remove(notification, e)}>{i18n.t("user.delete")}</Btn>
                   </span>
                 </span>
                 <span className="cap block mt-1">{formatDateTime(notification.createdAt)}</span>

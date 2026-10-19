@@ -203,3 +203,24 @@ export interface OtpRequiredResponse {
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
 }
+export interface TreatmentPlan {
+  id: string;
+  healthRecordId: string;
+  description: string;
+  startDate: string;
+  endDate: string | null;
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Medication {
+  id: string;
+  healthRecordId: string;
+  treatmentPlanId: string | null;
+  name: string;
+  dosage: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+}

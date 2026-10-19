@@ -1,6 +1,7 @@
+import i18n from '../../i18n';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, apiErrorMessage } from '../../lib/api';
+import { api } from '../../lib/api';
 import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function SessionsTab(props: Props) {
+
   return <SessionsContent key={props.horseId} {...props} />;
 }
 
@@ -256,7 +258,7 @@ function CreateSessionForm({
           <Field label={t('session.type')}>
             <input
               className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-              value={type} onChange={(e) => setType(e.target.value)} placeholder="gallop, sprint, trot…" maxLength={80} disabled={busy} required
+              value={type} onChange={(e) => setType(e.target.value)} placeholder={i18n.t("ui.gallopSprintTrot")} maxLength={80} disabled={busy} required
             />
           </Field>
           <Field label={t('session.notes')}>
@@ -264,7 +266,6 @@ function CreateSessionForm({
           </Field>
           {validation && <p className="text-bad font-medium text-[13px]" role="alert">{t(validation)}</p>}
           <ErrorText err={err} />
-          {err != null && apiErrorMessage(err) && <p className="text-bad font-medium text-[13px]" role="alert">{apiErrorMessage(err)}</p>}
         </ModalBody>
         <ModalFoot>
           <Btn disabled={busy} onClick={onClose}>{t('common.cancel')}</Btn>
@@ -344,8 +345,8 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
                 value={status} onChange={(e) => setStatus(e.target.value as 'DONE' | 'CANCELLED' | '')}
               >
                 <option value="">{t('session.keepPlanned')}</option>
-                <option value="DONE">DONE</option>
-                <option value="CANCELLED">CANCELLED</option>
+                <option value="DONE">{i18n.t("session.displayStatus.DONE")}</option>
+                <option value="CANCELLED">{i18n.t("session.displayStatus.CANCELLED")}</option>
               </select>
             </Field>
             <Field label={t('session.resultMetric')}>

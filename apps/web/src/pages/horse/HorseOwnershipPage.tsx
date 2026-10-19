@@ -1,3 +1,4 @@
+import i18n from '../../i18n';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +23,7 @@ export function HorseOwnershipPage() {
     return () => { active = false; };
   }, [id]);
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], horse?.name ?? '…', t('horseFlow.ownershipTitle')] });
+  usePageChrome({ crumbs: [[i18n.t("nav.horses"), '/horses'], horse?.name ?? '…', t('horseFlow.ownershipTitle')] });
 
   if (error) return <ErrorText err={error} />;
   if (!horse) return <p className="cap">{t('horseFlow.loading')}</p>;

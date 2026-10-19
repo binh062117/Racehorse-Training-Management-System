@@ -1,3 +1,4 @@
+import i18n from '../../i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -45,7 +46,7 @@ export function HorseRaceHistoryPage() {
     return () => { active = false; };
   }, [id]);
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], horse?.name ?? '…', t('horseFlow.performanceTitle')] });
+  usePageChrome({ crumbs: [[i18n.t("nav.horses"), '/horses'], horse?.name ?? '…', t('horseFlow.performanceTitle')] });
 
   // Chỉ hiện các race còn diễn ra trong tương lai và chưa được ngựa này đăng ký.
   const enteredRaceIds = new Set(entries.map((entry) => entry.race.id));

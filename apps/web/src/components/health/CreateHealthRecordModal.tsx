@@ -1,4 +1,6 @@
+import i18n from '../../i18n';
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { HealthRecord, HealthStatus } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -12,14 +14,15 @@ interface Props {
   horseName: string;
 }
 
-const HEALTH_STATUS_OPTIONS: { value: HealthStatus; label: string; desc: string }[] = [
-  { value: 'FIT', label: 'Khỏe mạnh', desc: 'Ngựa đủ sức khỏe thi đấu và huấn luyện' },
-  { value: 'MONITORING', label: 'Cần theo dõi', desc: 'Phát hiện dấu hiệu bất thường, cần giám sát thêm' },
-  { value: 'INJURED', label: 'Chấn thương', desc: 'Ngựa bị chấn thương, hạn chế vận động' },
-  { value: 'QUARANTINED', label: 'Cách ly', desc: 'Ngựa bị bệnh truyền nhiễm, cách ly hoàn toàn' },
-];
+const HEALTH_STATUS_OPTIONS: () => { value: HealthStatus; label: string; desc: string }[] = () => ([
+  { value: 'FIT', label: i18n.t("horseStatusBadge.FIT"), desc: i18n.t("ui.currentHealthStatusFit") },
+  { value: 'MONITORING', label: i18n.t("horseStatusBadge.MONITORING"), desc: i18n.t("ui.signsRequiringFurtherMonitoring") },
+  { value: 'INJURED', label: i18n.t("horseStatusBadge.INJURED"), desc: i18n.t("ui.theHorseIsInjuredAndMayNeedRestrictedActivity") },
+  { value: 'QUARANTINED', label: i18n.t("horseStatusBadge.QUARANTINED"), desc: i18n.t("ui.theHorseIsInMedicalQuarantine") },
+]);
 
 export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, horseName }: Props) {
+  const { t } = useTranslation();
   const [examDate, setExamDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [diagnosis, setDiagnosis] = useState('');
   const [treatment, setTreatment] = useState('');
@@ -27,23 +30,23 @@ export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, h
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>(null);
 
-  const selectedStatus = HEALTH_STATUS_OPTIONS.find((s) => s.value === healthStatus);
+  const selectedStatus = HEALTH_STATUS_OPTIONS().find((s) => s.value === healthStatus);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErr(null);
 
     if (!examDate) {
-      setErr(new Error('Vui lòng chọn ngày khám.'));
+      setErr(new Error(i18n.t("ui.selectAnExaminationDate")));
       return;
     }
     if (!diagnosis.trim()) {
-      setErr(new Error('Vui lòng nhập chẩn đoán.'));
+      setErr(new Error(i18n.t("ui.enterADiagnosis")));
       return;
     }
     // Validate examDate is not in the future
     if (new Date(examDate) > new Date()) {
-      setErr(new Error('Ngày khám không được ở tương lai.'));
+      setErr(new Error(i18n.t("ui.theExaminationDateCannotBeInTheFuture")));
       return;
     }
 
@@ -79,61 +82,60 @@ export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, h
 
   return (
     <Modal open={isOpen} onClose={handleClose} width={580} labelledBy="create-health-record-title">
-      <ModalHead icon="steth" title="Ghi nhận Hồ sơ Khám bệnh" id="create-health-record-title" onClose={handleClose} />
+      <ModalHead icon="steth" title={i18n.t("ui.recordMedicalExamination")} id="create-health-record-title" onClose={handleClose} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
           <ErrorText err={err} />
 
-          <Field label="Chiến mã khám">
+          <Field label={i18n.t("ui.horseBeingExamined")}>
             <Input value={horseName} disabled ro />
           </Field>
 
-          <Field label="Ngày khám" hint="Không được chọn ngày tương lai">
+          <Field label={i18n.t("health.examDate")} hint={i18n.t("ui.futureDatesAreNotAllowed")}>
             <Input type="date" value={examDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setExamDate(e.target.value)} required />
           </Field>
 
-          <Field label="Chẩn đoán" hint="Mô tả chi tiết tình trạng sau khi khám (bắt buộc)">
+          <Field label={i18n.t("health.diagnosis")} hint={i18n.t("ui.describeTheExaminationFindingsRequired")}>
             <Textarea
               value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} rows={3} maxLength={2000}
-              placeholder="VD: Ngựa có dấu hiệu viêm gân chân trước bên phải, sưng nhẹ vùng cổ chân..." required
+              placeholder={i18n.t("ui.exampleMildSwellingAroundTheRightFrontTendon")} required
             />
           </Field>
 
-          <Field label="Phương pháp điều trị" hint="Phác đồ điều trị, đơn thuốc, chỉ định nghỉ ngơi...">
+          <Field label={i18n.t("ui.treatmentNotes")} hint={i18n.t("ui.examinationTreatmentNotesMedicationNotesOrRestInstructions")}>
             <Textarea
               value={treatment} onChange={(e) => setTreatment(e.target.value)} rows={3} maxLength={2000}
-              placeholder="VD: Chườm đá 2 lần/ngày, nghỉ tập 7 ngày, thuốc chống viêm Phenylbutazone..."
+              placeholder={i18n.t("ui.exampleColdTherapyTwiceDailyRestForSevenDays")}
             />
           </Field>
 
-          <Field label="Cập nhật trạng thái sức khỏe" hint="Thay đổi trạng thái y tế của ngựa sau khám. Bỏ trống nếu không đổi.">
+          <Field label={i18n.t("ui.updateHealthStatus")} hint={i18n.t("ui.updateTheHorseSHealthStatusAfterThisExaminationLeaveUnchangedIfNotAppl")}>
             <select
               className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
               value={healthStatus} onChange={(e) => setHealthStatus(e.target.value as HealthStatus | '')}
             >
-              <option value="">— Không thay đổi trạng thái —</option>
-              {HEALTH_STATUS_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              <option value="">{i18n.t("ui.keepCurrentStatus")}</option>
+              {HEALTH_STATUS_OPTIONS().map((opt) => <option key={opt.value} value={opt.value}>{t(`horseStatusBadge.${opt.value}`)}</option>)}
             </select>
           </Field>
 
           {selectedStatus && (selectedStatus.value === 'INJURED' || selectedStatus.value === 'QUARANTINED') && (
-            <Alert tone="bad" icon="alert" title={selectedStatus.value === 'QUARANTINED' ? 'Ngựa sẽ bị cách ly' : 'Ngựa sẽ được đánh dấu chấn thương'}>
+            <Alert tone="bad" icon="alert" title={selectedStatus.value === 'QUARANTINED' ? i18n.t("ui.theHorseWillBeMarkedAsQuarantined") : i18n.t("ui.theHorseWillBeMarkedAsInjured")}>
               {selectedStatus.desc}.
-              {selectedStatus.value === 'QUARANTINED' && ' Ngựa sẽ không thể lập giáo án hoặc tham gia giải đua cho đến khi được giải phóng.'}
-              {selectedStatus.value === 'INJURED' && ' Nếu cần khóa huấn luyện, vui lòng sử dụng chức năng "Khóa tập" riêng biệt.'}
+              {' '}{t('healthView.separation')}
             </Alert>
           )}
 
           {selectedStatus && selectedStatus.value === 'FIT' && (
             <Alert tone="ok" icon="check">
-              Ngựa sẽ được chuyển về trạng thái <strong>Khỏe mạnh</strong> — đủ điều kiện huấn luyện và thi đấu.
+              <strong>{t('horseStatusBadge.FIT')}</strong>. {t('healthView.separation')}
             </Alert>
           )}
         </ModalBody>
 
         <ModalFoot>
-          <Btn onClick={handleClose} disabled={busy}>Hủy</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{busy ? 'Đang lưu...' : 'Lưu hồ sơ khám'}</Btn>
+          <Btn onClick={handleClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{busy ? i18n.t("horseFlow.saving") : i18n.t("ui.saveExamination")}</Btn>
         </ModalFoot>
       </form>
     </Modal>

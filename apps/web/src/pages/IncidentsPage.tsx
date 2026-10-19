@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
@@ -13,7 +14,7 @@ import type {
   Paginated,
 } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Field, HeroStats, Icon, Textarea, type Tone } from '../ds/ui';
+import { FileInput, Badge, Btn, Card, Field, HeroStats, Icon, Textarea, type Tone } from '../ds/ui';
 
 type IncidentFilter = 'ALL' | IncidentStatus;
 type IncidentData = { horses: Horse[]; incidents: Incident[]; errors: unknown[] };
@@ -75,7 +76,7 @@ export function IncidentsPage() {
   const [filter, setFilter] = useState<IncidentFilter>('ALL');
   const [search, setSearch] = useState('');
 
-  usePageChrome({ crumbs: ['Sức khỏe', t('incidents.title')], search: t('incidents.search'), onSearch: setSearch });
+  usePageChrome({ crumbs: [i18n.t("ui.health"), t('incidents.title')], search: t('incidents.search'), onSearch: setSearch });
 
   const { data, loading, error, reload } = useCachedResource(
     `health-incidents-${user?.id ?? 'anonymous'}`,
@@ -109,7 +110,7 @@ export function IncidentsPage() {
     <>
       <section className="hero px-8 py-7 flex flex-col gap-6">
         <div>
-          <div className="lbl">Sức khỏe</div>
+          <div className="lbl">{i18n.t("ui.health")}</div>
           <h1 className="disp text-[56px] mt-2">{t('incidents.title')}</h1>
           <p className="text-hero-muted mt-2 max-w-[560px]">{isGroom ? t('incidents.groomDescription') : t('incidents.description')}</p>
         </div>
@@ -200,7 +201,10 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
           setPhotoError(reason);
         }
       }
-      if (fileRef.current) fileRef.current.value = '';
+      if (fileRef.current) {
+        fileRef.current.value = '';
+        fileRef.current.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       await onCreated();
     } catch (reason) {
       setError(reason);
@@ -239,7 +243,7 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
           <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={2000} required placeholder={t('incidents.descriptionPlaceholder')} />
         </Field>
         <Field label={t('incidents.photo')} hint={t('incidents.photoHint')}>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="text-[12.5px]" />
+          <FileInput ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="text-[12.5px]" />
         </Field>
         <ErrorText err={error} />
         {photoError && (

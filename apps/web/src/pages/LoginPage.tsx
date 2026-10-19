@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { useCallback, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +55,7 @@ export function LoginPage() {
 
   if (googleOtpDone) {
     return (
-      <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
+      <AuthLayout eyebrow={i18n.t("ui.racehorseClub")} title={t('auth.register')}>
         <p>{t('auth.registerDone')}</p>
         <Btn v="p" onClick={() => { setGoogleOtpEmail(null); setGoogleOtpDone(false); }}>{t('auth.login')}</Btn>
       </AuthLayout>
@@ -63,7 +64,7 @@ export function LoginPage() {
 
   if (googleOtpEmail) {
     return (
-      <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
+      <AuthLayout eyebrow={i18n.t("ui.racehorseClub")} title={t('auth.register')}>
         <OtpStep email={googleOtpEmail} onVerified={() => setGoogleOtpDone(true)} />
       </AuthLayout>
     );
@@ -86,7 +87,7 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout eyebrow="Training & Management" title={t('auth.login')}>
+    <AuthLayout eyebrow={i18n.t("ui.trainingManagement")} title={t('auth.login')}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Field label={t('auth.email')}>
           <Input

@@ -1,4 +1,14 @@
+import i18n from '../i18n';
+
 const TZ = 'Asia/Ho_Chi_Minh';
+
+/** Translate the known system prefix; preserve the stored name and AI content. */
+export function formatNotificationMessage(message: string): string {
+  const prefix = '⚠ AI phát hiện rủi ro sức khỏe CAO cho ';
+  return message.startsWith(prefix)
+    ? i18n.t('notificationsPage.aiRiskPrefix', { details: message.slice(prefix.length) })
+    : message;
+}
 
 const dateFmt = new Intl.DateTimeFormat('vi-VN', {
   timeZone: TZ,

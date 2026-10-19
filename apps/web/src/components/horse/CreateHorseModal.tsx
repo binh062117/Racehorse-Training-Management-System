@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import type { Horse, Paginated, User, HorseGender, HorseStatus } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
-import { Btn, Field, Input, Modal, ModalBody, ModalFoot, ModalHead } from '../../ds/ui';
+import { FileInput, Btn, Field, Input, Modal, ModalBody, ModalFoot, ModalHead } from '../../ds/ui';
 
 interface CreateHorseModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface CreateHorseModalProps {
 }
 
 export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModalProps) {
+  useTranslation();
   const [owners, setOwners] = useState<User[]>([]);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<HorseGender | ''>('MALE');
@@ -79,51 +82,51 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="create-horse-title">
-      <ModalHead icon="horse" title="Thêm hồ sơ ngựa mới" id="create-horse-title" onClose={() => !busy && onClose()} />
+      <ModalHead icon="horse" title={i18n.t("ui.addHorseProfile")} id="create-horse-title" onClose={() => !busy && onClose()} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
           <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
-            <Field label="Tên ngựa" req>
-              <Input placeholder="vd: Thunderbolt" value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
+            <Field label={i18n.t("ui.horseName")} req>
+              <Input placeholder={i18n.t("ui.eGThunderbolt")} value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
             </Field>
 
-            <Field label="Chủ sở hữu" req>
+            <Field label={i18n.t("ui.owner2")} req>
               <select className={selectCls} value={ownerId} onChange={(e) => setOwnerId(e.target.value)} required>
-                <option value="" disabled>— Chọn chủ sở hữu —</option>
+                <option value="" disabled>{i18n.t("ui.selectOwner")}</option>
                 {owners.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.email})</option>)}
               </select>
             </Field>
 
-            <Field label="Giới tính">
+            <Field label={i18n.t("horse.gender")}>
               <select className={selectCls} value={gender} onChange={(e) => setGender(e.target.value as HorseGender | '')}>
-                <option value="MALE">Đực</option>
-                <option value="FEMALE">Cái</option>
-                <option value="">— Chưa rõ —</option>
+                <option value="MALE">{i18n.t("horse.genderMale")}</option>
+                <option value="FEMALE">{i18n.t("horse.genderFemale")}</option>
+                <option value="">{i18n.t("ui.unknown")}</option>
               </select>
             </Field>
 
-            <Field label="Số áo đua (tùy chọn)" hint="Số hiển thị trên yếm số (saddle cloth)">
-              <Input type="number" min={0} max={999} placeholder="vd: 7" value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
+            <Field label={i18n.t("ui.saddleNumberOptional")} hint={i18n.t("ui.numberDisplayedOnTheSaddleCloth")}>
+              <Input type="number" min={0} max={999} placeholder={i18n.t("ui.eG7")} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
             </Field>
 
-            <Field label="Giống loài">
-              <Input placeholder="vd: Thoroughbred, Arabian..." value={breed} onChange={(e) => setBreed(e.target.value)} maxLength={120} />
+            <Field label={i18n.t("ui.breed")}>
+              <Input placeholder={i18n.t("ui.eGThoroughbredArabian")} value={breed} onChange={(e) => setBreed(e.target.value)} maxLength={120} />
             </Field>
 
-            <Field label="Ngày sinh">
+            <Field label={i18n.t("horse.birthDate")}>
               <Input type="date" max={todayStr} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </Field>
 
-            <Field label="Trạng thái ban đầu">
+            <Field label={i18n.t("ui.initialStatus")}>
               <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as HorseStatus)}>
-                <option value="ACTIVE">Đang hoạt động (ACTIVE)</option>
-                <option value="RESTING">Nghỉ dưỡng (RESTING)</option>
-                <option value="RETIRED">Giải nghệ (RETIRED)</option>
+                <option value="ACTIVE">{i18n.t("ui.active3")}</option>
+                <option value="RESTING">{i18n.t("ui.resting")}</option>
+                <option value="RETIRED">{i18n.t("ui.retired")}</option>
               </select>
             </Field>
 
-            <Field label="Ảnh đại diện (tùy chọn)" hint="Định dạng JPG, PNG, WEBP (tối đa 5MB)">
-              <input
+            <Field label={i18n.t("ui.profilePhotoOptional")} hint={i18n.t("ui.jpgPngOrWebpMaximum5Mb")}>
+              <FileInput
                 type="file" accept="image/jpeg,image/png,image/webp" className="text-[13px]"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -133,7 +136,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
                     return;
                   }
                   if (file.size > 5 * 1024 * 1024) {
-                    setErr(new Error('Kích thước ảnh tối đa là 5MB'));
+                    setErr(new Error(i18n.t("ui.theMaximumImageSizeIs5Mb")));
                     return;
                   }
                   setPhoto(file);
@@ -143,7 +146,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
               />
               {preview && (
                 <div className="mt-2 text-center">
-                  <img src={preview} alt="Preview" className="max-h-[120px] rounded-btn border border-line object-cover inline-block" />
+                  <img src={preview} alt={i18n.t("ui.preview")} className="max-h-[120px] rounded-btn border border-line object-cover inline-block" />
                 </div>
               )}
             </Field>
@@ -153,8 +156,8 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
         </ModalBody>
 
         <ModalFoot>
-          <Btn onClick={onClose} disabled={busy}>Hủy</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{busy ? 'Đang tạo...' : 'Tạo hồ sơ'}</Btn>
+          <Btn onClick={onClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{busy ? i18n.t("ui.creating") : i18n.t("horseFlow.createRecord")}</Btn>
         </ModalFoot>
       </form>
     </Modal>
