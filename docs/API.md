@@ -150,19 +150,6 @@ PATCH  /sessions/:id          (TRAINER/GROOM)  # route sẵn có, + rule UC-12:
 Không có route mới — 2 rule an toàn gắn vào route đã có. Thứ tự lỗi khi
 tạo session: khoá ngựa (400) → `planId` sai (400) → trùng lịch (409).
 
-## Training progress overview ✅ (UC-13)
-
-```
-GET    /training-progress?from=&to=   (mọi role; OWNER chỉ thấy ngựa của mình)
-       → { summary: {horses, horsesWithActivePlan, activePlans, sessions, completionRate},
-           horses: [{ horse, plans: {total, active},
-                      sessions: {total, done, planned, cancelled, overdue},
-                      completionRate, lastSession, nextSession }] }
-```
-`from`/`to` (ISO, tuỳ chọn) lọc theo `scheduledAt`. `overdue` = PLANNED đã qua
-giờ. `completionRate` = done / (total − cancelled) × 100, `null` nếu mẫu số 0.
-Plan "active" = `startDate ≤ now ≤ endDate` (endDate null = dài hạn).
-
 ## Health & Injury extensions ✅ (Phase 10 — spec: specs/phase-10-health-injury-extensions.md)
 
 ```
@@ -173,7 +160,6 @@ POST   /incidents/:id/injury-locations       (VET)  {bodyRegion, side?, notes?}
 GET    /incidents/:id/injury-locations       (mọi role, ownership)
 POST   /health-records/:id/injury-locations  (VET)  {bodyRegion, side?, notes?}
 GET    /health-records/:id/injury-locations  (mọi role, ownership)
-# HealthRecord và IncidentReport trả thêm `_count.injuryLocations`.
 
 POST   /horses/:id/vaccinations              (VET)  {vaccineName, date, nextDueDate?}
 POST   /horses/:id/vaccinations              (VET)  {vaccineName, date, nextDueDate?, careType?}

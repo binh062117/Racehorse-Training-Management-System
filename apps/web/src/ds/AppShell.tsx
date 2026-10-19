@@ -20,7 +20,6 @@ const NAV: NavItem[] = [
   { to: '/dashboard', label: 'Tổng quan', icon: 'dashboard' },
   { to: '/horses', label: 'Ngựa đua', icon: 'horse' },
   { to: '/plans', label: 'Giáo án huấn luyện', icon: 'plans' },
-  { to: '/training-progress', label: 'Tiến độ huấn luyện', icon: 'reports' },
   { to: '/races', label: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
   { to: '/vaccinations', label: 'Tiêm phòng & Tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
   { to: '/health-records', label: 'Hồ sơ khám bệnh', icon: 'steth', roles: ['VET'] },

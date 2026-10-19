@@ -19,7 +19,6 @@ import { HorseDetailPage } from './pages/HorseDetailPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TrainingPlansPage } from './pages/TrainingPlansPage';
-import { TrainingProgressPage } from './pages/TrainingProgressPage';
 import { HealthSchedulePage } from './pages/HealthSchedulePage';
 import { HealthRecordsPage } from './pages/HealthRecordsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
@@ -108,7 +107,6 @@ const router = createBrowserRouter([
       { path: '/horses/:id/performance', element: <HorseRaceHistoryPage /> },
       { path: '/horses/:id/ownership', element: <HorseOwnershipPage /> },
       { path: '/plans', element: <TrainingPlansPage /> },
-      { path: '/training-progress', element: <TrainingProgressPage /> },
       {
         path: '/admin/users',
         element: (

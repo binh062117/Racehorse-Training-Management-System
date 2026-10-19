@@ -2,7 +2,6 @@ import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
-import { InjuryLocationsPanel } from '../components/injury/InjuryLocations';
 import { api, getFileUrl } from '../lib/api';
 import { formatDate, formatDateTime } from '../lib/format';
 import { useCachedResource } from '../lib/useCachedResource';
@@ -261,8 +260,6 @@ function IncidentRow({ incident, canAdvance, onChanged }: { incident: Incident; 
   const { t } = useTranslation();
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
-  const [showInjuries, setShowInjuries] = useState(false);
-  const [injuryCount, setInjuryCount] = useState(incident._count?.injuryLocations ?? 0);
   const next = NEXT_STATUS[incident.status];
   const photoUrl = getFileUrl(incident.photoUrl);
 
@@ -298,25 +295,13 @@ function IncidentRow({ incident, canAdvance, onChanged }: { incident: Incident; 
           {photoUrl ? <a href={photoUrl} target="_blank" rel="noreferrer" className="font-semibold text-info">{t('incidents.openPhoto')}</a> : <span className="cap">—</span>}
         </td>
         <td className="px-4 py-3">
-          <div className="flex flex-col items-start gap-1.5">
-            {canAdvance && next ? (
-              <Btn sm disabled={busy} onClick={() => void advance()}>
-                {busy ? t('incidents.updating') : t('incidents.moveTo', { status: t(`incidents.status.${next}`) })}
-              </Btn>
-            ) : <span className="cap">{formatDate(incident.updatedAt)}</span>}
-            <Btn sm onClick={() => setShowInjuries((v) => !v)} aria-expanded={showInjuries}>
-              <Icon name="pin" className="w-3.5 h-3.5" />{t('injury.toggle', { count: injuryCount })}
+          {canAdvance && next ? (
+            <Btn sm disabled={busy} onClick={() => void advance()}>
+              {busy ? t('incidents.updating') : t('incidents.moveTo', { status: t(`incidents.status.${next}`) })}
             </Btn>
-          </div>
+          ) : <span className="cap">{formatDate(incident.updatedAt)}</span>}
         </td>
       </tr>
-      {showInjuries && (
-        <tr className="border-b border-line-soft">
-          <td colSpan={7} className="px-4 pb-4 pt-1">
-            <InjuryLocationsPanel source="incidents" parentId={incident.id} canRecord={canAdvance} onCountChange={setInjuryCount} />
-          </td>
-        </tr>
-      )}
       {error && <tr><td colSpan={7} className="px-4 pb-3"><ErrorText err={error} /></td></tr>}
     </>
   );

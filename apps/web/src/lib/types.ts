@@ -142,18 +142,6 @@ export interface HealthRecord {
   attachmentPath: string | null;
   attachmentUrl: string | null;
   createdAt: string;
-  _count?: { injuryLocations: number };
-}
-
-/** UC-16 — attached to either an incident or a health record. */
-export interface InjuryLocation {
-  id: string;
-  incidentReportId: string | null;
-  healthRecordId: string | null;
-  bodyRegion: string;
-  side: string | null;
-  notes: string | null;
-  createdAt: string;
 }
 
 export interface FeedingRecord {
@@ -185,46 +173,6 @@ export interface Incident {
   photoUrl: string | null;
   createdAt: string;
   updatedAt: string;
-  _count?: { injuryLocations: number };
-}
-
-/** UC-13 — GET /training-progress */
-export interface SessionCounts {
-  total: number;
-  done: number;
-  planned: number;
-  cancelled: number;
-  overdue: number;
-}
-
-export interface TrainingProgressRow {
-  horse: {
-    id: string;
-    name: string;
-    breed: string | null;
-    saddleNumber: number | null;
-    status: HorseStatus;
-    healthStatus: HealthStatus;
-    locked: boolean;
-    fitnessScore: number | null;
-    owner: { id: string; name: string };
-  };
-  plans: { total: number; active: number };
-  sessions: SessionCounts;
-  completionRate: number | null;
-  lastSession: { scheduledAt: string; type: string; resultMetric: string | null; resultValue: number | null } | null;
-  nextSession: { scheduledAt: string; type: string } | null;
-}
-
-export interface TrainingProgress {
-  summary: {
-    horses: number;
-    horsesWithActivePlan: number;
-    activePlans: number;
-    sessions: SessionCounts;
-    completionRate: number | null;
-  };
-  horses: TrainingProgressRow[];
 }
 
 export interface Notification {

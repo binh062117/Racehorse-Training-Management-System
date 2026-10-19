@@ -21,7 +21,6 @@ import {
   CreateTrainingPlanDto,
   ListSessionsQueryDto,
   ListTrainingPlansQueryDto,
-  TrainingProgressQueryDto,
   UpdateSessionDto,
   UpdateTrainingPlanDto,
 } from './dto/training.dto';
@@ -97,19 +96,6 @@ export class HorseTrainingPlansController {
     @Query() q: ListTrainingPlansQueryDto,
   ) {
     return this.training.listPlansByHorse(horseId, q);
-  }
-}
-
-@ApiTags('training')
-@ApiBearerAuth()
-@Controller('training-progress')
-export class TrainingProgressController {
-  constructor(private readonly training: TrainingService) {}
-
-  /** UC-13 — every authenticated role; OWNER is scoped to own horses. */
-  @Get()
-  get(@Query() q: TrainingProgressQueryDto, @CurrentUser() user: AuthUser) {
-    return this.training.progress(q, user);
   }
 }
 

@@ -21,7 +21,7 @@ interface QuickAction {
 const QUICK_ACTIONS: Partial<Record<Role, QuickAction[]>> = {
   TRAINER: [
     { icon: 'plans', to: '/plans?action=create', title: 'Lập giáo án huấn luyện chi tiết', desc: 'Cự ly, khối lượng, mặt sân theo từng giai đoạn' },
-    { icon: 'reports', to: '/training-progress', title: 'Theo dõi tiến độ huấn luyện', desc: 'Tỷ lệ hoàn thành, buổi quá hạn và lịch sắp tới của từng chiến mã' },
+    { icon: 'heart', to: '/plans', title: 'Theo dõi tiến độ & Giáo án', desc: 'Quản lý toàn bộ danh sách giáo án của các chiến mã' },
     { icon: 'flag', to: '/races', title: 'Lựa chọn chiến mã tham gia giải đua', desc: 'Đăng ký danh sách thi đấu phù hợp' },
   ],
   VET: [
