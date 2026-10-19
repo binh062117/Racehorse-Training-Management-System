@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { HealthStatus, HorseStatus, NotificationType, Prisma, Role, SessionStatus } from '@prisma/client';
+import {
+  HealthStatus,
+  HorseStatus,
+  NotificationType,
+  Prisma,
+  Role,
+  SessionStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AppException } from '../common/app-exception';
@@ -9,6 +16,7 @@ import {
   CreateTrainingPlanDto,
   ListSessionsQueryDto,
   ListTrainingPlansQueryDto,
+  TrainingProgressQueryDto,
   UpdateSessionDto,
   UpdateTrainingPlanDto,
 } from './dto/training.dto';
@@ -305,7 +313,13 @@ export class TrainingService {
   ): Promise<PlanView> {
     const horse = await this.prisma.horse.findFirst({
       where: { id: horseId, deletedAt: null },
-      select: { id: true, name: true, status: true, healthStatus: true, locked: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        healthStatus: true,
+        locked: true,
+      },
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
 
@@ -434,4 +448,192 @@ export class TrainingService {
       include: PLAN_INCLUDE,
     });
   }
+
+  /**
+   * UC-13 — overall training progress: one row per visible horse with
+   * session counts by status, active plans and last/next session, plus a
+   * club-wide summary. Aggregated server-side so the UI needs one request
+   * instead of one per horse. OWNER only sees their own horses.
+   */
+  async progress(
+    q: TrainingProgressQueryDto,
+    user: AuthUser,
+  ): Promise<TrainingProgressView> {
+    const now = new Date();
+    const horses = await this.prisma.horse.findMany({
+      where: {
+        deletedAt: null,
+        ...(user.role === Role.OWNER ? { ownerId: user.id } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        breed: true,
+        saddleNumber: true,
+        status: true,
+        healthStatus: true,
+        locked: true,
+        fitnessScore: true,
+        owner: { select: { id: true, name: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+    const horseIds = horses.map((h) => h.id);
+
+    const scheduledAt: Prisma.DateTimeFilter = {};
+    if (q.from) scheduledAt.gte = new Date(q.from);
+    if (q.to) scheduledAt.lte = new Date(q.to);
+    const sessionWhere: Prisma.TrainingSessionWhereInput = {
+      horseId: { in: horseIds },
+      ...(q.from || q.to ? { scheduledAt } : {}),
+    };
+
+    const [byStatus, overdue, plans, lastDone, nextPlanned] = await Promise.all(
+      [
+        this.prisma.trainingSession.groupBy({
+          by: ['horseId', 'status'],
+          where: sessionWhere,
+          _count: { _all: true },
+        }),
+        this.prisma.trainingSession.groupBy({
+          by: ['horseId'],
+          where: {
+            AND: [
+              sessionWhere,
+              { status: SessionStatus.PLANNED, scheduledAt: { lt: now } },
+            ],
+          },
+          _count: { _all: true },
+        }),
+        this.prisma.trainingPlan.findMany({
+          where: { horseId: { in: horseIds } },
+          select: { horseId: true, startDate: true, endDate: true },
+        }),
+        this.prisma.trainingSession.findMany({
+          where: { AND: [sessionWhere, { status: SessionStatus.DONE }] },
+          orderBy: { scheduledAt: 'desc' },
+          distinct: ['horseId'],
+          select: {
+            horseId: true,
+            scheduledAt: true,
+            type: true,
+            resultMetric: true,
+            resultValue: true,
+          },
+        }),
+        this.prisma.trainingSession.findMany({
+          where: {
+            AND: [
+              sessionWhere,
+              { status: SessionStatus.PLANNED, scheduledAt: { gte: now } },
+            ],
+          },
+          orderBy: { scheduledAt: 'asc' },
+          distinct: ['horseId'],
+          select: { horseId: true, scheduledAt: true, type: true },
+        }),
+      ],
+    );
+
+    const rows = new Map<string, TrainingProgressRow>(
+      horses.map((horse) => [
+        horse.id,
+        {
+          horse,
+          plans: { total: 0, active: 0 },
+          sessions: { total: 0, done: 0, planned: 0, cancelled: 0, overdue: 0 },
+          completionRate: null,
+          lastSession: null,
+          nextSession: null,
+        },
+      ]),
+    );
+
+    for (const g of byStatus) {
+      const s = rows.get(g.horseId)!.sessions;
+      const n = g._count._all;
+      s.total += n;
+      if (g.status === SessionStatus.DONE) s.done += n;
+      else if (g.status === SessionStatus.PLANNED) s.planned += n;
+      else s.cancelled += n;
+    }
+    for (const g of overdue)
+      rows.get(g.horseId)!.sessions.overdue = g._count._all;
+    for (const p of plans) {
+      const r = rows.get(p.horseId)!.plans;
+      r.total += 1;
+      if (p.startDate <= now && (!p.endDate || p.endDate >= now)) r.active += 1;
+    }
+    for (const s of lastDone) {
+      const { horseId, ...rest } = s;
+      rows.get(horseId)!.lastSession = rest;
+    }
+    for (const s of nextPlanned) {
+      const { horseId, ...rest } = s;
+      rows.get(horseId)!.nextSession = rest;
+    }
+
+    const summary: TrainingProgressView['summary'] = {
+      horses: horses.length,
+      horsesWithActivePlan: 0,
+      activePlans: 0,
+      sessions: { total: 0, done: 0, planned: 0, cancelled: 0, overdue: 0 },
+      completionRate: null,
+    };
+    for (const row of rows.values()) {
+      row.completionRate = completionRate(row.sessions);
+      summary.activePlans += row.plans.active;
+      if (row.plans.active > 0) summary.horsesWithActivePlan += 1;
+      for (const k of Object.keys(summary.sessions) as SessionCountKey[]) {
+        summary.sessions[k] += row.sessions[k];
+      }
+    }
+    summary.completionRate = completionRate(summary.sessions);
+
+    return { summary, horses: [...rows.values()] };
+  }
+}
+
+type SessionCountKey = 'total' | 'done' | 'planned' | 'cancelled' | 'overdue';
+type SessionCounts = Record<SessionCountKey, number>;
+
+/** Share of non-cancelled sessions that are DONE, 0..100; null if none. */
+function completionRate(s: SessionCounts): number | null {
+  const base = s.total - s.cancelled;
+  return base > 0 ? Math.round((s.done / base) * 100) : null;
+}
+
+interface TrainingProgressRow {
+  horse: {
+    id: string;
+    name: string;
+    breed: string | null;
+    saddleNumber: number | null;
+    status: HorseStatus;
+    healthStatus: HealthStatus;
+    locked: boolean;
+    fitnessScore: number | null;
+    owner: { id: string; name: string };
+  };
+  plans: { total: number; active: number };
+  sessions: SessionCounts;
+  completionRate: number | null;
+  lastSession: {
+    scheduledAt: Date;
+    type: string;
+    resultMetric: string | null;
+    resultValue: number | null;
+  } | null;
+  nextSession: { scheduledAt: Date; type: string } | null;
+}
+
+export interface TrainingProgressView {
+  summary: {
+    horses: number;
+    horsesWithActivePlan: number;
+    activePlans: number;
+    sessions: SessionCounts;
+    completionRate: number | null;
+  };
+  horses: TrainingProgressRow[];
 }

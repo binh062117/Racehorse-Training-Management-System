@@ -137,3 +137,14 @@ export class ListTrainingPlansQueryDto {
   @Max(100)
   limit = 20;
 }
+
+/** UC-13 — optional scheduledAt window for the club-wide progress overview. */
+export class TrainingProgressQueryDto {
+  @IsOptional()
+  @IsISO8601()
+  from?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  to?: string;
+}

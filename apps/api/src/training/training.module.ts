@@ -6,6 +6,7 @@ import {
   HorseTrainingPlansController,
   SessionsController,
   TrainingPlansController,
+  TrainingProgressController,
 } from './training.controller';
 import { TrainingService } from './training.service';
 
@@ -16,6 +17,7 @@ import { TrainingService } from './training.service';
     SessionsController,
     HorseTrainingPlansController,
     TrainingPlansController,
+    TrainingProgressController,
   ],
   providers: [TrainingService, HorseOwnershipGuard],
 })
