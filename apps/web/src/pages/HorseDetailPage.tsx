@@ -16,7 +16,7 @@ import { PedigreeTab } from './horse/PedigreeTab';
 import { HorseRecordNav } from './horse/HorseRecordNav';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Badge, Btn, Card, Cloth, HeroStats, Icon, LockBadge, Silk,
+  Badge, Btn, Card, Cloth, HeroStats, Icon, ImageLightbox, LockBadge, Silk,
   careerTone, healthTone,
 } from '../ds/ui';
 
@@ -57,6 +57,7 @@ export function HorseDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
   const [pedigreeVersion, setPedigreeVersion] = useState(0);
 
   const rawTab = params.get('tab');
@@ -143,7 +144,14 @@ export function HorseDetailPage() {
           <div className="flex-[2_1_520px] min-w-0 flex flex-col gap-4">
             <div className="flex gap-4 items-center">
               {photo ? (
-                <img src={photo} alt={horse.name} className="w-[50px] h-[50px] rounded-full object-cover border-2 border-white/20" />
+                <button
+                  type="button"
+                  onClick={() => setPhotoViewerOpen(true)}
+                  aria-label={`Xem ảnh lớn ${horse.name}`}
+                  className="w-[50px] h-[50px] rounded-full flex-none overflow-hidden border-2 border-white/20 cursor-zoom-in"
+                >
+                  <img src={photo} alt={horse.name} className="w-full h-full object-cover" />
+                </button>
               ) : (
                 <Cloth n={horse.saddleNumber ?? '—'} inv lg />
               )}
@@ -258,6 +266,7 @@ export function HorseDetailPage() {
       />
       <DeleteHorseModal horse={horse} isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} onDeleted={() => navigate('/horses')} />
       <PhotoUploadModal horse={horse} isOpen={photoOpen} onClose={() => setPhotoOpen(false)} onUploaded={loadHorse} />
+      {photo && <ImageLightbox src={photo} alt={horse.name} open={photoViewerOpen} onClose={() => setPhotoViewerOpen(false)} />}
     </>
   );
 }

@@ -305,6 +305,25 @@ export function ModalHead({ icon, tone = 'info', title, sub, onClose, id }: { ic
 export const ModalBody = ({ children }: { children: ReactNode }) => <div className="px-6 pb-5 flex flex-col gap-4">{children}</div>;
 export const ModalFoot = ({ children }: { children: ReactNode }) => <div className="flex flex-wrap justify-end items-center gap-2 px-6 py-4 border-t border-line-soft bg-subtle rounded-b-xl">{children}</div>;
 
+/** Full-screen click-to-view for a thumbnail image (e.g. a horse's photo). */
+export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: string; open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-navy/80" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <button type="button" onClick={onClose} aria-label="Đóng" className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20">
+        <Icon name="x" className="w-5 h-5" />
+      </button>
+      <img src={src} alt={alt} className="max-w-full max-h-full rounded-card object-contain" />
+    </div>
+  );
+}
+
 /* ---------- small charts ---------- */
 export function Ring({ value, size = 60, stroke = 5, color, track = '#eceae4', text, textColor = '#1a1f2e', label }: { value: number; size?: number; stroke?: number; color: string; track?: string; text?: ReactNode; textColor?: string; label?: string }) {
   const r = size / 2 - stroke, c = 2 * Math.PI * r;
