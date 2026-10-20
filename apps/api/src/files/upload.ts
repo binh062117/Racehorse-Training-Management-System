@@ -4,7 +4,7 @@ import { join } from 'path';
 import type { Request } from 'express';
 import { MulterModuleOptions } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import { AppException } from '../common/app-exception';
 
 export const HORSE_PHOTO_KIND = 'horse-photos';
@@ -69,6 +69,32 @@ export function buildAttachmentMulterOptions(): MulterModuleOptions {
         cb(null, `${recordId}-${randomBytes(4).toString('hex')}.${ext}`);
       },
     }),
+  };
+}
+
+/**
+ * Multer options for the horse-photo route, kept in memory (not written to
+ * disk) so the buffer can go straight to Cloudinary when configured. Built
+ * from `process.env` for the same reason as buildAttachmentMulterOptions().
+ */
+export function buildHorsePhotoMemoryMulterOptions(): MulterModuleOptions {
+  const maxMb = Number(process.env.UPLOAD_MAX_MB) || 5;
+  return {
+    limits: { fileSize: maxMb * 1024 * 1024, files: 1 },
+    fileFilter: (_req, file, cb) => {
+      if (!MIME_TO_EXT[file.mimetype]) {
+        cb(
+          new AppException(
+            'VALIDATION_ERROR',
+            'Only JPEG, PNG or WebP images are allowed',
+          ),
+          false,
+        );
+        return;
+      }
+      cb(null, true);
+    },
+    storage: memoryStorage(),
   };
 }
 

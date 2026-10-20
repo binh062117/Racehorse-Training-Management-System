@@ -7,6 +7,19 @@ import { PrismaService } from './../src/prisma/prisma.service';
 import { existsSync, readdirSync, rmSync } from 'fs';
 import { join } from 'path';
 
+// The photo-serving tests below exercise the local-disk fallback path and
+// its per-owner access control (CloudinaryService.enabled === false bypasses
+// that check entirely, by design — see horses.service.ts#toView). Force the
+// fallback here regardless of what a developer's local .env has set, so this
+// suite doesn't flip behavior — or hit real Cloudinary — just because
+// CLOUDINARY_* happens to be configured for manual testing. Set to '' rather
+// than deleted: ConfigModule's dotenv load only fills in keys that are
+// *absent* from process.env, so a deleted key would just get repopulated
+// from .env when AppModule compiles below.
+process.env.CLOUDINARY_CLOUD_NAME = '';
+process.env.CLOUDINARY_API_KEY = '';
+process.env.CLOUDINARY_API_SECRET = '';
+
 /**
  * Phase 2 — Horses. Covers CRUD, OWNER scoping / ownership 403s, and the
  * photo upload + permission-checked file serving. See docs/specs/phase-2-horses.md §9.

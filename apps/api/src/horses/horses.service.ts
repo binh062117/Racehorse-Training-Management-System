@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Horse, NotificationType, Prisma, Role } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileStorageService } from '../files/file-storage.service';
+import { CloudinaryService } from '../files/cloudinary.service';
+import { HORSE_PHOTO_KIND, MIME_TO_EXT } from '../files/upload';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
   AiService,
@@ -42,6 +45,7 @@ export class HorsesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: FileStorageService,
+    private readonly cloudinary: CloudinaryService,
     private readonly notifications: NotificationsService,
     private readonly ai: AiService,
   ) {}
@@ -50,7 +54,9 @@ export class HorsesService {
     return {
       ...horse,
       photoUrl: horse.photoPath
-        ? `${API_PREFIX}/files/${horse.photoPath}`
+        ? horse.photoPath.startsWith('http')
+          ? horse.photoPath
+          : `${API_PREFIX}/files/${horse.photoPath}`
         : null,
     };
   }
@@ -283,6 +289,29 @@ export class HorsesService {
     return { message: 'Horse deleted' };
   }
 
+  /**
+   * Uploads to Cloudinary when configured (survives a Render redeploy);
+   * falls back to local disk otherwise (fine for local dev only — see
+   * CloudinaryService).
+   */
+  async savePhoto(id: string, file: Express.Multer.File): Promise<HorseView> {
+    const ext = MIME_TO_EXT[file.mimetype];
+    const publicId = `${id}-${randomBytes(4).toString('hex')}`;
+    let photoPath: string;
+    if (this.cloudinary.enabled) {
+      photoPath = await this.cloudinary.uploadBuffer(
+        file.buffer,
+        HORSE_PHOTO_KIND,
+        publicId,
+      );
+    } else {
+      const filename = `${publicId}.${ext}`;
+      this.storage.saveBuffer(HORSE_PHOTO_KIND, filename, file.buffer);
+      photoPath = `${HORSE_PHOTO_KIND}/${filename}`;
+    }
+    return this.setPhoto(id, photoPath);
+  }
+
   async setPhoto(id: string, photoPath: string): Promise<HorseView> {
     const current = await this.prisma.horse.findUnique({
       where: { id },
@@ -294,7 +323,11 @@ export class HorsesService {
       include: { owner: { select: OWNER_SELECT } },
     });
     if (current?.photoPath && current.photoPath !== photoPath) {
-      this.storage.removeQuietly(current.photoPath);
+      if (current.photoPath.startsWith('http')) {
+        void this.cloudinary.destroyByUrl(current.photoPath);
+      } else {
+        this.storage.removeQuietly(current.photoPath);
+      }
     }
     return this.toView(horse);
   }
