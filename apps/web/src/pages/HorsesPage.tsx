@@ -10,9 +10,21 @@ import { EditHorseModal } from '../components/horse/EditHorseModal';
 import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Badge, Btn, Card, Chip, Cloth, HeroStats, Icon, LockBadge, Ring, Seg, Silk,
+  Badge, Btn, Card, Chip, Cloth, HeroStats, Icon, LockBadge, Ring, Seg,
   careerTone, fitColor, healthTone,
 } from '../ds/ui';
+
+/** Small badge mark used next to the saddle-cloth number in horse rows/cards. */
+function HorseMark({ size = 30 }: { size?: number }) {
+  return (
+    <span
+      className="rounded-full bg-white border border-line flex-none inline-flex items-center justify-center overflow-hidden"
+      style={{ width: size, height: size }}
+    >
+      <img src="/icons/manager-horse-head.png" alt="" className="w-full h-full object-contain p-[3px]" />
+    </span>
+  );
+}
 
 type Filter = 'all' | 'locked' | 'injured' | 'mon';
 const FILTERS: [Filter, string, (h: Horse) => boolean][] = [
@@ -163,7 +175,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                     <tr key={h.id} className={`border-b border-line-soft hover:bg-subtle ${h.locked ? 'bg-[#fdfbfb]' : ''}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <Cloth n={h.saddleNumber ?? '—'} /><Silk owner={h.owner.id} />
+                          <Cloth n={h.saddleNumber ?? '—'} /><HorseMark />
                           <div>
                             <Link to={`/horses/${h.id}`} className="font-semibold text-ink no-underline">{h.name}</Link>
                             <div className="cap num">{h.gender === 'MALE' ? 'Đực' : h.gender === 'FEMALE' ? 'Cái' : '—'} · {age != null ? `${age} tuổi` : '—'}</div>
@@ -213,7 +225,7 @@ function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: bo
         ) : (
           <Cloth n={h.saddleNumber ?? '—'} />
         )}
-        <Silk owner={h.owner.id} size={34} />
+        <HorseMark size={34} />
         <div className="flex-1 min-w-0"><div className="disp text-2xl leading-6 truncate">{h.name}</div><div className="cap num mt-1">{h.breed ?? 'Chưa rõ giống'} · {age != null ? `${age} tuổi` : 'Chưa rõ tuổi'}</div></div>
       </Link>
       <div className="flex items-center gap-3.5 px-4 pb-3.5">
