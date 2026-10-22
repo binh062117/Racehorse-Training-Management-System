@@ -5,7 +5,6 @@ import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate, formatTime, fromDateTimeLocal } from '../../lib/format';
-import { translateTrainingGoal } from '../../lib/trainingGoal';
 import {
   Alert, Badge, Btn, Card, Field, Icon, Modal, ModalBody, ModalFoot, ModalHead, Textarea, type Tone,
 } from '../../ds/ui';
@@ -154,7 +153,7 @@ function SessionsContent({ horseId, isLocked, lockReason }: Props) {
                     session={s}
                     hasPlan={!!s.planId}
                     planLabel={s.planId
-                      ? translateTrainingGoal(plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable'), t)
+                      ? plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable')
                       : t('session.noPlan')}
                     canUpdate={canUpdate}
                     isTrainer={role === 'TRAINER'}
@@ -241,7 +240,7 @@ function CreateSessionForm({
               value={planId} onChange={(e) => setPlanId(e.target.value)} disabled={busy || plansLoading || !!plansErr}
             >
               <option value="">{t('session.noPlan')}</option>
-              {plans.map((plan) => <option key={plan.id} value={plan.id}>{translateTrainingGoal(plan.goal, t)} ({formatDate(plan.startDate)})</option>)}
+              {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.goal} ({formatDate(plan.startDate)})</option>)}
             </select>
           </Field>
           {plansLoading && <p className="cap" role="status">{t('session.loadingPlans')}</p>}

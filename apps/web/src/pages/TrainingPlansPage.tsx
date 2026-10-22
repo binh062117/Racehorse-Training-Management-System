@@ -7,7 +7,6 @@ import type { Paginated, TrainingPlan } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
-import { translateTrainingGoal } from '../lib/trainingGoal';
 import { CreateTrainingPlanModal } from '../components/training/CreateTrainingPlanModal';
 import { usePageChrome } from '../ds/AppShell';
 import { Badge, Btn, Card, Chip, HeroStats, Icon } from '../ds/ui';
@@ -120,7 +119,7 @@ export function TrainingPlansPage() {
                         <Link to={`/horses/${plan.horseId}`} className="font-semibold text-navy no-underline">{plan.horse?.name ?? '—'}</Link>
                         {plan.horse?.breed && <div className="cap">{plan.horse.breed}</div>}
                       </td>
-                      <td className="px-4 py-3 max-w-[360px]">{translateTrainingGoal(plan.goal, t)}</td>
+                      <td className="px-4 py-3 max-w-[360px]">{plan.goal}</td>
                       <td className="px-4 py-3">
                         <div className="font-medium">{plan.trainer?.name ?? '—'}</div>
                         <div className="cap">{plan.trainer?.email}</div>

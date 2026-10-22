@@ -5,7 +5,6 @@ import type { Horse, Paginated, TrainingPlan } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate } from '../../lib/format';
-import { translateTrainingGoal } from '../../lib/trainingGoal';
 import { CreateTrainingPlanModal } from '../../components/training/CreateTrainingPlanModal';
 import { Alert, Badge, Btn, Card, Icon } from '../../ds/ui';
 
@@ -84,7 +83,7 @@ export function PlansTab({ horse }: Props) {
               <Card key={p.id} className={`p-5 border-l-4 ${isOngoing ? 'border-l-ok' : 'border-l-line'}`}>
                 <div className="flex justify-between items-start flex-wrap gap-2">
                   <div>
-                    <h4 className="text-[15px] font-semibold">{translateTrainingGoal(p.goal, t)}</h4>
+                    <h4 className="text-[15px] font-semibold">{p.goal}</h4>
                     <p className="cap mt-1">{t('plansTab.trainer')} <strong>{p.trainer?.name ?? '—'}</strong> ({p.trainer?.email})</p>
                   </div>
                   {isOngoing ? <Badge tone="ok"><Icon name="check" className="w-3.5 h-3.5" />{t('plansTab.active')}</Badge> : <Badge tone="neu">{t('plansTab.completed')}</Badge>}

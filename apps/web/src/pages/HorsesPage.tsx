@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, HealthStatus, Paginated } from '../lib/types';
@@ -14,6 +15,15 @@ import {
   Badge, Btn, Card, Chip, Cloth, HeroStats, Icon, LockBadge, Ring, Seg, Silk,
   careerTone, fitColor, healthTone,
 } from '../ds/ui';
+
+function formatLockReason(reason: string | null | undefined, t: TFunction): string {
+  if (!reason) return t('horsePage.locked');
+  const prefix = 'Incident: ';
+  if (reason.startsWith(prefix)) {
+    return `${t('horsePage.incidentPrefix')}: ${reason.slice(prefix.length)}`;
+  }
+  return reason;
+}
 
 type Filter = 'all' | 'locked' | 'injured' | 'mon';
 const FILTERS: [Filter, (h: Horse) => boolean][] = [
@@ -186,7 +196,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                       <td className="px-4 py-3"><b className="num" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore ?? '—'}</b></td>
                       <td className="px-4 py-3"><Badge tone={careerTone[h.status]}>{t(`horseStatusBadge.${h.status}`)}</Badge></td>
                       <td className="px-4 py-3"><Badge tone={healthTone[h.healthStatus]}>{t(`horseStatusBadge.${h.healthStatus}`)}</Badge></td>
-                      <td className="px-4 py-3">{h.locked ? <LockBadge>{h.lockReason ?? t('horsePage.locked')}</LockBadge> : <span className="cap">—</span>}</td>
+                      <td className="px-4 py-3">{h.locked ? <LockBadge>{formatLockReason(h.lockReason, t)}</LockBadge> : <span className="cap">—</span>}</td>
                       {isManager && (
                         <td className="px-4 py-3">
                           <div className="flex gap-1.5">
@@ -239,7 +249,7 @@ function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: bo
       <div className="flex flex-wrap gap-1.5 px-4 pb-3.5">
         <Badge tone={careerTone[h.status]}>{t(`horseStatusBadge.${h.status}`)}</Badge>
         <Badge tone={healthTone[h.healthStatus]}>{t(`horseStatusBadge.${h.healthStatus}`)}</Badge>
-        {h.locked && <LockBadge>{h.lockReason ?? t('horsePage.locked')}</LockBadge>}
+        {h.locked && <LockBadge>{formatLockReason(h.lockReason, t)}</LockBadge>}
       </div>
       <div className="mt-auto flex items-center gap-2 px-4 py-2.5 border-t border-line-soft bg-subtle">
         <span className="cap flex-1 min-w-0 truncate">{t('horsePage.ownerLabel')} <b className="text-ink">{h.owner.name}</b></span>
