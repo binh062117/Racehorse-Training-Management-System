@@ -37,7 +37,7 @@ export function RegisterPage() {
 
   if (step === 'done') {
     return (
-      <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
+      <AuthLayout eyebrow={t('nav.brandName')} title={t('auth.register')}>
         <p>{t('auth.registerDone')}</p>
         <Link to="/login"><Btn v="p" className="w-full h-11">{t('auth.login')}</Btn></Link>
       </AuthLayout>
@@ -46,14 +46,14 @@ export function RegisterPage() {
 
   if (step === 'otp') {
     return (
-      <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
+      <AuthLayout eyebrow={t('nav.brandName')} title={t('auth.register')}>
         <OtpStep email={email.trim()} onVerified={() => setStep('done')} />
       </AuthLayout>
     );
   }
 
   return (
-    <AuthLayout eyebrow="Racehorse Club" title={t('auth.register')}>
+    <AuthLayout eyebrow={t('nav.brandName')} title={t('auth.register')}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Field label={t('auth.name')}>
           <Input value={name} onChange={(e) => setName(e.target.value)} required />

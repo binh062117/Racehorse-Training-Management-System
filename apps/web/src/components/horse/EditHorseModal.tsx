@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { Paginated, User, Horse, HorseGender, HorseStatus } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -12,6 +13,7 @@ interface EditHorseModalProps {
 }
 
 export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseModalProps) {
+  const { t } = useTranslation();
   const [owners, setOwners] = useState<User[]>([]);
   const [allHorses, setAllHorses] = useState<Horse[]>([]);
   const [name, setName] = useState('');
@@ -64,7 +66,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
 
     // Front-end validate pedigree
     if (sireId && damId && sireId === damId) {
-      setErr(new Error('Ngựa cha và ngựa mẹ không thể là cùng một con ngựa'));
+      setErr(new Error(t('horseModal.parentsMustDiffer')));
       return;
     }
 
@@ -97,65 +99,65 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="edit-horse-title">
-      <ModalHead icon="edit" title="Chỉnh sửa hồ sơ ngựa" id="edit-horse-title" onClose={() => !busy && onClose()} />
+      <ModalHead icon="edit" title={t('horseModal.editTitle')} id="edit-horse-title" onClose={() => !busy && onClose()} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
-          <Field label="Tên ngựa" req>
+          <Field label={t('horseModal.name')} req>
             <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
           </Field>
 
-          <Field label="Chủ sở hữu" req>
+          <Field label={t('horseModal.owner')} req>
             <select className={selectCls} value={ownerId} onChange={(e) => setOwnerId(e.target.value)} required>
               {owners.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.email})</option>)}
             </select>
           </Field>
 
-          <Field label="Giới tính">
+          <Field label={t('horseModal.gender')}>
             <select className={selectCls} value={gender} onChange={(e) => setGender(e.target.value as HorseGender | '')}>
-              <option value="">— Chưa rõ —</option>
-              <option value="MALE">Đực</option>
-              <option value="FEMALE">Cái</option>
+              <option value="">{t('horseModal.unknown')}</option>
+              <option value="MALE">{t('horse.genderMale')}</option>
+              <option value="FEMALE">{t('horse.genderFemale')}</option>
             </select>
           </Field>
 
           <div className="grid grid-cols-2 gap-3.5">
-            <Field label="Giống loài">
+            <Field label={t('horseModal.breed')}>
               <Input value={breed} onChange={(e) => setBreed(e.target.value)} maxLength={120} />
             </Field>
-            <Field label="Ngày sinh">
+            <Field label={t('horseModal.birthDate')}>
               <Input type="date" max={todayStr} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3.5">
-            <Field label="Trạng thái">
+              <Field label={t('horseModal.status')}>
               <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as HorseStatus)}>
-                <option value="ACTIVE">Đang hoạt động (ACTIVE)</option>
-                <option value="RESTING">Nghỉ dưỡng (RESTING)</option>
-                <option value="RETIRED">Giải nghệ (RETIRED)</option>
+                  {(['ACTIVE', 'RESTING', 'RETIRED'] as const).map((value) => (
+                    <option key={value} value={value}>{t(`horseFlow.status.${value}`)}</option>
+                  ))}
               </select>
             </Field>
-            <Field label="Điểm thể trạng (0-100)">
-              <Input type="number" min={0} max={100} placeholder="Chưa đánh giá" value={fitnessScore} onChange={(e) => setFitnessScore(e.target.value)} />
+              <Field label={t('horseModal.fitness')}>
+                <Input type="number" min={0} max={100} placeholder={t('horseModal.fitnessUnknown')} value={fitnessScore} onChange={(e) => setFitnessScore(e.target.value)} />
             </Field>
           </div>
 
-          <Field label="Số áo đua (tùy chọn)" hint="Số hiển thị trên yếm số (saddle cloth)">
-            <Input type="number" min={0} max={999} placeholder="vd: 7" value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
+          <Field label={t('horseModal.saddleNumber')} hint={t('horseModal.saddleHint')}>
+            <Input type="number" min={0} max={999} placeholder={t('horseModal.exampleNumber')} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
           </Field>
 
           <div className="p-3 rounded-card border border-line bg-subtle">
-            <div className="lbl text-navy mb-2">Phả hệ (Pedigree)</div>
+            <div className="lbl text-navy mb-2">{t('horseModal.pedigree')}</div>
             <div className="grid grid-cols-2 gap-3.5">
-              <Field label="Ngựa cha (Sire)">
+              <Field label={t('horseModal.sire')}>
                 <select className={selectCls} value={sireId} onChange={(e) => setSireId(e.target.value)}>
-                  <option value="">— Không chọn —</option>
+                  <option value="">{t('horseModal.noSelection')}</option>
                   {allHorses.filter((h) => h.id !== damId).map((h) => <option key={h.id} value={h.id}>{h.name} ({h.breed ?? '—'})</option>)}
                 </select>
               </Field>
-              <Field label="Ngựa mẹ (Dam)">
+              <Field label={t('horseModal.dam')}>
                 <select className={selectCls} value={damId} onChange={(e) => setDamId(e.target.value)}>
-                  <option value="">— Không chọn —</option>
+                  <option value="">{t('horseModal.noSelection')}</option>
                   {allHorses.filter((h) => h.id !== sireId).map((h) => <option key={h.id} value={h.id}>{h.name} ({h.breed ?? '—'})</option>)}
                 </select>
               </Field>
@@ -166,8 +168,8 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
         </ModalBody>
 
         <ModalFoot>
-          <Btn onClick={onClose} disabled={busy}>Hủy</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{busy ? 'Đang lưu...' : 'Lưu thay đổi'}</Btn>
+          <Btn onClick={onClose} disabled={busy}>{t('horseModal.cancel')}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{busy ? t('horseModal.saving') : t('horseModal.save')}</Btn>
         </ModalFoot>
       </form>
     </Modal>

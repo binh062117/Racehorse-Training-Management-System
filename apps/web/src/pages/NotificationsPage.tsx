@@ -65,7 +65,7 @@ export function NotificationsPage() {
   return (
     <>
       <section className="hero px-8 py-7 flex flex-col gap-2">
-        <div className="lbl">Cảnh báo AI</div>
+        <div className="lbl">{t('nav.aiAlerts')}</div>
         <h1 className="disp text-[48px] mt-1">{t('notificationsPage.title')}</h1>
         <p className="text-hero-muted">{t('notificationsPage.description')}</p>
       </section>
@@ -94,7 +94,7 @@ export function NotificationsPage() {
                   <strong>{notification.message}</strong>
                   <span className="flex items-center gap-2 flex-none">
                     {!notification.read && <Badge tone="warn">{t('notificationsPage.unread')}</Badge>}
-                    <Btn sm v="d" disabled={updatingId !== null} onClick={(e) => void remove(notification, e)}>Xoá</Btn>
+                    <Btn sm v="d" disabled={updatingId !== null} onClick={(e) => void remove(notification, e)}>{t('common.delete')}</Btn>
                   </span>
                 </span>
                 <span className="cap block mt-1">{formatDateTime(notification.createdAt)}</span>

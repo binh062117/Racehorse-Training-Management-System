@@ -8,7 +8,7 @@ import { useCachedResource } from '../lib/useCachedResource';
 import { formatDate } from '../lib/format';
 import type { Horse, Paginated, Vaccination } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Chip, Field, Icon, Input, Select } from '../ds/ui';
+import { Badge, Btn, Card, Chip, Field, Icon, Input } from '../ds/ui';
 
 export function HealthSchedulePage() {
   const { t } = useTranslation();
@@ -16,7 +16,7 @@ export function HealthSchedulePage() {
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [careType, setCareType] = useState<'ALL' | 'VACCINATION' | 'DEWORMING'>('ALL');
 
-  usePageChrome({ crumbs: ['Sức khỏe', t('healthSchedule.title')] });
+  usePageChrome({ crumbs: [t('healthSchedule.eyebrow'), t('healthSchedule.title')] });
 
   const vaccinationParams = {
     limit: 100,
@@ -159,10 +159,14 @@ function CreateVaccinationForm({ onCreated }: { onCreated: () => Promise<void> }
             </select>
           </Field>
           <Field label={t('healthSchedule.kind')}>
-            <Select options={[t('healthSchedule.kindOptions.VACCINATION'), t('healthSchedule.kindOptions.DEWORMING')]}
-              value={t(`healthSchedule.kindOptions.${careType}`)}
-              onChange={(e) => setCareType(e.target.value === t('healthSchedule.kindOptions.DEWORMING') ? 'DEWORMING' : 'VACCINATION')}
-            />
+            <select
+              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              value={careType}
+              onChange={(e) => setCareType(e.target.value as 'VACCINATION' | 'DEWORMING')}
+            >
+              <option value="VACCINATION">{t('healthSchedule.kindOptions.VACCINATION')}</option>
+              <option value="DEWORMING">{t('healthSchedule.kindOptions.DEWORMING')}</option>
+            </select>
           </Field>
           <Field label={t('healthSchedule.item')}>
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />

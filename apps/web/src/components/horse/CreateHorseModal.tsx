@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { Horse, Paginated, User, HorseGender, HorseStatus } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -11,6 +12,7 @@ interface CreateHorseModalProps {
 }
 
 export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModalProps) {
+  const { t } = useTranslation();
   const [owners, setOwners] = useState<User[]>([]);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<HorseGender | ''>('MALE');
@@ -79,50 +81,50 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="create-horse-title">
-      <ModalHead icon="horse" title="Thêm hồ sơ ngựa mới" id="create-horse-title" onClose={() => !busy && onClose()} />
+      <ModalHead icon="horse" title={t('horseModal.createTitle')} id="create-horse-title" onClose={() => !busy && onClose()} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
           <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
-            <Field label="Tên ngựa" req>
-              <Input placeholder="vd: Thunderbolt" value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
+            <Field label={t('horseModal.name')} req>
+              <Input placeholder={t('horseModal.exampleHorse')} value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
             </Field>
 
-            <Field label="Chủ sở hữu" req>
+            <Field label={t('horseModal.owner')} req>
               <select className={selectCls} value={ownerId} onChange={(e) => setOwnerId(e.target.value)} required>
-                <option value="" disabled>— Chọn chủ sở hữu —</option>
+                <option value="" disabled>{t('horseModal.chooseOwner')}</option>
                 {owners.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.email})</option>)}
               </select>
             </Field>
 
-            <Field label="Giới tính">
+            <Field label={t('horseModal.gender')}>
               <select className={selectCls} value={gender} onChange={(e) => setGender(e.target.value as HorseGender | '')}>
-                <option value="MALE">Đực</option>
-                <option value="FEMALE">Cái</option>
-                <option value="">— Chưa rõ —</option>
+                <option value="MALE">{t('horse.genderMale')}</option>
+                <option value="FEMALE">{t('horse.genderFemale')}</option>
+                <option value="">{t('horseModal.unknown')}</option>
               </select>
             </Field>
 
-            <Field label="Số áo đua (tùy chọn)" hint="Số hiển thị trên yếm số (saddle cloth)">
-              <Input type="number" min={0} max={999} placeholder="vd: 7" value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
+            <Field label={t('horseModal.saddleNumber')} hint={t('horseModal.saddleHint')}>
+              <Input type="number" min={0} max={999} placeholder={t('horseModal.exampleNumber')} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
             </Field>
 
-            <Field label="Giống loài">
-              <Input placeholder="vd: Thoroughbred, Arabian..." value={breed} onChange={(e) => setBreed(e.target.value)} maxLength={120} />
+            <Field label={t('horseModal.breed')}>
+              <Input placeholder={t('horseModal.exampleBreed')} value={breed} onChange={(e) => setBreed(e.target.value)} maxLength={120} />
             </Field>
 
-            <Field label="Ngày sinh">
+            <Field label={t('horseModal.birthDate')}>
               <Input type="date" max={todayStr} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </Field>
 
-            <Field label="Trạng thái ban đầu">
+              <Field label={t('horseModal.initialStatus')}>
               <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as HorseStatus)}>
-                <option value="ACTIVE">Đang hoạt động (ACTIVE)</option>
-                <option value="RESTING">Nghỉ dưỡng (RESTING)</option>
-                <option value="RETIRED">Giải nghệ (RETIRED)</option>
+                  {(['ACTIVE', 'RESTING', 'RETIRED'] as const).map((value) => (
+                    <option key={value} value={value}>{t(`horseFlow.status.${value}`)}</option>
+                  ))}
               </select>
             </Field>
 
-            <Field label="Ảnh đại diện (tùy chọn)" hint="Định dạng JPG, PNG, WEBP (tối đa 5MB)">
+              <Field label={t('horseModal.photo')} hint={t('horseModal.photoHint')}>
               <input
                 type="file" accept="image/jpeg,image/png,image/webp" className="text-[13px]"
                 onChange={(e) => {
@@ -133,7 +135,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
                     return;
                   }
                   if (file.size > 5 * 1024 * 1024) {
-                    setErr(new Error('Kích thước ảnh tối đa là 5MB'));
+                    setErr(new Error(t('horseModal.photoTooLarge')));
                     return;
                   }
                   setPhoto(file);
@@ -143,7 +145,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
               />
               {preview && (
                 <div className="mt-2 text-center">
-                  <img src={preview} alt="Preview" className="max-h-[120px] rounded-btn border border-line object-cover inline-block" />
+                  <img src={preview} alt={t('horseModal.preview')} className="max-h-[120px] rounded-btn border border-line object-cover inline-block" />
                 </div>
               )}
             </Field>
@@ -153,8 +155,8 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
         </ModalBody>
 
         <ModalFoot>
-          <Btn onClick={onClose} disabled={busy}>Hủy</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{busy ? 'Đang tạo...' : 'Tạo hồ sơ'}</Btn>
+          <Btn onClick={onClose} disabled={busy}>{t('horseModal.cancel')}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{busy ? t('horseModal.creating') : t('horseModal.create')}</Btn>
         </ModalFoot>
       </form>
     </Modal>

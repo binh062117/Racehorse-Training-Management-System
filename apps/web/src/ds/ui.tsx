@@ -1,5 +1,6 @@
 import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 /* ---------- icons (stroke, 24px grid) ---------- */
 const P: Record<string, string[]> = {
@@ -253,8 +254,9 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
   );
 }
 export function Tabs({ items }: { items: [string, ReactNode, boolean?][] }) {
+  const { t } = useTranslation();
   return (
-    <nav className="flex gap-1 border-b border-line overflow-x-auto" aria-label="Mục">
+    <nav className="flex gap-1 border-b border-line overflow-x-auto" aria-label={t('common.tabs')}>
       {items.map(([to, label, ext]) => (
         <NavLink key={to} to={to} end className={({ isActive }) => `inline-flex items-center gap-2 h-10 px-3.5 -mb-px border-b-2 whitespace-nowrap no-underline ${isActive ? 'text-info border-info font-semibold' : 'text-muted border-transparent font-medium hover:text-ink'}`}>
           {label}{ext && <Icon name="external" className="w-3.5 h-3.5" />}
@@ -293,12 +295,13 @@ export function Modal({ open, onClose, width = 560, labelledBy, children }: { op
   );
 }
 export function ModalHead({ icon, tone = 'info', title, sub, onClose, id }: { icon?: string; tone?: 'bad' | 'info' | 'ok' | 'warn'; title: ReactNode; sub?: ReactNode; onClose?: () => void; id?: string }) {
-  const t = { bad: 'bg-bad-bg text-bad', info: 'bg-info-bg text-info', ok: 'bg-ok-bg text-ok', warn: 'bg-warn-bg text-warn' }[tone];
+  const { t: translate } = useTranslation();
+  const toneClasses = { bad: 'bg-bad-bg text-bad', info: 'bg-info-bg text-info', ok: 'bg-ok-bg text-ok', warn: 'bg-warn-bg text-warn' }[tone];
   return (
     <div className="flex items-start gap-3 px-6 pt-5 pb-4">
-      {icon && <span className={`w-10 h-10 rounded-card flex items-center justify-center flex-none ${t}`}><Icon name={icon} className="w-5 h-5" /></span>}
+      {icon && <span className={`w-10 h-10 rounded-card flex items-center justify-center flex-none ${toneClasses}`}><Icon name={icon} className="w-5 h-5" /></span>}
       <div className="flex-1"><h2 id={id} className="text-base font-semibold">{title}</h2>{sub && <p className="text-muted mt-1">{sub}</p>}</div>
-      <button type="button" aria-label="Đóng" onClick={onClose} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream"><Icon name="x" /></button>
+      <button type="button" aria-label={translate('common.close')} onClick={onClose} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream"><Icon name="x" /></button>
     </div>
   );
 }

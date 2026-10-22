@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api, getFileUrl } from '../lib/api';
 import type { Horse, HorseRaceEntry, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
@@ -21,27 +22,28 @@ import {
 } from '../ds/ui';
 
 const TAB_ITEMS: [Tab, string][] = [
-  ['profile', 'Hồ sơ chi tiết'],
-  ['pedigree', 'Phả hệ'],
-  ['plans', 'Giáo án huấn luyện'],
-  ['sessions', 'Buổi tập luyện'],
-  ['health', 'Hồ sơ y tế'],
-  ['feeding', 'Khẩu phần ăn'],
+  ['profile', 'horseDetail.tabs.profile'],
+  ['pedigree', 'horseDetail.tabs.pedigree'],
+  ['plans', 'horseDetail.tabs.plans'],
+  ['sessions', 'horseDetail.tabs.sessions'],
+  ['health', 'horseDetail.tabs.health'],
+  ['feeding', 'horseDetail.tabs.feeding'],
 ];
 
 type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'health' | 'feeding';
 
-function calculateAge(birthDate: string | null): string {
+function calculateAge(birthDate: string | null, translate: (key: string, options?: { count: number }) => string): string {
   if (!birthDate) return '—';
   const birth = new Date(birthDate);
   if (Number.isNaN(birth.getTime())) return '—';
   const ageYears = Math.floor(
     (Date.now() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000),
   );
-  return ageYears >= 0 ? `${ageYears} tuổi` : '—';
+  return ageYears >= 0 ? translate('horseDetail.age', { count: ageYears }) : '—';
 }
 
 export function HorseDetailPage() {
+  const { t } = useTranslation();
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -108,7 +110,7 @@ export function HorseDetailPage() {
     if (!horse) return;
     const willLock = !horse.locked;
     const reason = willLock
-      ? window.prompt('Nhập lý do khóa tập luyện (tuỳ chọn):') ?? ''
+      ? window.prompt(t('horseDetail.lockReasonPrompt')) ?? ''
       : '';
     try {
       await api.patch(`/horses/${horse.id}/lock`, {
@@ -117,14 +119,14 @@ export function HorseDetailPage() {
       });
       await loadHorse();
     } catch (e) {
-      alert('Không thể cập nhật trạng thái khóa tập luyện: ' + String(e));
+      alert(t('horseDetail.lockUpdateFailed', { error: String(e) }));
     }
   };
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], horse?.name ?? '…'] });
+  usePageChrome({ crumbs: [[t('nav.horses'), '/horses'], horse?.name ?? '…'] });
 
   if (loading && !horse) {
-    return <p className="cap">Đang tải thông tin hồ sơ ngựa…</p>;
+    return <p className="cap">{t('horseDetail.loading')}</p>;
   }
   if (err && !horse) {
     return <ErrorText err={err} />;
@@ -149,53 +151,53 @@ export function HorseDetailPage() {
               )}
               <Silk owner={horse.owner.id} size={64} />
               <div className="flex flex-wrap gap-1.5">
-                <Badge tone={careerTone[horse.status]}>{horse.status}</Badge>
-                <Badge tone={healthTone[horse.healthStatus]}>{horse.healthStatus}</Badge>
-                {horse.locked && <LockBadge>Khóa tập luyện</LockBadge>}
+                <Badge tone={careerTone[horse.status]}>{t(`horseStatusBadge.${horse.status}`)}</Badge>
+                <Badge tone={healthTone[horse.healthStatus]}>{t(`horseStatusBadge.${horse.healthStatus}`)}</Badge>
+                {horse.locked && <LockBadge>{t('horseDetail.trainingLocked')}</LockBadge>}
               </div>
             </div>
             <div>
               <h1 className="disp text-[64px] sm:text-[84px]">{horse.name}</h1>
               <p className="mt-2.5 text-hero-line text-sm">
-                {horse.breed ?? 'Chưa rõ giống'} · {horse.gender === 'MALE' ? 'Đực' : horse.gender === 'FEMALE' ? 'Cái' : 'Chưa rõ giới tính'} · {calculateAge(horse.birthDate)}
+                {horse.breed ?? t('horseDetail.unknownBreed')} · {horse.gender ? t(`horse.gender${horse.gender === 'MALE' ? 'Male' : 'Female'}`) : t('horseDetail.genderUnknown')} · {calculateAge(horse.birthDate, t)}
               </p>
-              <p className="cap num mt-1">Chủ sở hữu {horse.owner.name} ({horse.owner.email})</p>
+              <p className="cap num mt-1">{t('horseDetail.owner', { name: horse.owner.name, email: horse.owner.email })}</p>
             </div>
             <div className="flex flex-wrap gap-2 mt-auto">
               {isVet && (
                 <Btn v={horse.locked ? 'ghostDark' : 'light'} onClick={() => void handleToggleLock()}>
-                  <Icon name={horse.locked ? 'unlock' : 'lock'} />{horse.locked ? 'Mở khóa tập' : 'Khóa tập luyện'}
+                  <Icon name={horse.locked ? 'unlock' : 'lock'} />{horse.locked ? t('horseDetail.unlockTraining') : t('horseDetail.lockTraining')}
                 </Btn>
               )}
               {isManager && (
                 <>
-                  <Btn v="ghostDark" onClick={() => setPhotoOpen(true)}><Icon name="camera" />Đổi ảnh</Btn>
-                  <Btn v="ghostDark" onClick={() => setEditOpen(true)}><Icon name="edit" />Sửa hồ sơ</Btn>
-                  <Btn v="ghostDark" aria-label="Xóa ngựa" className="!text-bad-on !px-3" onClick={() => setDeleteOpen(true)}><Icon name="trash" /></Btn>
+                  <Btn v="ghostDark" onClick={() => setPhotoOpen(true)}><Icon name="camera" />{t('horseDetail.changePhoto')}</Btn>
+                  <Btn v="ghostDark" onClick={() => setEditOpen(true)}><Icon name="edit" />{t('horseDetail.editProfile')}</Btn>
+                  <Btn v="ghostDark" aria-label={t('horseDetail.deleteHorse')} className="!text-bad-on !px-3" onClick={() => setDeleteOpen(true)}><Icon name="trash" /></Btn>
                 </>
               )}
             </div>
           </div>
           {horse.locked && (
             <div className="flex-[1_1_280px] min-w-0 rounded-xl bg-white/[.06] border border-white/[.12] p-5 flex flex-col gap-2.5 text-bad-on">
-              <span className="lbl !text-bad-on">Training Lock</span>
+              <span className="lbl !text-bad-on">{t('horseDetail.trainingLocked')}</span>
               <Icon name="lock" className="w-10 h-10" />
-              <div className="cap">{horse.lockReason || 'Chưa có lý do cụ thể'}. Không thể xếp lịch tập mới cho đến khi bác sĩ thú y mở khóa.</div>
+              <div className="cap">{t('horseDetail.lockDescription', { reason: horse.lockReason || t('horseDetail.lockReasonDefault') })}</div>
             </div>
           )}
         </div>
         <div className="flex flex-wrap gap-y-5 items-end px-8 pt-5 pb-6 border-t border-white/10 bg-black/[.12]">
           <HeroStats items={[
-            { label: 'Fitness', value: horse.fitnessScore ?? '—', small: horse.fitnessScore != null ? '/ 100' : undefined, color: '#9fd9b1' },
-            { label: 'Lần đua', value: starts, small: `${wins} thắng` },
-            { label: 'Số áo đua', value: horse.saddleNumber ?? '—' },
+            { label: t('horseDetail.fitness'), value: horse.fitnessScore ?? '—', small: horse.fitnessScore != null ? '/ 100' : undefined, color: '#9fd9b1' },
+            { label: t('horseDetail.starts'), value: starts, small: t('horseDetail.wins', { count: wins }) },
+            { label: t('horseDetail.saddleNumber'), value: horse.saddleNumber ?? '—' },
           ]} />
         </div>
       </section>
 
       <HorseRecordNav horseId={horse.id} />
 
-      <nav className="flex gap-1 border-b border-line overflow-x-auto" aria-label="Mục">
+      <nav className="flex gap-1 border-b border-line overflow-x-auto" aria-label={t('horseDetail.sections')}>
         {TAB_ITEMS.map(([key, label]) => (
           <button
             key={key}
@@ -203,7 +205,7 @@ export function HorseDetailPage() {
             onClick={() => setTab(key)}
             className={`inline-flex items-center gap-2 h-10 px-3.5 -mb-px border-b-2 whitespace-nowrap ${tab === key ? 'text-info border-info font-semibold' : 'text-muted border-transparent font-medium hover:text-ink'}`}
           >
-            {label}
+            {t(label)}
           </button>
         ))}
       </nav>
@@ -213,18 +215,18 @@ export function HorseDetailPage() {
           fetch lại API mỗi lần chuyển tab. */}
       {visitedTabs.has('profile') && (
         <Card className="p-5" hidden={tab !== 'profile'}>
-          <h2 className="text-[15px] font-semibold mb-3">Thông tin lý lịch</h2>
+          <h2 className="text-[15px] font-semibold mb-3">{t('horseDetail.profileInfo')}</h2>
           <dl className="grid grid-cols-[160px_1fr] gap-x-4 gap-y-2.5 m-0 text-[13px]">
-            <dt className="text-muted">Tên ngựa</dt><dd className="m-0">{horse.name}</dd>
-            <dt className="text-muted">Giới tính</dt><dd className="m-0">{horse.gender === 'MALE' ? 'Đực' : horse.gender === 'FEMALE' ? 'Cái' : 'Chưa xác định'}</dd>
-            <dt className="text-muted">Giống loài</dt><dd className="m-0">{horse.breed ?? '—'}</dd>
-            <dt className="text-muted">Ngày sinh</dt><dd className="m-0">{formatDate(horse.birthDate)} ({calculateAge(horse.birthDate)})</dd>
-            <dt className="text-muted">Chủ sở hữu</dt><dd className="m-0">{horse.owner.name} ({horse.owner.email})</dd>
-            <dt className="text-muted">Trạng thái thi đấu</dt><dd className="m-0"><Badge tone={careerTone[horse.status]}>{horse.status}</Badge></dd>
-            <dt className="text-muted">Tình trạng y tế</dt><dd className="m-0"><Badge tone={healthTone[horse.healthStatus]}>{horse.healthStatus}</Badge></dd>
-            <dt className="text-muted">Điểm thể trạng</dt><dd className="m-0">{horse.fitnessScore != null ? `${horse.fitnessScore} / 100` : 'Chưa đánh giá'}</dd>
-            <dt className="text-muted">Số áo đua</dt><dd className="m-0">{horse.saddleNumber ?? '—'}</dd>
-            <dt className="text-muted">Mã hồ sơ hệ thống</dt><dd className="m-0 font-mono text-xs">{horse.id}</dd>
+            <dt className="text-muted">{t('horseDetail.name')}</dt><dd className="m-0">{horse.name}</dd>
+            <dt className="text-muted">{t('horseDetail.gender')}</dt><dd className="m-0">{horse.gender ? t(`horse.gender${horse.gender === 'MALE' ? 'Male' : 'Female'}`) : t('horseDetail.genderUnknown')}</dd>
+            <dt className="text-muted">{t('horseDetail.breed')}</dt><dd className="m-0">{horse.breed ?? '—'}</dd>
+            <dt className="text-muted">{t('horseDetail.birthDate')}</dt><dd className="m-0">{formatDate(horse.birthDate)} ({calculateAge(horse.birthDate, t)})</dd>
+            <dt className="text-muted">{t('horseDetail.ownerLabel')}</dt><dd className="m-0">{horse.owner.name} ({horse.owner.email})</dd>
+            <dt className="text-muted">{t('horseDetail.careerStatus')}</dt><dd className="m-0"><Badge tone={careerTone[horse.status]}>{t(`horseStatusBadge.${horse.status}`)}</Badge></dd>
+            <dt className="text-muted">{t('horseDetail.healthStatus')}</dt><dd className="m-0"><Badge tone={healthTone[horse.healthStatus]}>{t(`horseStatusBadge.${horse.healthStatus}`)}</Badge></dd>
+            <dt className="text-muted">{t('horseDetail.fitnessScore')}</dt><dd className="m-0">{horse.fitnessScore != null ? `${horse.fitnessScore} / 100` : t('horseDetail.fitnessUnrated')}</dd>
+            <dt className="text-muted">{t('horseDetail.saddleNumber')}</dt><dd className="m-0">{horse.saddleNumber ?? '—'}</dd>
+            <dt className="text-muted">{t('horseDetail.systemId')}</dt><dd className="m-0 font-mono text-xs">{horse.id}</dd>
           </dl>
         </Card>
       )}

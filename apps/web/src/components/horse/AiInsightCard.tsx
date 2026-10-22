@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import { ErrorText } from '../ErrorText';
 import { Badge, Btn, Card, Icon, type Tone } from '../../ds/ui';
@@ -10,12 +11,6 @@ interface HorseInsight {
   recommendations: string[];
 }
 
-const RISK_LABEL: Record<HorseInsight['riskLevel'], string> = {
-  LOW: 'Rủi ro thấp',
-  MEDIUM: 'Rủi ro trung bình',
-  HIGH: 'Rủi ro cao',
-};
-
 const RISK_TONE: Record<HorseInsight['riskLevel'], Tone> = {
   LOW: 'ok',
   MEDIUM: 'warn',
@@ -24,6 +19,7 @@ const RISK_TONE: Record<HorseInsight['riskLevel'], Tone> = {
 
 /** AI-generated health/injury-risk summary for a horse (VET/MANAGER only). */
 export function AiInsightCard({ horseId }: { horseId: string }) {
+  const { t } = useTranslation();
   const [insight, setInsight] = useState<HorseInsight | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<unknown>(null);
@@ -45,11 +41,11 @@ export function AiInsightCard({ horseId }: { horseId: string }) {
     <Card className="p-5">
       <div className="flex justify-between items-center gap-3 flex-wrap">
         <div>
-          <h2 className="text-[15px] font-semibold flex items-center gap-2"><Icon name="sparkle" />Trợ lý AI — phân tích rủi ro sức khỏe</h2>
-          <p className="cap mt-1">Dùng AI tóm tắt lịch sử khám bệnh, sự cố và tập luyện, gợi ý rủi ro chấn thương. Chỉ mang tính tham khảo.</p>
+          <h2 className="text-[15px] font-semibold flex items-center gap-2"><Icon name="sparkle" />{t('aiInsight.title')}</h2>
+          <p className="cap mt-1">{t('aiInsight.description')}</p>
         </div>
         <Btn v="p" sm onClick={() => void analyze()} disabled={loading} className="whitespace-nowrap">
-          {loading ? 'Đang phân tích…' : insight ? 'Phân tích lại' : 'Phân tích ngay'}
+          {loading ? t('aiInsight.analyzing') : insight ? t('aiInsight.again') : t('aiInsight.analyze')}
         </Btn>
       </div>
 
@@ -57,12 +53,12 @@ export function AiInsightCard({ horseId }: { horseId: string }) {
 
       {insight && !loading && (
         <div className="mt-3.5 pt-3.5 border-t border-line-soft">
-          <Badge tone={RISK_TONE[insight.riskLevel]}>{RISK_LABEL[insight.riskLevel]}</Badge>
+          <Badge tone={RISK_TONE[insight.riskLevel]}>{t(`aiInsight.risk${insight.riskLevel === 'LOW' ? 'Low' : insight.riskLevel === 'MEDIUM' ? 'Medium' : 'High'}`)}</Badge>
           <p className="mt-2.5 leading-relaxed">{insight.summary}</p>
 
           {insight.riskReasons.length > 0 && (
             <div className="mt-3">
-              <span className="lbl">Yếu tố rủi ro</span>
+              <span className="lbl">{t('aiInsight.riskFactors')}</span>
               <ul className="mt-1.5 pl-5 list-disc">
                 {insight.riskReasons.map((reason, i) => <li key={i} className="mb-1">{reason}</li>)}
               </ul>
@@ -71,7 +67,7 @@ export function AiInsightCard({ horseId }: { horseId: string }) {
 
           {insight.recommendations.length > 0 && (
             <div className="mt-3">
-              <span className="lbl">Khuyến nghị</span>
+              <span className="lbl">{t('aiInsight.recommendations')}</span>
               <ul className="mt-1.5 pl-5 list-disc">
                 {insight.recommendations.map((rec, i) => <li key={i} className="mb-1">{rec}</li>)}
               </ul>

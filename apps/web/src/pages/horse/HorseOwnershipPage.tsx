@@ -22,7 +22,7 @@ export function HorseOwnershipPage() {
     return () => { active = false; };
   }, [id]);
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], horse?.name ?? '…', t('horseFlow.ownershipTitle')] });
+  usePageChrome({ crumbs: [[t('nav.horses'), '/horses'], horse?.name ?? '…', t('horseFlow.ownershipTitle')] });
 
   if (error) return <ErrorText err={error} />;
   if (!horse) return <p className="cap">{t('horseFlow.loading')}</p>;

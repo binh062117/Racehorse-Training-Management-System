@@ -45,44 +45,44 @@ export function HealthTab({ horse }: { horse: Horse }) {
     <div className="flex flex-col gap-5">
       <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h2 className="text-[15px] font-semibold">Hồ sơ khám bệnh</h2>
+          <h2 className="text-[15px] font-semibold">{t('healthTab.title')}</h2>
           <p className="cap mt-0.5">
-            {isVet ? 'Ghi nhận kết quả khám, chẩn đoán và cập nhật tình trạng sức khỏe.' : 'Lịch sử khám bệnh và chẩn đoán của chiến mã.'}
+            {isVet ? t('healthTab.vetDescription') : t('healthTab.description')}
           </p>
         </div>
-        {isVet && <Btn v="p" onClick={() => setModalOpen(true)}><Icon name="plus" />Ghi nhận hồ sơ khám</Btn>}
+        {isVet && <Btn v="p" onClick={() => setModalOpen(true)}><Icon name="plus" />{t('healthTab.createRecord')}</Btn>}
       </div>
 
       {canUseAi && <AiInsightCard horseId={horse.id} />}
 
       <Card className="flex gap-6 items-center px-5 py-3.5">
         <div>
-          <span className="cap">Trạng thái sức khỏe hiện tại</span>
+          <span className="cap">{t('healthTab.currentStatus')}</span>
           <div className="mt-1">
-            <Badge tone={healthTone[horse.healthStatus]}>{horse.healthStatus}</Badge>
-            {horse.locked && <Badge tone="bad" className="ml-1.5">Khóa tập</Badge>}
+            <Badge tone={healthTone[horse.healthStatus]}>{t(`horseStatusBadge.${horse.healthStatus}`)}</Badge>
+            {horse.locked && <Badge tone="bad" className="ml-1.5">{t('healthTab.trainingLocked')}</Badge>}
           </div>
         </div>
         <div className="border-l border-line pl-6">
-          <span className="cap">Tổng số lần khám</span>
+          <span className="cap">{t('healthTab.examCount')}</span>
           <div className="font-bold text-xl mt-0.5">{loading ? '...' : records.length}</div>
         </div>
         {records.length > 0 && (
           <div className="border-l border-line pl-6">
-            <span className="cap">Lần khám gần nhất</span>
+            <span className="cap">{t('healthTab.lastExam')}</span>
             <div className="font-semibold mt-0.5">{formatDate(records[0].examDate)}</div>
           </div>
         )}
       </Card>
 
       {loading ? (
-        <p className="cap">Đang tải hồ sơ...</p>
+        <p className="cap">{t('healthTab.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
         <Card className="px-5 py-10 text-center">
           <p className="cap">{t('health.empty')}</p>
-          {isVet && <Btn v="p" className="mt-3" onClick={() => setModalOpen(true)}>Tạo hồ sơ khám đầu tiên</Btn>}
+          {isVet && <Btn v="p" className="mt-3" onClick={() => setModalOpen(true)}>{t('healthTab.firstRecord')}</Btn>}
         </Card>
       ) : (
         <ul className="list-none p-0 flex flex-col gap-3">
@@ -161,7 +161,7 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
         <div className="flex justify-between items-center mb-2.5">
           <div>
             <strong className="text-[15px]">{formatDate(record.examDate)}</strong>
-            <span className="cap ml-2.5">Bác sĩ: {record.vet.name}</span>
+            <span className="cap ml-2.5">{t('healthTab.vet', { name: record.vet.name })}</span>
           </div>
           <div className="flex gap-1.5">
             {record.attachmentPath && <Btn sm onClick={() => void download()}>{t('health.openAttachment')}</Btn>}

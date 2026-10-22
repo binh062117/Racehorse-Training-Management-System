@@ -4,14 +4,11 @@ import { api, apiErrorMessage } from '../../lib/api';
 import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
-import { formatDate, fromDateTimeLocal } from '../../lib/format';
+import { formatDate, formatTime, fromDateTimeLocal } from '../../lib/format';
+import { translateTrainingGoal } from '../../lib/trainingGoal';
 import {
   Alert, Badge, Btn, Card, Field, Icon, Modal, ModalBody, ModalFoot, ModalHead, Textarea, type Tone,
 } from '../../ds/ui';
-
-const sessionTime = new Intl.DateTimeFormat('vi-VN', {
-  timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit',
-});
 
 const STATUS_TONE: Record<TrainingSession['status'], Tone> = { PLANNED: 'info', DONE: 'ok', CANCELLED: 'neu' };
 
@@ -156,7 +153,9 @@ function SessionsContent({ horseId, isLocked, lockReason }: Props) {
                     key={s.id}
                     session={s}
                     hasPlan={!!s.planId}
-                    planLabel={s.planId ? plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable') : t('session.noPlan')}
+                    planLabel={s.planId
+                      ? translateTrainingGoal(plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable'), t)
+                      : t('session.noPlan')}
                     canUpdate={canUpdate}
                     isTrainer={role === 'TRAINER'}
                     onChanged={load}
@@ -242,7 +241,7 @@ function CreateSessionForm({
               value={planId} onChange={(e) => setPlanId(e.target.value)} disabled={busy || plansLoading || !!plansErr}
             >
               <option value="">{t('session.noPlan')}</option>
-              {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.goal} ({formatDate(plan.startDate)})</option>)}
+              {plans.map((plan) => <option key={plan.id} value={plan.id}>{translateTrainingGoal(plan.goal, t)} ({formatDate(plan.startDate)})</option>)}
             </select>
           </Field>
           {plansLoading && <p className="cap" role="status">{t('session.loadingPlans')}</p>}
@@ -318,7 +317,7 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
     <li>
       <Card className="p-4">
         <div className="flex justify-between items-start gap-3 flex-wrap">
-          <time className="disp text-2xl" dateTime={session.scheduledAt}>{sessionTime.format(new Date(session.scheduledAt))}</time>
+          <time className="disp text-2xl" dateTime={session.scheduledAt}>{formatTime(session.scheduledAt)}</time>
           <div className="flex items-center gap-2">
             <strong>{session.type}</strong>
             <Badge tone={STATUS_TONE[session.status]}>{t(`session.displayStatus.${session.status}`)}</Badge>
@@ -344,8 +343,8 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
                 value={status} onChange={(e) => setStatus(e.target.value as 'DONE' | 'CANCELLED' | '')}
               >
                 <option value="">{t('session.keepPlanned')}</option>
-                <option value="DONE">DONE</option>
-                <option value="CANCELLED">CANCELLED</option>
+                <option value="DONE">{t('session.displayStatus.DONE')}</option>
+                <option value="CANCELLED">{t('session.displayStatus.CANCELLED')}</option>
               </select>
             </Field>
             <Field label={t('session.resultMetric')}>

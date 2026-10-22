@@ -75,7 +75,7 @@ export function IncidentsPage() {
   const [filter, setFilter] = useState<IncidentFilter>('ALL');
   const [search, setSearch] = useState('');
 
-  usePageChrome({ crumbs: ['Sức khỏe', t('incidents.title')], search: t('incidents.search'), onSearch: setSearch });
+  usePageChrome({ crumbs: [t('incidents.eyebrow'), t('incidents.title')], search: t('incidents.search'), onSearch: setSearch });
 
   const { data, loading, error, reload } = useCachedResource(
     `health-incidents-${user?.id ?? 'anonymous'}`,
@@ -109,7 +109,7 @@ export function IncidentsPage() {
     <>
       <section className="hero px-8 py-7 flex flex-col gap-6">
         <div>
-          <div className="lbl">Sức khỏe</div>
+          <div className="lbl">{t('incidents.eyebrow')}</div>
           <h1 className="disp text-[56px] mt-2">{t('incidents.title')}</h1>
           <p className="text-hero-muted mt-2 max-w-[560px]">{isGroom ? t('incidents.groomDescription') : t('incidents.description')}</p>
         </div>

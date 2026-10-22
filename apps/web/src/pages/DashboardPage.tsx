@@ -13,36 +13,36 @@ import {
 
 interface QuickAction {
   icon: string;
-  title: string;
-  desc: string;
+  titleKey: string;
+  descKey: string;
   to: string;
 }
 
 const QUICK_ACTIONS: Partial<Record<Role, QuickAction[]>> = {
   TRAINER: [
-    { icon: 'plans', to: '/plans?action=create', title: 'Lập giáo án huấn luyện chi tiết', desc: 'Cự ly, khối lượng, mặt sân theo từng giai đoạn' },
-    { icon: 'heart', to: '/plans', title: 'Theo dõi tiến độ & Giáo án', desc: 'Quản lý toàn bộ danh sách giáo án của các chiến mã' },
-    { icon: 'flag', to: '/races', title: 'Lựa chọn chiến mã tham gia giải đua', desc: 'Đăng ký danh sách thi đấu phù hợp' },
+    { icon: 'plans', to: '/plans?action=create', titleKey: 'trainerPlan', descKey: 'trainerPlanDescription' },
+    { icon: 'heart', to: '/plans', titleKey: 'trainerProgress', descKey: 'trainerProgressDescription' },
+    { icon: 'flag', to: '/races', titleKey: 'trainerRaces', descKey: 'trainerRacesDescription' },
   ],
   VET: [
-    { icon: 'heart', to: '/health-records', title: 'Ghi nhận hồ sơ khám bệnh', desc: 'Chẩn đoán chi tiết và cập nhật phác đồ điều trị' },
-    { icon: 'lock', to: '/horses', title: 'Đặt lệnh Khóa huấn luyện khẩn cấp', desc: 'Ngăn chặn xếp lịch bài tập nặng với ngựa chấn thương' },
-    { icon: 'check', to: '/vaccinations', title: 'Lịch tiêm phòng & Tẩy giun định kỳ', desc: 'Theo dõi nhắc lịch tiêm chủng tự động' },
+    { icon: 'heart', to: '/health-records', titleKey: 'vetRecords', descKey: 'vetRecordsDescription' },
+    { icon: 'lock', to: '/horses', titleKey: 'vetLock', descKey: 'vetLockDescription' },
+    { icon: 'check', to: '/vaccinations', titleKey: 'vetSchedule', descKey: 'vetScheduleDescription' },
   ],
   GROOM: [
-    { icon: 'check', to: '/horses', title: 'Ghi nhận khẩu phần ăn hàng ngày', desc: 'Loại thức ăn, khối lượng cho từng ngựa' },
-    { icon: 'alert', to: '/incidents', title: 'Gửi báo cáo sự cố đột xuất tại chuồng', desc: 'Bỏ ăn, dấu hiệu sốt, móng xước kèm ảnh thực tế' },
-    { icon: 'horse', to: '/horses', title: 'Theo dõi lịch tiêm phòng', desc: 'Sắp xếp công việc theo lịch sắp đến hạn' },
+    { icon: 'check', to: '/horses', titleKey: 'groomFeeding', descKey: 'groomFeedingDescription' },
+    { icon: 'alert', to: '/incidents', titleKey: 'groomIncident', descKey: 'groomIncidentDescription' },
+    { icon: 'horse', to: '/horses', titleKey: 'groomVaccinations', descKey: 'groomVaccinationsDescription' },
   ],
   OWNER: [
-    { icon: 'horse', to: '/my-horses', title: 'Xem dòng dõi (Pedigree) & Lý lịch', desc: 'Hồ sơ 3 đời và lịch sử thành tích thi đấu' },
-    { icon: 'heart', to: '/my-horses', title: 'Theo dõi sức khỏe & Thể trạng', desc: 'Trạng thái sẵn sàng thi đấu của ngựa sở hữu' },
-    { icon: 'plans', to: '/plans', title: 'Lịch tập luyện', desc: 'Xem giáo án huấn luyện từ Huấn luyện viên' },
+    { icon: 'horse', to: '/my-horses', titleKey: 'ownerPedigree', descKey: 'ownerPedigreeDescription' },
+    { icon: 'heart', to: '/my-horses', titleKey: 'ownerHealth', descKey: 'ownerHealthDescription' },
+    { icon: 'plans', to: '/plans', titleKey: 'ownerPlans', descKey: 'ownerPlansDescription' },
   ],
   MANAGER: [
-    { icon: 'plus', to: '/horses', title: 'Thêm mới hồ sơ ngựa đua', desc: 'Quản lý danh mục tổng các cá thể ngựa' },
-    { icon: 'user', to: '/admin/users', title: 'Phân quyền truy cập hệ thống (RBAC)', desc: 'Duyệt tài khoản và gán vai trò vận hành' },
-    { icon: 'flag', to: '/races', title: 'Quản lý giải đua', desc: 'Tạo giải, đăng ký ngựa, cập nhật kết quả' },
+    { icon: 'plus', to: '/horses', titleKey: 'managerHorse', descKey: 'managerHorseDescription' },
+    { icon: 'user', to: '/admin/users', titleKey: 'managerAccess', descKey: 'managerAccessDescription' },
+    { icon: 'flag', to: '/races', titleKey: 'managerRaces', descKey: 'managerRacesDescription' },
   ],
 };
 
@@ -86,25 +86,25 @@ export function DashboardPage() {
   const quarantinedHorses = horses.filter((h) => h.healthStatus === 'QUARANTINED');
 
   const subtitle: Partial<Record<Role, string>> = {
-    TRAINER: 'Theo dõi tiến độ huấn luyện, cảnh báo ngưỡng thể lực và lập giáo án cho toàn bộ chiến mã.',
-    VET: 'Kiểm soát sơ đồ sức khỏe đàn ngựa, hồ sơ bệnh án và lệnh khóa huấn luyện an toàn.',
-    GROOM: 'Quản lý khẩu phần dinh dưỡng hàng ngày và báo cáo sự cố chuồng.',
-    OWNER: 'Tra cứu hồ sơ lý lịch, dòng dõi gia phả và tình trạng sẵn sàng thi đấu của ngựa sở hữu.',
-    MANAGER: 'Giám sát vận hành câu lạc bộ, quản lý danh mục và phân quyền kiểm soát truy cập (RBAC).',
+    TRAINER: t('dashboard.roleSubtitle.TRAINER'),
+    VET: t('dashboard.roleSubtitle.VET'),
+    GROOM: t('dashboard.roleSubtitle.GROOM'),
+    OWNER: t('dashboard.roleSubtitle.OWNER'),
+    MANAGER: t('dashboard.roleSubtitle.MANAGER'),
   };
 
   const heroStats = role === 'VET'
     ? [
-      { label: 'Đủ điều kiện (FIT)', value: loading ? '…' : fitHorses.length, color: '#9fd9b1' },
-      { label: 'Cần theo dõi', value: loading ? '…' : monitoringHorses.length, color: monitoringHorses.length ? '#f3d29a' : undefined },
-      { label: 'Đang chấn thương', value: loading ? '…' : injuredHorses.length, color: injuredHorses.length ? '#f3b4b4' : undefined },
-      { label: 'Cách ly kiểm dịch', value: loading ? '…' : quarantinedHorses.length, color: quarantinedHorses.length ? '#f3b4b4' : undefined },
+      { label: t('horseStatusBadge.FIT'), value: loading ? '…' : fitHorses.length, color: '#9fd9b1' },
+      { label: t('horseStatusBadge.MONITORING'), value: loading ? '…' : monitoringHorses.length, color: monitoringHorses.length ? '#f3d29a' : undefined },
+      { label: t('dashboard.injured'), value: loading ? '…' : injuredHorses.length, color: injuredHorses.length ? '#f3b4b4' : undefined },
+      { label: t('dashboard.quarantined'), value: loading ? '…' : quarantinedHorses.length, color: quarantinedHorses.length ? '#f3b4b4' : undefined },
     ]
     : [
-      { label: role === 'OWNER' ? 'Ngựa thuộc sở hữu' : 'Tổng số ngựa', value: loading ? '…' : totalHorses },
-      { label: 'Đang bị khóa huấn luyện', value: loading ? '…' : lockedHorses.length, color: lockedHorses.length ? '#f3b4b4' : '#9fd9b1' },
-      { label: role === 'TRAINER' ? 'Sẵn sàng tập luyện' : 'Hoạt động bình thường', value: loading ? '…' : activeHorses.length, color: '#9fd9b1' },
-      ...(role === 'MANAGER' ? [{ label: 'Tài khoản chờ duyệt (RBAC)', value: loading ? '…' : pendingUsersCount, color: pendingUsersCount ? '#f3d29a' : undefined }] : []),
+      { label: role === 'OWNER' ? t('dashboard.ownedHorses') : t('dashboard.totalHorses'), value: loading ? '…' : totalHorses },
+      { label: t('dashboard.trainingLocked'), value: loading ? '…' : lockedHorses.length, color: lockedHorses.length ? '#f3b4b4' : '#9fd9b1' },
+      { label: role === 'TRAINER' ? t('dashboard.readyToTrain') : t('dashboard.normalOperation'), value: loading ? '…' : activeHorses.length, color: '#9fd9b1' },
+      ...(role === 'MANAGER' ? [{ label: t('dashboard.pendingRoleAccounts'), value: loading ? '…' : pendingUsersCount, color: pendingUsersCount ? '#f3d29a' : undefined }] : []),
     ];
 
   return (
@@ -112,12 +112,12 @@ export function DashboardPage() {
       <section className="hero px-8 py-7 flex flex-col gap-6">
         <div className="flex flex-wrap gap-6 items-end justify-between">
           <div>
-            <div className="lbl">Racehorse Club</div>
+            <div className="lbl">{t('nav.brandName')}</div>
             <h1 className="disp text-[56px] mt-2">{t('dashboard.welcome')} {user?.name}</h1>
             <p className="text-hero-muted mt-2 max-w-[560px]">{(role && subtitle[role]) || t('dashboard.subtitle')}</p>
           </div>
           {role === 'MANAGER' && <Btn v="light" to="/horses"><Icon name="plus" />{t('dashboard.newHorse')}</Btn>}
-          {role === 'TRAINER' && <Btn v="light" to="/plans?action=create"><Icon name="plus" />Lập giáo án mới</Btn>}
+          {role === 'TRAINER' && <Btn v="light" to="/plans?action=create"><Icon name="plus" />{t('dashboard.newPlan')}</Btn>}
         </div>
         <HeroStats items={heroStats} />
       </section>
@@ -126,12 +126,12 @@ export function DashboardPage() {
         <div className="flex-[1.6_1_480px] min-w-0">
           <Card>
             <CardHeader title={
-              role === 'OWNER' ? 'Danh sách ngựa thuộc sở hữu'
-                : role === 'VET' ? 'Sơ đồ trạng thái sức khỏe đàn ngựa'
-                  : role === 'GROOM' ? 'Danh sách ngựa tại khu vực phụ trách'
-                    : 'Danh sách ngựa đua'
+              role === 'OWNER' ? t('dashboard.horseListOwned')
+                : role === 'VET' ? t('dashboard.horseListHealth')
+                  : role === 'GROOM' ? t('dashboard.horseListAssigned')
+                    : t('dashboard.horseList')
             }>
-              <Link to="/horses" className="font-semibold text-info text-[12.5px] no-underline flex items-center gap-1">Xem tất cả <Icon name="chevRight" className="w-3.5 h-3.5" /></Link>
+              <Link to="/horses" className="font-semibold text-info text-[12.5px] no-underline flex items-center gap-1">{t('dashboard.viewAll')} <Icon name="chevRight" className="w-3.5 h-3.5" /></Link>
             </CardHeader>
             {horses.length === 0 ? (
               <div className="py-10 text-center"><p className="cap">{t('horse.empty')}</p></div>
@@ -150,13 +150,13 @@ export function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">{horse.name}</span>
-                          {horse.locked && <Badge tone="bad"><Icon name="lock" className="w-3 h-3" />Khóa tập</Badge>}
+                          {horse.locked && <Badge tone="bad"><Icon name="lock" className="w-3 h-3" />{t('horseStatusBadge.locked')}</Badge>}
                         </div>
-                        <div className="cap truncate">{horse.breed || 'Không rõ giống'}{horse.gender ? ` · ${horse.gender === 'MALE' ? 'Đực' : 'Cái'}` : ''} · Chủ sở hữu: {horse.owner?.name || 'N/A'}</div>
+                        <div className="cap truncate">{horse.breed || t('horsePage.breedUnknown')}{horse.gender ? ` · ${t(`horse.gender${horse.gender === 'MALE' ? 'Male' : 'Female'}`)}` : ''} · {t('horseDetail.ownerLabel')}: {horse.owner?.name || '—'}</div>
                       </div>
                       <div className="flex items-center gap-2 flex-none">
-                        <Badge tone={careerTone[horse.status]}>{horse.status}</Badge>
-                        <Badge tone={healthTone[horse.healthStatus]}>{horse.healthStatus}</Badge>
+                        <Badge tone={careerTone[horse.status]}>{t(`horseStatusBadge.${horse.status}`)}</Badge>
+                        <Badge tone={healthTone[horse.healthStatus]}>{t(`horseStatusBadge.${horse.healthStatus}`)}</Badge>
                       </div>
                     </li>
                   );
@@ -168,41 +168,41 @@ export function DashboardPage() {
 
         <div className="flex-[1_1_320px] min-w-0 flex flex-col gap-5">
           <Card>
-            <CardHeader title={`Các thao tác chính (${role ? t(`role.${role}`) : 'Người dùng'})`} />
+            <CardHeader title={`${t('dashboard.quickActions')} (${role ? t(`role.${role}`) : t('dashboard.user')})`} />
             <div className="p-3 flex flex-col gap-1">
               {role && QUICK_ACTIONS[role]?.map((action) => (
-                <Link key={action.title} to={action.to} className="flex gap-3 items-start p-2.5 rounded-btn no-underline text-ink hover:bg-subtle">
+                <Link key={action.titleKey} to={action.to} className="flex gap-3 items-start p-2.5 rounded-btn no-underline text-ink hover:bg-subtle">
                   <span className="w-9 h-9 rounded-btn bg-info-bg text-info flex items-center justify-center flex-none"><Icon name={action.icon} /></span>
                   <div>
-                    <div className="font-semibold text-[13px]">{action.title}</div>
-                    <div className="cap mt-0.5">{action.desc}</div>
+                    <div className="font-semibold text-[13px]">{t(`dashboard.quickAction.${action.titleKey}`)}</div>
+                    <div className="cap mt-0.5">{t(`dashboard.quickAction.${action.descKey}`)}</div>
                   </div>
                 </Link>
               ))}
-              {!role && <p className="cap p-2.5">Tài khoản đang chờ Club Manager phê duyệt vai trò để kích hoạt chức năng nghiệp vụ.</p>}
+              {!role && <p className="cap p-2.5">{t('dashboard.awaitingRole')}</p>}
             </div>
           </Card>
 
           <Card>
-            <CardHeader title={role === 'VET' ? 'Cảnh báo dịch tễ & Chấn thương' : role === 'TRAINER' ? 'Cảnh báo ngưỡng thể lực & Khóa tập' : 'Cảnh báo & Tình trạng vận hành'} />
+            <CardHeader title={role === 'VET' ? t('dashboard.vetAlerts') : role === 'TRAINER' ? t('dashboard.trainerAlerts') : t('dashboard.operationAlerts')} />
             <div className="p-5">
               {lockedHorses.length > 0 ? (
                 <div className="flex flex-col gap-2">
                   {lockedHorses.map((h) => (
                     <div key={h.id} className="rounded-btn border border-bad-bd bg-bad-bg px-3 py-2.5 text-[12.5px]">
-                      <div className="flex items-center gap-1.5"><Icon name="lock" className="w-4 h-4 text-bad" /><strong>{h.name}</strong> đang bị khóa huấn luyện khẩn cấp.</div>
-                      {h.lockReason && <div className="text-bad mt-0.5 pl-[22px]">Lý do: {h.lockReason}</div>}
+                      <div className="flex items-center gap-1.5"><Icon name="lock" className="w-4 h-4 text-bad" /><strong>{h.name}</strong> {t('dashboard.lockedAlert')}</div>
+                      {h.lockReason && <div className="text-bad mt-0.5 pl-[22px]">{t('dashboard.reason')}: {h.lockReason}</div>}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-[13px] text-ok flex gap-2 items-center"><Icon name="check" />Tất cả các cá thể ngựa đều đang trong điều kiện an toàn và sẵn sàng hoạt động.</div>
+                <div className="text-[13px] text-ok flex gap-2 items-center"><Icon name="check" />{t('dashboard.allSafe')}</div>
               )}
             </div>
           </Card>
 
           <Card>
-            <CardHeader title="Thông báo gần đây"><Link to="/notifications" className="font-semibold text-info text-[12.5px] no-underline">{t('dashboard.viewAll')}</Link></CardHeader>
+            <CardHeader title={t('dashboard.recentNotifs')}><Link to="/notifications" className="font-semibold text-info text-[12.5px] no-underline">{t('dashboard.viewAll')}</Link></CardHeader>
             {notifications.length === 0 ? (
               <div className="py-6 text-center"><p className="cap">{t('dashboard.noNotifs')}</p></div>
             ) : (

@@ -58,7 +58,7 @@ export function RacesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingRace, setEditingRace] = useState<Race | null>(null);
 
-  usePageChrome({ crumbs: ['Giải đua', t('races.title')], search: t('races.search'), onSearch: setSearch });
+  usePageChrome({ crumbs: [t('nav.races'), t('races.title')], search: t('races.search'), onSearch: setSearch });
 
   const { data: raceData, loading, error, reload: loadRaces } = useCachedResource(
     `race-management-${user?.id ?? 'anonymous'}-${canManage}`,
@@ -113,7 +113,7 @@ export function RacesPage() {
       <section className="hero px-8 py-7 flex flex-col gap-6">
         <div className="flex flex-wrap gap-6 items-end justify-between">
           <div>
-            <div className="lbl">Mùa giải 2026 · Racehorse Club</div>
+            <div className="lbl">{t('common.season', { year: 2026 })} · {t('nav.brandName')}</div>
             <h1 className="disp text-[56px] mt-2">{t('races.title')}</h1>
             <p className="text-hero-muted mt-2 max-w-[560px]">{t('races.description')}</p>
           </div>

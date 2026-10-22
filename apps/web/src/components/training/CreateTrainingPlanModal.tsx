@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { Horse, Paginated, TrainingPlan } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -12,14 +13,10 @@ interface Props {
   defaultHorseName?: string;
 }
 
-const GOAL_TEMPLATES = [
-  'Xây dựng nền tảng thể lực, cự ly 1400m sân cát (Khối lượng vừa)',
-  'Tăng cường sức bền cự ly 1600m mặt cỏ tự nhiên (Khối lượng cao)',
-  'Rèn luyện bứt tốc nước rút cự ly 1200m chuẩn bị giải đấu',
-  'Bài tập nhẹ phục hồi thể trạng & theo dõi gân cơ',
-];
+const GOAL_TEMPLATE_KEYS = [0, 1, 2, 3] as const;
 
 export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHorseId, defaultHorseName }: Props) {
+  const { t } = useTranslation();
   const [horses, setHorses] = useState<Horse[]>([]);
   const [horseId, setHorseId] = useState(defaultHorseId ?? '');
   const [goal, setGoal] = useState('');
@@ -65,19 +62,19 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
 
     const targetHorseId = defaultHorseId ?? horseId;
     if (!targetHorseId) {
-      setErr(new Error('Vui lòng chọn chiến mã để lập giáo án.'));
+      setErr(new Error(t('trainingPlanModal.horseRequired')));
       return;
     }
     if (!goal.trim()) {
-      setErr(new Error('Vui lòng nhập mục tiêu huấn luyện.'));
+      setErr(new Error(t('trainingPlanModal.goalRequired')));
       return;
     }
     if (!startDate) {
-      setErr(new Error('Vui lòng chọn ngày bắt đầu.'));
+      setErr(new Error(t('trainingPlanModal.dateRequired')));
       return;
     }
     if (endDate && endDate < startDate) {
-      setErr(new Error('Ngày kết thúc không được trước ngày bắt đầu.'));
+      setErr(new Error(t('trainingPlanModal.endBeforeStart')));
       return;
     }
 
@@ -101,32 +98,32 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} width={560} labelledBy="create-plan-title">
-      <ModalHead icon="plans" title="Lập Giáo án Huấn luyện" id="create-plan-title" onClose={() => !busy && onClose()} />
+      <ModalHead icon="plans" title={t('trainingPlanModal.title')} id="create-plan-title" onClose={() => !busy && onClose()} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
           <ErrorText err={err} />
 
           {defaultHorseId ? (
-            <Field label="Chiến mã áp dụng">
+            <Field label={t('trainingPlanModal.horse')}>
               <Input value={defaultHorseName ?? defaultHorseId} disabled ro />
             </Field>
           ) : (
-            <Field label="Chọn chiến mã" hint="Ngựa đã giải nghệ (RETIRED) hoặc đang cách ly (QUARANTINED) không xuất hiện trong danh sách.">
+            <Field label={t('trainingPlanModal.chooseHorse')} hint={t('trainingPlanModal.eligibilityHint')}>
               {loadingHorses ? (
-                <p className="cap">Đang tải danh sách ngựa…</p>
+                <p className="cap">{t('trainingPlanModal.loadingHorses')}</p>
               ) : (
                 <select className={selectCls} value={horseId} onChange={(e) => setHorseId(e.target.value)} required>
-                  {horses.length === 0 && <option value="">— Không có ngựa đủ điều kiện —</option>}
+                  {horses.length === 0 && <option value="">{t('trainingPlanModal.noEligibleHorse')}</option>}
                   {horses.map((h) => {
                     const tags: string[] = [];
-                    if (h.status === 'RESTING') tags.push('Nghỉ dưỡng');
-                    if (h.healthStatus === 'INJURED') tags.push('Chấn thương');
-                    if (h.healthStatus === 'MONITORING') tags.push('Theo dõi');
-                    if (h.locked) tags.push('KHÓA TẬP');
+                    if (h.status === 'RESTING') tags.push(t('horseStatusBadge.RESTING'));
+                    if (h.healthStatus === 'INJURED') tags.push(t('horseStatusBadge.INJURED'));
+                    if (h.healthStatus === 'MONITORING') tags.push(t('horseStatusBadge.MONITORING'));
+                    if (h.locked) tags.push(t('horseStatusBadge.locked'));
                     const suffix = tags.length > 0 ? ` [${tags.join(' · ')}]` : '';
                     return (
                       <option key={h.id} value={h.id}>
-                        {h.name} {h.breed ? `(${h.breed})` : ''} — Chủ: {h.owner.name}{suffix}
+                        {h.name} {h.breed ? `(${h.breed})` : ''} — {t('trainingPlanModal.owner')} {h.owner.name}{suffix}
                       </option>
                     );
                   })}
@@ -136,52 +133,50 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
           )}
 
           {(selectedHorse?.locked || selectedHorse?.healthStatus === 'INJURED') && (
-            <Alert tone="warn" icon="alert" title="Lưu ý">
+            <Alert tone="warn" icon="alert" title={t('trainingPlanModal.warning')}>
               {selectedHorse.locked && (
-                <>
-                  Ngựa này đang bị bác sĩ thú y khóa huấn luyện
-                  {selectedHorse.lockReason ? ` (${selectedHorse.lockReason})` : ''}.
-                  Bạn vẫn có thể soạn trước kế hoạch, nhưng không thể lên lịch buổi tập cho đến khi được mở khóa.
-                </>
+                t('trainingPlanModal.lockedWarning', {
+                  reason: selectedHorse.lockReason ? ` (${selectedHorse.lockReason})` : '',
+                })
               )}
               {!selectedHorse.locked && selectedHorse.healthStatus === 'INJURED' && (
-                <>
-                  Ngựa đang trong trạng thái chấn thương (INJURED).
-                  Giáo án sẽ được lưu nhưng nên phối hợp với bác sĩ thú y trước khi lên lịch buổi tập thực tế.
-                </>
+                t('trainingPlanModal.injuredWarning')
               )}
             </Alert>
           )}
 
-          <Field label="Mục tiêu huấn luyện" hint="Cự ly, khối lượng, mặt sân hoặc giai đoạn chuẩn bị giải đấu (tối đa 500 ký tự)">
+          <Field label={t('trainingPlanModal.goal')} hint={t('trainingPlanModal.goalHint')}>
             <Textarea
               rows={3} value={goal} onChange={(e) => setGoal(e.target.value)}
-              placeholder="Ví dụ: Rèn luyện sức bền cự ly 1600m mặt sân cỏ, tăng cường bứt tốc giai đoạn cuối chuẩn bị Spring Derby..."
+              placeholder={t('trainingPlanModal.goalPlaceholder')}
               required maxLength={500}
             />
             <div className="mt-2">
-              <div className="cap mb-1.5">Gợi ý giáo án chuẩn (bấm để áp dụng nhanh):</div>
+              <div className="cap mb-1.5">{t('trainingPlanModal.templatesHint')}</div>
               <div className="flex flex-wrap gap-1.5">
-                {GOAL_TEMPLATES.map((tpl) => (
-                  <Chip key={tpl} onClick={() => setGoal(tpl)} className="h-auto py-1 text-[11.5px]">+ {tpl}</Chip>
-                ))}
+                {GOAL_TEMPLATE_KEYS.map((index) => {
+                  const template = t(`trainingPlanModal.goals.${index}`);
+                  return (
+                    <Chip key={index} onClick={() => setGoal(template)} className="h-auto py-1 text-[11.5px]">+ {template}</Chip>
+                  );
+                })}
               </div>
             </div>
           </Field>
 
           <div className="grid grid-cols-2 gap-3.5">
-            <Field label="Ngày bắt đầu">
+            <Field label={t('trainingPlanModal.startDate')}>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
             </Field>
-            <Field label="Ngày kết thúc (tùy chọn)">
+            <Field label={t('trainingPlanModal.endDate')}>
               <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
             </Field>
           </div>
         </ModalBody>
 
         <ModalFoot>
-          <Btn onClick={onClose} disabled={busy}>Hủy</Btn>
-          <Btn v="p" type="submit" disabled={busy || loadingHorses}>{busy ? 'Đang tạo…' : 'Tạo giáo án'}</Btn>
+          <Btn onClick={onClose} disabled={busy}>{t('common.cancel')}</Btn>
+          <Btn v="p" type="submit" disabled={busy || loadingHorses}>{busy ? t('trainingPlanModal.creating') : t('trainingPlanModal.create')}</Btn>
         </ModalFoot>
       </form>
     </Modal>

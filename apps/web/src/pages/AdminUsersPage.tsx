@@ -18,7 +18,7 @@ export function AdminUsersPage() {
   const [err, setErr] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
-  usePageChrome({ crumbs: ['Quản trị', t('nav.users')] });
+  usePageChrome({ crumbs: [t('nav.admin'), t('nav.users')] });
 
   const load = useCallback(async () => {
     try {
@@ -44,14 +44,14 @@ export function AdminUsersPage() {
     <>
       <section className="hero px-8 py-7 flex flex-col gap-6">
         <div>
-          <div className="lbl">Quản trị hệ thống</div>
+          <div className="lbl">{t('nav.admin')}</div>
           <h1 className="disp text-[56px] mt-2">{t('nav.users')}</h1>
         </div>
         <HeroStats items={[
-          { label: 'Tổng tài khoản', value: users.length },
-          { label: 'Chờ duyệt', value: pending, color: pending > 0 ? '#f3d29a' : undefined },
-          { label: 'Đang hoạt động', value: active, color: '#9fd9b1' },
-          { label: 'Đã khóa', value: disabled },
+          { label: t('user.totalAccounts'), value: users.length },
+          { label: t('user.pending'), value: pending, color: pending > 0 ? '#f3d29a' : undefined },
+          { label: t('user.active'), value: active, color: '#9fd9b1' },
+          { label: t('user.disabled'), value: disabled },
         ]} />
       </section>
 

@@ -24,7 +24,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['"Barlow Condensed"', '"Arial Narrow"', 'ui-sans-serif', 'sans-serif'],
+        display: ['Oswald', '"Barlow Condensed"', '"Arial Narrow"', 'ui-sans-serif', 'sans-serif'],
       },
       borderRadius: { card: '10px', btn: '8px', badge: '4px' },
       boxShadow: {

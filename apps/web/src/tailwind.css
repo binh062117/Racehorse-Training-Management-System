@@ -9,7 +9,7 @@
 
 @layer components {
   /* Big condensed display type — race-board feel */
-  .disp { @apply font-display font-bold uppercase; line-height: .95; }
+  .disp { @apply font-display font-bold uppercase; line-height: 1.05; }
   .num { font-variant-numeric: tabular-nums; }
   .lbl { @apply text-[11px] leading-4 font-semibold uppercase tracking-[.04em] text-muted; }
   .cap { @apply text-[11.5px] leading-4 text-muted; }

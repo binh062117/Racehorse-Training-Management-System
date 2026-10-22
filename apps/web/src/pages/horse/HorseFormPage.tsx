@@ -87,7 +87,7 @@ export function HorseFormPage() {
     };
   }, [id]);
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')] });
+  usePageChrome({ crumbs: [[t('nav.horses'), '/horses'], id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')] });
 
   const setValue = <K extends keyof HorseFormState>(key: K, value: HorseFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));

@@ -45,7 +45,7 @@ export function HorseRaceHistoryPage() {
     return () => { active = false; };
   }, [id]);
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], horse?.name ?? '…', t('horseFlow.performanceTitle')] });
+  usePageChrome({ crumbs: [[t('nav.horses'), '/horses'], horse?.name ?? '…', t('horseFlow.performanceTitle')] });
 
   // Chỉ hiện các race còn diễn ra trong tương lai và chưa được ngựa này đăng ký.
   const enteredRaceIds = new Set(entries.map((entry) => entry.race.id));

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { HealthRecord, HealthStatus } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -12,14 +13,15 @@ interface Props {
   horseName: string;
 }
 
-const HEALTH_STATUS_OPTIONS: { value: HealthStatus; label: string; desc: string }[] = [
-  { value: 'FIT', label: 'Khỏe mạnh', desc: 'Ngựa đủ sức khỏe thi đấu và huấn luyện' },
-  { value: 'MONITORING', label: 'Cần theo dõi', desc: 'Phát hiện dấu hiệu bất thường, cần giám sát thêm' },
-  { value: 'INJURED', label: 'Chấn thương', desc: 'Ngựa bị chấn thương, hạn chế vận động' },
-  { value: 'QUARANTINED', label: 'Cách ly', desc: 'Ngựa bị bệnh truyền nhiễm, cách ly hoàn toàn' },
+const HEALTH_STATUS_OPTIONS: { value: HealthStatus }[] = [
+  { value: 'FIT' },
+  { value: 'MONITORING' },
+  { value: 'INJURED' },
+  { value: 'QUARANTINED' },
 ];
 
 export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, horseName }: Props) {
+  const { t } = useTranslation();
   const [examDate, setExamDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [diagnosis, setDiagnosis] = useState('');
   const [treatment, setTreatment] = useState('');
@@ -34,16 +36,16 @@ export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, h
     setErr(null);
 
     if (!examDate) {
-      setErr(new Error('Vui lòng chọn ngày khám.'));
+      setErr(new Error(t('healthRecordModal.dateRequired')));
       return;
     }
     if (!diagnosis.trim()) {
-      setErr(new Error('Vui lòng nhập chẩn đoán.'));
+      setErr(new Error(t('healthRecordModal.diagnosisRequired')));
       return;
     }
     // Validate examDate is not in the future
     if (new Date(examDate) > new Date()) {
-      setErr(new Error('Ngày khám không được ở tương lai.'));
+      setErr(new Error(t('healthRecordModal.dateInFuture')));
       return;
     }
 
@@ -79,61 +81,59 @@ export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, h
 
   return (
     <Modal open={isOpen} onClose={handleClose} width={580} labelledBy="create-health-record-title">
-      <ModalHead icon="steth" title="Ghi nhận Hồ sơ Khám bệnh" id="create-health-record-title" onClose={handleClose} />
+      <ModalHead icon="steth" title={t('healthRecordModal.title')} id="create-health-record-title" onClose={handleClose} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
           <ErrorText err={err} />
 
-          <Field label="Chiến mã khám">
+          <Field label={t('healthRecordModal.horse')}>
             <Input value={horseName} disabled ro />
           </Field>
 
-          <Field label="Ngày khám" hint="Không được chọn ngày tương lai">
+          <Field label={t('healthRecordModal.examDate')} hint={t('healthRecordModal.futureDateHint')}>
             <Input type="date" value={examDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setExamDate(e.target.value)} required />
           </Field>
 
-          <Field label="Chẩn đoán" hint="Mô tả chi tiết tình trạng sau khi khám (bắt buộc)">
+          <Field label={t('healthRecordModal.diagnosis')} hint={t('healthRecordModal.diagnosisHint')}>
             <Textarea
               value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} rows={3} maxLength={2000}
-              placeholder="VD: Ngựa có dấu hiệu viêm gân chân trước bên phải, sưng nhẹ vùng cổ chân..." required
+              placeholder={t('healthRecordModal.diagnosisPlaceholder')} required
             />
           </Field>
 
-          <Field label="Phương pháp điều trị" hint="Phác đồ điều trị, đơn thuốc, chỉ định nghỉ ngơi...">
+          <Field label={t('healthRecordModal.treatment')} hint={t('healthRecordModal.treatmentHint')}>
             <Textarea
               value={treatment} onChange={(e) => setTreatment(e.target.value)} rows={3} maxLength={2000}
-              placeholder="VD: Chườm đá 2 lần/ngày, nghỉ tập 7 ngày, thuốc chống viêm Phenylbutazone..."
+              placeholder={t('healthRecordModal.treatmentPlaceholder')}
             />
           </Field>
 
-          <Field label="Cập nhật trạng thái sức khỏe" hint="Thay đổi trạng thái y tế của ngựa sau khám. Bỏ trống nếu không đổi.">
+          <Field label={t('healthRecordModal.updateStatus')} hint={t('healthRecordModal.statusHint')}>
             <select
               className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
               value={healthStatus} onChange={(e) => setHealthStatus(e.target.value as HealthStatus | '')}
             >
-              <option value="">— Không thay đổi trạng thái —</option>
-              {HEALTH_STATUS_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              <option value="">{t('healthRecordModal.unchanged')}</option>
+              {HEALTH_STATUS_OPTIONS.map(({ value }) => <option key={value} value={value}>{t(`horseStatusBadge.${value}`)}</option>)}
             </select>
           </Field>
 
           {selectedStatus && (selectedStatus.value === 'INJURED' || selectedStatus.value === 'QUARANTINED') && (
-            <Alert tone="bad" icon="alert" title={selectedStatus.value === 'QUARANTINED' ? 'Ngựa sẽ bị cách ly' : 'Ngựa sẽ được đánh dấu chấn thương'}>
-              {selectedStatus.desc}.
-              {selectedStatus.value === 'QUARANTINED' && ' Ngựa sẽ không thể lập giáo án hoặc tham gia giải đua cho đến khi được giải phóng.'}
-              {selectedStatus.value === 'INJURED' && ' Nếu cần khóa huấn luyện, vui lòng sử dụng chức năng "Khóa tập" riêng biệt.'}
+            <Alert tone="bad" icon="alert" title={t(selectedStatus.value === 'QUARANTINED' ? 'healthRecordModal.quarantineTitle' : 'healthRecordModal.injuredTitle')}>
+              {selectedStatus.value === 'QUARANTINED' ? t('healthRecordModal.quarantineMessage') : t('healthRecordModal.injuredMessage')}
             </Alert>
           )}
 
           {selectedStatus && selectedStatus.value === 'FIT' && (
             <Alert tone="ok" icon="check">
-              Ngựa sẽ được chuyển về trạng thái <strong>Khỏe mạnh</strong> — đủ điều kiện huấn luyện và thi đấu.
+              {t('healthRecordModal.fitMessage')}
             </Alert>
           )}
         </ModalBody>
 
         <ModalFoot>
-          <Btn onClick={handleClose} disabled={busy}>Hủy</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{busy ? 'Đang lưu...' : 'Lưu hồ sơ khám'}</Btn>
+          <Btn onClick={handleClose} disabled={busy}>{t('common.cancel')}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{busy ? t('healthRecordModal.saving') : t('healthRecordModal.save')}</Btn>
         </ModalFoot>
       </form>
     </Modal>
