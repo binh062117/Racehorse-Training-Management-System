@@ -16,7 +16,7 @@ import { PhotoUploadModal } from '../components/horse/PhotoUploadModal';
 import { PedigreeTab } from './horse/PedigreeTab';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Alert, Btn, Card, CareerBadge, Cloth, HealthBadge, HorseAvatar, Icon, ImageLightbox, KpiStrip, LockBadge,
+  Alert, Btn, Card, CareerBadge, CountUp, Cloth, HealthBadge, HorseAvatar, Icon, ImageLightbox, KpiStrip, LockBadge,
   fitColor, lockReasonText,
 } from '../ds/ui';
 
@@ -152,7 +152,7 @@ export function HorseDetailPage() {
           <div className="min-w-0">
             <nav aria-label="Đường dẫn" className="flex items-center gap-1.5 text-[13px] text-muted mb-0.5">
               <Link to="/horses" className="no-underline text-muted hover:text-ink">Ngựa đua</Link>
-              <Icon name="chevRight" className="w-3.5 h-3.5" />
+              <Icon name="chevRight" className="w-3.5 h-3.5 nudge" />
             </nav>
             <div className="flex items-center gap-2.5">
               <h1 className="text-[24px] leading-8 font-semibold tracking-[-0.01em] truncate">{horse.name}</h1>
@@ -193,7 +193,7 @@ export function HorseDetailPage() {
       <KpiStrip items={[
         {
           label: 'Thể lực', lead: true,
-          value: horse.fitnessScore != null ? <span style={{ color: fitColor(horse.fitnessScore) }}>{horse.fitnessScore}</span> : <span className="text-muted text-[16px] font-normal">Chưa đánh giá</span>,
+          value: horse.fitnessScore != null ? <span style={{ color: fitColor(horse.fitnessScore) }}><CountUp value={horse.fitnessScore} /></span> : <span className="text-muted text-[16px] font-normal">Chưa đánh giá</span>,
           unit: horse.fitnessScore != null ? '/100' : undefined,
           sub: horse.fitnessScore == null ? undefined : horse.fitnessScore >= 80 ? 'Tốt (từ 80)' : horse.fitnessScore >= 60 ? 'Cần theo dõi (60–79)' : 'Thấp (dưới 60)',
         },

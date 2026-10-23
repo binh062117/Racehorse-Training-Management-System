@@ -56,32 +56,41 @@ function useUnreadCount(): number {
   return count;
 }
 
+/** Text that only shows while the desktop rail is open (hover / keyboard focus). */
+const RAIL_FADE = 'whitespace-nowrap transition-opacity duration-150 opacity-0 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100';
+
 const navRow = ({ isActive }: { isActive: boolean }) =>
   // Navy rail, the same ground as the login banner: the active row is a lighter navy
   // with a brand-blue marker, idle rows are soft white.
-  `relative flex items-center gap-2.5 h-9 px-2.5 rounded-btn no-underline text-[14px] transition-colors ${isActive ? 'bg-navy-track text-white font-medium before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-[#5b9bd5] [&_svg]:text-[#8fb8e0]' : 'text-[#c3cbd6] hover:bg-white/[.06] hover:text-white'}`;
+  `relative flex items-center gap-3 h-9 px-3 rounded-btn no-underline text-[14px] transition-colors [&_svg]:transition-transform [&_svg]:duration-300 hover:[&_svg]:scale-[1.18] ${isActive ? 'bg-navy-track text-white font-medium before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-[#5b9bd5] [&_svg]:text-[#8fb8e0]' : 'text-[#c3cbd6] hover:bg-white/[.06] hover:text-white'}`;
 
-function NavGroup({ title, items }: { title?: string; items: NavItem[] }) {
+function NavGroup({ title, items, rail }: { title?: string; items: NavItem[]; rail: boolean }) {
   if (items.length === 0) return null;
   return (
     <div className="flex flex-col gap-0.5">
-      {title && <div className="px-2.5 pt-5 pb-1.5 text-[12px] font-medium text-[#93a3b8]">{title}</div>}
+      {title && (
+        <div className="relative px-3 pt-5 pb-1.5 text-[12px] font-medium text-[#93a3b8]">
+          {/* Closed rail: a hairline marks the group instead of its name. */}
+          {rail && <span aria-hidden className="absolute left-3 right-3 top-[26px] h-px bg-white/10 transition-opacity duration-150 group-hover/rail:opacity-0 group-focus-within/rail:opacity-0" />}
+          <span className={rail ? RAIL_FADE : ''}>{title}</span>
+        </div>
+      )}
       {items.map(({ to, label, icon }) => (
-        <NavLink key={to} to={to} className={navRow}>
-          <Icon name={icon} className="w-4 h-4 text-[#93a3b8]" />{label}
+        <NavLink key={to} to={to} className={navRow} title={rail ? label : undefined}>
+          <Icon name={icon} className="w-4 h-4 flex-none text-[#93a3b8]" /><span className={rail ? RAIL_FADE : ''}>{label}</span>
         </NavLink>
       ))}
     </div>
   );
 }
 
-function Brand() {
+function Brand({ rail }: { rail: boolean }) {
   return (
-    <Link to="/dashboard" className="flex items-center gap-2.5 no-underline">
+    <Link to="/dashboard" className="flex items-center gap-3 no-underline">
       <span className="w-9 h-9 rounded-full bg-white flex-none overflow-hidden flex items-center justify-center">
         <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain scale-[1.3]" />
       </span>
-      <span className="min-w-0">
+      <span className={`min-w-0 ${rail ? RAIL_FADE : ''}`}>
         <span className="block text-[14px] font-semibold leading-[18px] text-white">Racehorse Club</span>
         <span className="block text-[12px] leading-4 text-[#b7c0cc]">Huấn luyện &amp; quản lý</span>
       </span>
@@ -96,7 +105,8 @@ function initials(name?: string) {
 }
 
 /** Navigation shared by the desktop sidebar and the phone sheet. */
-function NavContent({ unread }: { unread: number }) {
+function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }) {
+  const fade = rail ? RAIL_FADE : '';
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -111,35 +121,39 @@ function NavContent({ unread }: { unread: number }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-2.5 pb-4"><Brand /></div>
-      <nav aria-label="Điều hướng chính" className="flex flex-col flex-1 overflow-y-auto">
+      <div className="px-0.5 pb-4"><Brand rail={rail} /></div>
+      <nav aria-label="Điều hướng chính" className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex flex-col gap-0.5">
           {NAV.filter(visible).map(({ to, label, icon }) => (
-            <NavLink key={to} to={to} className={navRow}>
-              <Icon name={icon} className="w-4 h-4 text-[#93a3b8]" />{label}
+            <NavLink key={to} to={to} className={navRow} title={rail ? label : undefined}>
+              <Icon name={icon} className="w-4 h-4 flex-none text-[#93a3b8]" /><span className={fade}>{label}</span>
             </NavLink>
           ))}
-          <NavLink to="/notifications" className={navRow}>
-            <Icon name="bell" className="w-4 h-4 text-[#93a3b8]" />
-            <span className="flex-1">Thông báo</span>
-            {unread > 0 && <span className="num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center" aria-label={`${unread} chưa đọc`}>{unread}</span>}
+          <NavLink to="/notifications" className={navRow} title={rail ? 'Thông báo' : undefined}>
+            <span className="relative flex-none">
+              <Icon name="bell" className="w-4 h-4 text-[#93a3b8]" />
+              {/* Closed rail: the count shrinks to a dot on the bell. */}
+              {rail && unread > 0 && <span aria-hidden className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-bad ring-2 ring-navy transition-opacity duration-150 group-hover/rail:opacity-0 group-focus-within/rail:opacity-0" />}
+            </span>
+            <span className={`flex-1 ${fade}`}>Thông báo</span>
+            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={`${unread} chưa đọc`}>{unread}</span>}
           </NavLink>
         </div>
-        <NavGroup title="Sức khỏe" items={HEALTH_NAV.filter(visible)} />
-        <NavGroup title="Quản trị" items={ADMIN_NAV.filter(visible)} />
+        <NavGroup title="Sức khỏe" items={HEALTH_NAV.filter(visible)} rail={rail} />
+        <NavGroup title="Quản trị" items={ADMIN_NAV.filter(visible)} rail={rail} />
       </nav>
       <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2.5 px-1">
         <span className="w-8 h-8 rounded-full bg-[#1a4b8a] text-white flex-none inline-flex items-center justify-center text-[12px] font-semibold">{initials(user?.name)}</span>
-        <span className="min-w-0 flex-1">
+        <span className={`min-w-0 flex-1 ${fade}`}>
           <span className="block text-[13.5px] font-medium leading-[18px] truncate text-white">{user?.name}</span>
           <span className="block text-[12px] leading-4 text-[#b7c0cc] truncate">{user?.role ? t(`role.${user.role}`) : ''}</span>
         </span>
         <button type="button" onClick={() => void i18n.changeLanguage(i18n.language === 'vi' ? 'en' : 'vi')}
-          className="h-8 px-2 rounded-btn text-[12px] font-medium text-[#b7c0cc] hover:bg-white/[.08] hover:text-white" aria-label="Đổi ngôn ngữ">
+          className={`h-8 px-2 rounded-btn text-[12px] font-medium text-[#b7c0cc] hover:bg-white/[.08] hover:text-white ${fade}`} aria-label="Đổi ngôn ngữ">
           {i18n.language === 'vi' ? 'VI' : 'EN'}
         </button>
         <button type="button" onClick={() => void handleLogout()} aria-label={t('nav.logout')} title={t('nav.logout')}
-          className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-[#b7c0cc] hover:bg-white/[.08] hover:text-white">
+          className={`w-8 h-8 flex-none rounded-btn inline-flex items-center justify-center text-[#b7c0cc] hover:bg-white/[.08] hover:text-white ${fade}`}>
           <Icon name="logout" />
         </button>
       </div>
@@ -203,8 +217,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     <ChromeContext.Provider value={ctxValue}>
       <div className="min-h-screen bg-page md:flex">
         {/* Desktop sidebar: on the page ground, one hairline from the canvas. */}
-        <aside className="hidden md:flex flex-none w-[244px] h-screen sticky top-0 bg-navy px-3 pt-5 pb-3">
-          <div className="w-full"><NavContent unread={unread} /></div>
+        {/* Desktop: a 64px icon rail that opens over the page on hover or keyboard focus
+            (a short delay on open so passing the mouse across it doesn't flash it open).
+            The placeholder keeps the page beside the closed rail; the open panel overlays it. */}
+        <div className="hidden md:block flex-none w-16" aria-hidden />
+        <aside className="group/rail hidden md:flex fixed left-0 top-0 z-40 h-screen w-16 overflow-hidden bg-navy px-3 pt-5 pb-3
+          transition-[width,box-shadow] duration-200 ease-out delay-0
+          hover:w-[244px] hover:delay-[120ms] hover:shadow-[8px_0_32px_rgba(10,20,32,.28)]
+          focus-within:w-[244px] focus-within:shadow-[8px_0_32px_rgba(10,20,32,.28)]">
+          <div className="w-[220px] flex-none"><NavContent unread={unread} rail /></div>
         </aside>
 
         {/* Phone: the sidebar folds into a top bar and a full-screen sheet. */}

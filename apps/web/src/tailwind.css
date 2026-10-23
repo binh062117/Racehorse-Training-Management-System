@@ -22,11 +22,45 @@
   input[type='file']::file-selector-button:hover { @apply bg-subtle; }
 }
 
+@keyframes ringIn { from { stroke-dasharray: 0 100; } }
+.ring-arc { animation: ringIn .9s cubic-bezier(.22, 1, .36, 1) both; }
+
+@keyframes waveHop {
+  0%, 100% { transform: none; }
+  40% { transform: translateY(-5px); }
+}
+
+/* People who ask the OS for less motion get none of the hover/count-up motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .hop, .lift, .nudge { transform: none !important; }
+}
+
 @layer components {
   .num { font-variant-numeric: tabular-nums; }
   /* Small label above a value: sentence case, readable, grey at 4.5:1. */
   .lbl { @apply text-[12px] leading-4 font-medium text-muted; }
   .cap { @apply text-[12px] leading-4 text-muted; }
+
+  /* ---------- hover motion ----------
+     A number (or short text) marked .hop springs up a few pixels when the row,
+     card or cell around it is hovered or focused, then settles back. */
+  .hop { display: inline-block; transition: transform .38s cubic-bezier(.34, 1.56, .64, 1); will-change: transform; }
+  :where(a, button, tr, li, .hover-hop):hover .hop,
+  :where(a, button, tr, li, .hover-hop):focus-visible .hop,
+  .hop:hover { transform: translateY(-3px); }
+
+  /* Page titles: each letter jumps in turn while the title is hovered. */
+  .wave > span { display: inline-block; white-space: pre; }
+  :where(h1, .wave-host):hover .wave > span { animation: waveHop .55s cubic-bezier(.34, 1.56, .64, 1) both; animation-delay: calc(var(--i) * 22ms); }
+
+  /* Cards that open something lift a little on hover. */
+  .lift { transition: transform .25s cubic-bezier(.34, 1.56, .64, 1), box-shadow .25s ease, border-color .15s ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(28, 43, 58, .09); }
+
+  /* An arrow inside a link slides toward where it goes. */
+  .nudge { transition: transform .25s cubic-bezier(.34, 1.56, .64, 1); }
+  :where(a, button):hover .nudge { transform: translateX(3px); }
 
   /* Saddle-cloth number — the one job of the condensed face. */
   .cloth { @apply inline-flex flex-none items-center justify-center rounded-badge bg-navy px-[5px] font-display font-bold text-white;

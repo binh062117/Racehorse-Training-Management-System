@@ -130,7 +130,7 @@ export function DashboardPage() {
         <Card>
           <CardHeader title="Bảng chuồng hôm nay">
             <Link to={role === 'OWNER' ? '/my-horses' : '/horses'} className="text-[13px] font-medium text-info no-underline flex items-center gap-1">
-              Xem tất cả {horses.length > 0 ? horses.length : ''} ngựa<Icon name="chevRight" className="w-3.5 h-3.5" />
+              Xem tất cả {horses.length > 0 ? horses.length : ''} ngựa<Icon name="chevRight" className="w-3.5 h-3.5 nudge" />
             </Link>
           </CardHeader>
           {horses.length === 0 && !horsesLoading ? (
@@ -154,7 +154,7 @@ export function DashboardPage() {
                     </span>
                     <span className="num text-right col-start-3 row-start-1 sm:col-start-auto sm:row-start-auto">
                       {horse.fitnessScore != null
-                        ? <><span className="font-semibold" style={{ color: fitColor(horse.fitnessScore) }}>{horse.fitnessScore}</span><span className="text-[12px] text-muted">/100</span></>
+                        ? <><span className="font-semibold hop" style={{ color: fitColor(horse.fitnessScore) }}>{horse.fitnessScore}</span><span className="text-[12px] text-muted">/100</span></>
                         : <span className="text-muted">—</span>}
                     </span>
                   </Link>
@@ -179,7 +179,7 @@ export function DashboardPage() {
                         <span className="block font-medium">{job.title}</span>
                         <span className="block text-[12.5px] text-muted">{job.desc}</span>
                       </span>
-                      <Icon name="chevRight" className="w-4 h-4 text-muted" />
+                      <Icon name="chevRight" className="w-4 h-4 text-muted nudge" />
                     </Link>
                   </li>
                 ))}
