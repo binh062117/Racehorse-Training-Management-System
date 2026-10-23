@@ -78,7 +78,7 @@ export function lockReasonText(reason: string | null | undefined): string {
 /* ---------- buttons ---------- */
 type BtnVariant = 'p' | 's' | 'd' | 'g';
 const btnV: Record<BtnVariant, string> = {
-  p: 'bg-navy text-white hover:bg-navy-hover',
+  p: 'bg-info text-white hover:bg-info-ink',
   s: 'bg-white text-ink border-line-strong hover:bg-subtle',
   d: 'bg-white text-bad border-bad-bd hover:bg-bad-bg',
   g: 'bg-transparent text-ink hover:bg-cream',
@@ -164,7 +164,7 @@ export function KpiStrip({ items }: { items: { label: string; value: ReactNode; 
       {items.map((k, i) => (
         <div key={k.label} className={`bg-white px-5 py-4 min-w-0 ${items.length % 2 === 1 && i === items.length - 1 ? 'col-span-2 md:col-span-1' : ''}`}>
           <div className="text-[13px] text-muted">{k.label}</div>
-          <div className={`num mt-1 font-semibold leading-tight ${k.lead ? 'text-[30px]' : 'text-[24px]'} ${k.tone ? toneCls[k.tone] : 'text-ink'}`}>
+          <div className={`num mt-1 font-semibold leading-tight ${k.lead ? 'text-[30px]' : 'text-[24px]'} ${k.tone ? toneCls[k.tone] : k.lead ? 'text-info' : 'text-ink'}`}>
             {k.value}{k.unit && <span className="text-[14px] font-normal text-muted ml-1">{k.unit}</span>}
           </div>
           {k.sub && <div className="text-[12px] text-muted mt-1">{k.sub}</div>}
@@ -194,18 +194,25 @@ export function Cloth({ n, className = '' }: { n: number | string | null | undef
   return <span className={`cloth ${className}`} title="Số áo đua">{n}</span>;
 }
 export const HORSE_LOGO = '/icons/manager-horse-head.png';
+/** Soft grounds for horses without a photo — one per horse, picked from its name so it never changes. */
+const AVATAR_TINTS = ['#e3ecf8', '#dff2e7', '#fbefd9', '#efe6f8', '#fbe5e3', '#dcf0f2'];
+function tintFor(name: string) {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_TINTS[h % AVATAR_TINTS.length];
+}
 /** The horse's photo, or the club's horse-head mark when there is none or it fails to load. */
 export function HorseAvatar({ src, name, size = 36, className = '', onClick }: { src?: string | null; name: string; size?: number; className?: string; onClick?: () => void }) {
   const [broken, setBroken] = useState(false);
   const photo = src && !broken;
   const inner = photo
     ? <img src={src} alt={name} onError={() => setBroken(true)} className="w-full h-full object-cover" />
-    : <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain p-[14%]" />;
-  const cls = `inline-flex flex-none items-center justify-center rounded-full overflow-hidden bg-white border border-line ${className}`;
+    : <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain p-[14%] mix-blend-multiply" />;
+  const cls = `inline-flex flex-none items-center justify-center rounded-full overflow-hidden border border-black/[.06] ${className}`;
   if (onClick && photo) {
-    return <button type="button" onClick={onClick} aria-label={`Xem ảnh lớn ${name}`} className={`${cls} cursor-zoom-in`} style={{ width: size, height: size }}>{inner}</button>;
+    return <button type="button" onClick={onClick} aria-label={`Xem ảnh lớn ${name}`} className={`${cls} cursor-zoom-in`} style={{ width: size, height: size, background: photo ? '#fff' : tintFor(name) }}>{inner}</button>;
   }
-  return <span className={cls} style={{ width: size, height: size }}>{inner}</span>;
+  return <span className={cls} style={{ width: size, height: size, background: photo ? '#fff' : tintFor(name) }}>{inner}</span>;
 }
 
 /* ---------- controls ---------- */
@@ -223,7 +230,7 @@ export function Seg({ options, value, onChange }: { options: (string | [string, 
 }
 export function Chip({ on, onClick, children, className = '' }: { on?: boolean; onClick?: () => void; children: ReactNode; className?: string }) {
   return <button type="button" aria-pressed={on} onClick={onClick}
-    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-btn border text-[13px] transition-colors ${on ? 'bg-navy text-white border-navy' : 'bg-white text-ink border-line-strong hover:bg-subtle'} ${className}`}>{children}</button>;
+    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-btn border text-[13px] transition-colors ${on ? 'bg-info text-white border-info' : 'bg-white text-ink border-line-strong hover:bg-subtle'} ${className}`}>{children}</button>;
 }
 /** A filter count inside a Chip — inherits the chip's colour so it stays legible when active. */
 export function ChipCount({ n }: { n: number }) {

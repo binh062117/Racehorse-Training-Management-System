@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, apiErrorMessage } from '../../lib/api';
+import { api } from '../../lib/api';
 import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
-import { formatDate, fromDateTimeLocal } from '../../lib/format';
+import { formatDate, fromDateTimeLocal, toDateTimeLocal } from '../../lib/format';
 import {
-  Badge, Btn, Card, EmptyState, Field, Icon, Input, Modal, ModalBody, ModalFoot, ModalHead, NativeSelect, Textarea, type Tone,
+  Alert, Badge, Btn, Card, EmptyState, Field, Icon, Input, Modal, ModalBody, ModalFoot, ModalHead, NativeSelect, Textarea, type Tone,
 } from '../../ds/ui';
 
 const sessionTime = new Intl.DateTimeFormat('vi-VN', {
@@ -131,7 +131,7 @@ function SessionsContent({ horseId, isLocked }: Props) {
 
       <CreateSessionForm
         open={canCreate && !isLocked && creating}
-        horseId={horseId} plans={plans} plansLoading={plansLoading}
+        horseId={horseId} sessions={sessions} plans={plans} plansLoading={plansLoading}
         plansErr={plansErr} retryPlans={retryPlans} onClose={() => setCreating(false)}
         onCreated={() => { setCreating(false); setCreated(true); void load(); }}
       />
@@ -157,6 +157,7 @@ function SessionsContent({ horseId, isLocked }: Props) {
                     planLabel={s.planId ? plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable') : t('session.noPlan')}
                     canUpdate={canUpdate}
                     isTrainer={role === 'TRAINER'}
+                    allSessions={sessions}
                     onChanged={load}
                   />
                 ))}
@@ -169,11 +170,37 @@ function SessionsContent({ horseId, isLocked }: Props) {
   );
 }
 
+/** EX-01: two sessions of one horse must be at least this far apart (mirrors the API rule). */
+const CONFLICT_WINDOW_MIN = 60;
+
+/** The planned session that a time would clash with, if any — the API refuses these with 409. */
+function findClash(sessions: TrainingSession[], localValue: string, excludeId?: string): TrainingSession | null {
+  if (!localValue) return null;
+  const at = new Date(localValue).getTime();
+  if (!Number.isFinite(at)) return null;
+  const windowMs = CONFLICT_WINDOW_MIN * 60_000;
+  return sessions
+    .filter((s) => s.status === 'PLANNED' && s.id !== excludeId)
+    .filter((s) => Math.abs(new Date(s.scheduledAt).getTime() - at) <= windowMs)
+    .sort((a, b) => Math.abs(new Date(a.scheduledAt).getTime() - at) - Math.abs(new Date(b.scheduledAt).getTime() - at))[0] ?? null;
+}
+
+function ClashWarning({ clash }: { clash: TrainingSession | null }) {
+  if (!clash) return null;
+  return (
+    <Alert tone="warn" icon="alert" title="Trùng lịch tập">
+      Ngựa đã có buổi “{clash.type}” lúc <span className="num font-medium">{sessionTime.format(new Date(clash.scheduledAt))} {formatDate(clash.scheduledAt)}</span>.
+      {' '}Hai buổi tập phải cách nhau ít nhất {CONFLICT_WINDOW_MIN} phút — hãy chọn giờ khác.
+    </Alert>
+  );
+}
+
 function CreateSessionForm({
-  open, horseId, onCreated, onClose, plans, plansLoading, plansErr, retryPlans,
+  open, horseId, sessions, onCreated, onClose, plans, plansLoading, plansErr, retryPlans,
 }: {
   open: boolean;
   horseId: string;
+  sessions: TrainingSession[];
   onCreated: () => void;
   onClose: () => void;
   plans: TrainingPlan[];
@@ -189,10 +216,11 @@ function CreateSessionForm({
   const [err, setErr] = useState<unknown>(null);
   const [validation, setValidation] = useState('');
   const [busy, setBusy] = useState(false);
+  const clash = findClash(sessions, scheduledAt);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || clash) return;
     setErr(null);
     setValidation('');
     if (!scheduledAt || !Number.isFinite(new Date(scheduledAt).getTime())) {
@@ -229,19 +257,14 @@ function CreateSessionForm({
       <form onSubmit={submit} aria-label={t('session.new')}>
         <ModalBody>
           <Field label={t('session.scheduledAt')} hint={t('session.localTime', { zone: Intl.DateTimeFormat().resolvedOptions().timeZone })}>
-            <input
-              className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
-              type="datetime-local" autoFocus value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} disabled={busy} required
-            />
+            <Input type="datetime-local" autoFocus value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} disabled={busy} required err={!!clash} />
           </Field>
+          <ClashWarning clash={clash} />
           <Field label={t('session.plan')}>
-            <select
-              className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
-              value={planId} onChange={(e) => setPlanId(e.target.value)} disabled={busy || plansLoading || !!plansErr}
-            >
+            <NativeSelect value={planId} onChange={(e) => setPlanId(e.target.value)} disabled={busy || plansLoading || !!plansErr}>
               <option value="">{t('session.noPlan')}</option>
               {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.goal} ({formatDate(plan.startDate)})</option>)}
-            </select>
+            </NativeSelect>
           </Field>
           {plansLoading && <p className="cap" role="status">{t('session.loadingPlans')}</p>}
           {plansErr != null && (
@@ -252,33 +275,30 @@ function CreateSessionForm({
             </div>
           )}
           <Field label={t('session.type')}>
-            <input
-              className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
-              value={type} onChange={(e) => setType(e.target.value)} placeholder="gallop, sprint, trot…" maxLength={80} disabled={busy} required
-            />
+            <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="Ví dụ: Chạy nước rút, Chạy sức bền…" maxLength={80} disabled={busy} required />
           </Field>
           <Field label={t('session.notes')}>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} disabled={busy} rows={2} />
           </Field>
           {validation && <p className="text-bad font-medium text-[13px]" role="alert">{t(validation)}</p>}
           <ErrorText err={err} />
-          {err != null && apiErrorMessage(err) && <p className="text-bad font-medium text-[13px]" role="alert">{apiErrorMessage(err)}</p>}
         </ModalBody>
         <ModalFoot>
           <Btn disabled={busy} onClick={onClose}>{t('common.cancel')}</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{t('session.schedule')}</Btn>
+          <Btn v="p" type="submit" disabled={busy || !!clash}>{t('session.schedule')}</Btn>
         </ModalFoot>
       </form>
     </Modal>
   );
 }
 
-function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChanged }: {
+function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSessions, onChanged }: {
   session: TrainingSession;
   planLabel: string;
   hasPlan: boolean;
   canUpdate: boolean;
   isTrainer: boolean;
+  allSessions: TrainingSession[];
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
@@ -287,16 +307,23 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
   const [resultMetric, setResultMetric] = useState(session.resultMetric ?? '');
   const [resultValue, setResultValue] = useState(session.resultValue?.toString() ?? '');
   const [notes, setNotes] = useState(session.notes ?? '');
+  const originalTime = toDateTimeLocal(session.scheduledAt);
+  const [when, setWhen] = useState(originalTime);
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
   const editable = canUpdate && session.status === 'PLANNED';
+  // Only a trainer reschedules, and only while the session stays planned (EX-01 applies to planned sessions).
+  const moving = isTrainer && !status && when !== originalTime;
+  const clash = moving ? findClash(allSessions, when, session.id) : null;
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    if (clash) return;
     setErr(null);
     setBusy(true);
     const body: Record<string, unknown> = {};
+    if (moving && when) body.scheduledAt = fromDateTimeLocal(when);
     if (status) body.status = status;
     if (resultMetric.trim()) body.resultMetric = resultMetric.trim();
     if (resultValue.trim()) body.resultValue = Number(resultValue);
@@ -345,6 +372,14 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
                 <option value="CANCELLED">{t('session.displayStatus.CANCELLED')}</option>
               </NativeSelect>
             </Field>
+            {isTrainer && !status && (
+              <>
+                <Field label="Giờ tập" hint="Dời giờ khi lịch thay đổi — buổi tập vẫn ở trạng thái đã lên lịch.">
+                  <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} err={!!clash} required />
+                </Field>
+                <ClashWarning clash={clash} />
+              </>
+            )}
             <Field label={t('session.resultMetric')}>
               <Input value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} placeholder="Ví dụ: thời gian 1200m (giây)" />
             </Field>
@@ -354,7 +389,7 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
             {isTrainer && <Field label={t('session.notes')}><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></Field>}
             <ErrorText err={err} />
             <div className="flex gap-2">
-              <Btn v="p" sm type="submit" disabled={busy}>{t('common.save')}</Btn>
+              <Btn v="p" sm type="submit" disabled={busy || !!clash}>{t('common.save')}</Btn>
               <Btn sm onClick={() => setEditing(false)} disabled={busy}>{t('common.cancel')}</Btn>
             </div>
           </form>

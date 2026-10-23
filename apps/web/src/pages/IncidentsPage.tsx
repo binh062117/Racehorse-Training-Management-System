@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
@@ -14,7 +14,7 @@ import type {
   Paginated,
 } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, NativeSelect, PageHeader, Textarea, type Tone } from '../ds/ui';
+import { Alert, Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, ImageLightbox, NativeSelect, PageHeader, Textarea, type Tone } from '../ds/ui';
 
 type IncidentFilter = 'ALL' | IncidentStatus;
 type IncidentData = { horses: Horse[]; incidents: Incident[]; errors: unknown[] };
@@ -151,7 +151,7 @@ export function IncidentsPage() {
               </thead>
               <tbody>
                 {filteredIncidents.map((incident) => (
-                  <IncidentRow key={incident.id} incident={incident} canAdvance={isVet} isVet={isVet} onChanged={reload} />
+                  <IncidentRow key={incident.id} incident={incident} canAdvance={isVet} isVet={isVet} isGroom={isGroom} onChanged={reload} />
                 ))}
               </tbody>
             </table>
@@ -163,41 +163,93 @@ export function IncidentsPage() {
   );
 }
 
+// UC-19 — mirrors the API's image rule (jpg/png/webp, UPLOAD_MAX_MB = 5) so a
+// wrong file is caught before the report is sent, not after.
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const PHOTO_MAX_MB = 5;
+function photoProblem(file: File): string | null {
+  if (!PHOTO_TYPES.includes(file.type)) return 'Chỉ nhận ảnh JPEG, PNG hoặc WebP.';
+  if (file.size > PHOTO_MAX_MB * 1024 * 1024) return `Ảnh nặng ${(file.size / 1024 / 1024).toFixed(1)} MB — tối đa ${PHOTO_MAX_MB} MB.`;
+  return null;
+}
+async function uploadIncidentPhoto(incidentId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  await api.post(`/incidents/${incidentId}/photo`, formData);
+}
+
+/** File picker with a preview of the chosen photo and an inline check of type and size. */
+function PhotoPicker({ file, onChange, disabled }: { file: File | null; onChange: (f: File | null) => void; disabled?: boolean }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  const pick = (f: File | undefined) => {
+    if (!f) return;
+    const p = photoProblem(f);
+    setProblem(p);
+    onChange(p ? null : f);
+    if (p && inputRef.current) inputRef.current.value = '';
+  };
+  const clear = () => { onChange(null); setProblem(null); if (inputRef.current) inputRef.current.value = ''; };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {file && preview ? (
+        <div className="flex items-center gap-3 rounded-btn border border-line p-2 pr-3 bg-subtle">
+          <img src={preview} alt="Ảnh sẽ gửi kèm" className="w-16 h-16 rounded-badge object-cover flex-none" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[13.5px] font-medium truncate">{file.name}</div>
+            <div className="num text-[12.5px] text-muted">{(file.size / 1024).toFixed(0)} KB</div>
+          </div>
+          <Btn sm v="g" onClick={clear} disabled={disabled}><Icon name="x" className="w-3.5 h-3.5" />Bỏ ảnh</Btn>
+        </div>
+      ) : (
+        <input ref={inputRef} type="file" accept={PHOTO_TYPES.join(',')} disabled={disabled}
+          onChange={(e) => pick(e.target.files?.[0])} aria-label="Chọn ảnh minh chứng" />
+      )}
+      {problem && <p className="text-bad font-medium text-[13px]" role="alert">{problem}</p>}
+    </div>
+  );
+}
+
 function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated: () => Promise<void> }) {
   const { t } = useTranslation();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [horseId, setHorseId] = useState('');
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState<IncidentSeverity>('LOW');
+  const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [photoError, setPhotoError] = useState<unknown>(null);
+  const [sent, setSent] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     setPhotoError(null);
+    setSent(null);
     setSaving(true);
     try {
       const response = await api.post<Incident>(`/horses/${horseId}/incidents`, {
         description: description.trim(),
         severity,
       });
-      const file = fileRef.current?.files?.[0];
-      setDescription('');
-      setSeverity('LOW');
-      setHorseId('');
-
-      if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
+      const horseName = horses.find((h) => h.id === horseId)?.name ?? '';
+      if (photo) {
         try {
-          await api.post(`/incidents/${response.data.id}/photo`, formData);
+          await uploadIncidentPhoto(response.data.id, photo);
         } catch (reason) {
+          // The report itself is saved; the photo can be added again from its row.
           setPhotoError(reason);
         }
       }
-      if (fileRef.current) fileRef.current.value = '';
+      setDescription('');
+      setSeverity('LOW');
+      setHorseId('');
+      setPhoto(null);
+      setSent(horseName);
       await onCreated();
     } catch (reason) {
       setError(reason);
@@ -229,15 +281,17 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
         <Field label={t('incidents.descriptionLabel')}>
           <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={2000} required placeholder={t('incidents.descriptionPlaceholder')} />
         </Field>
-        <Field label={t('incidents.photo')} hint={t('incidents.photoHint')}>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="text-[12.5px]" />
+        <Field label={t('incidents.photo')} hint={`JPEG, PNG hoặc WebP, tối đa ${PHOTO_MAX_MB} MB.`}>
+          <PhotoPicker file={photo} onChange={setPhoto} disabled={saving} />
         </Field>
         <ErrorText err={error} />
-        {photoError && (
-          <div role="alert" className="flex flex-col gap-1">
-            <span className="text-[12.5px] text-bad font-semibold">{t('incidents.reportSavedPhotoFailed')}</span>
-            <ErrorText err={photoError} />
-          </div>
+        {sent != null && !photoError && (
+          <Alert tone="ok" icon="check">Đã gửi báo cáo sự cố{sent ? ` cho ${sent}` : ''} — bác sĩ thú y đã được thông báo.</Alert>
+        )}
+        {photoError != null && (
+          <Alert tone="warn" icon="alert" title={t('incidents.reportSavedPhotoFailed')}>
+            Bấm “Thêm ảnh” ở dòng sự cố vừa gửi trong bảng bên dưới để tải lại.
+          </Alert>
         )}
         <Btn v="p" type="submit" disabled={saving || !horseId || horses.length === 0} className="self-start">
           <Icon name="send" />{saving ? t('incidents.sending') : t('incidents.submitReport')}
@@ -247,7 +301,58 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
   );
 }
 
-function IncidentRow({ incident, canAdvance, isVet, onChanged }: { incident: Incident; canAdvance: boolean; isVet: boolean; onChanged: () => Promise<void> }) {
+/** The evidence photo: a thumbnail that opens full size, plus add/replace for the groom while the case is open. */
+function IncidentPhotoCell({ incident, photoUrl, canUpload, onChanged }: { incident: Incident; photoUrl: string | null; canUpload: boolean; onChanged: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<unknown>(null);
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    const p = photoProblem(file);
+    if (p) { setProblem(new Error(p)); return; }
+    setProblem(null);
+    setBusy(true);
+    try {
+      await uploadIncidentPhoto(incident.id, file);
+      await onChanged();
+    } catch (reason) {
+      setProblem(reason);
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      {photoUrl ? (
+        <>
+          <button type="button" onClick={() => setOpen(true)} aria-label={t('incidents.openPhoto')}
+            className="w-12 h-12 rounded-badge overflow-hidden border border-line cursor-zoom-in flex-none">
+            <img src={photoUrl} alt={t('incidents.photoAlt', { horse: incident.horse.name })} className="w-full h-full object-cover" loading="lazy" />
+          </button>
+          <ImageLightbox src={photoUrl} alt={t('incidents.photoAlt', { horse: incident.horse.name })} open={open} onClose={() => setOpen(false)} />
+        </>
+      ) : !canUpload && <span className="text-muted">Không</span>}
+      {canUpload && (
+        <>
+          <input ref={inputRef} type="file" accept={PHOTO_TYPES.join(',')} className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
+          <Btn sm v="g" disabled={busy} onClick={() => inputRef.current?.click()} className="-ml-2">
+            <Icon name="camera" className="w-3.5 h-3.5" />{busy ? 'Đang tải…' : photoUrl ? 'Đổi ảnh' : 'Thêm ảnh'}
+          </Btn>
+        </>
+      )}
+      {problem != null && (problem instanceof Error && !('response' in problem)
+        ? <p className="text-bad text-[12.5px] font-medium max-w-[160px]" role="alert">{problem.message}</p>
+        : <ErrorText err={problem} />)}
+    </div>
+  );
+}
+
+function IncidentRow({ incident, canAdvance, isVet, isGroom, onChanged }: { incident: Incident; canAdvance: boolean; isVet: boolean; isGroom: boolean; onChanged: () => Promise<void> }) {
   const { t } = useTranslation();
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -284,7 +389,7 @@ function IncidentRow({ incident, canAdvance, isVet, onChanged }: { incident: Inc
         <td className="px-4 py-3"><Badge tone={SEVERITY_TONE[incident.severity]}>{t(`incidents.severities.${incident.severity}`)}</Badge></td>
         <td className="px-4 py-3"><Badge tone={STATUS_TONE[incident.status]}>{t(`incidents.status.${incident.status}`)}</Badge></td>
         <td className="px-4 py-3">
-          {photoUrl ? <a href={photoUrl} target="_blank" rel="noreferrer" className="font-semibold text-info">{t('incidents.openPhoto')}</a> : <span className="text-muted">Không</span>}
+          <IncidentPhotoCell incident={incident} photoUrl={photoUrl} canUpload={isGroom && incident.status !== 'RESOLVED'} onChanged={onChanged} />
         </td>
         <td className="px-4 py-3">
           <Btn sm v="g" onClick={() => setInjuriesOpen((v) => !v)}><Icon name={injuriesOpen ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />Chi tiết</Btn>

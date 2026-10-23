@@ -263,6 +263,66 @@ describe('Health & Injury extensions (e2e)', () => {
     expect(res.body.photoUrl).toMatch(/\/files\/incident-photos\//);
   });
 
+  it('UC-19: the horse owner can open the incident photo (200)', async () => {
+    const incident = await api()
+      .get(`/api/v1/incidents/${incidentId}`)
+      .set(auth('owner1'));
+    const res = await api().get(incident.body.photoUrl).set(auth('owner1'));
+    expect(res.status).toBe(200);
+  });
+
+  it('UC-19: a new photo replaces the old one, which stops being served', async () => {
+    const before = await api()
+      .get(`/api/v1/incidents/${incidentId}`)
+      .set(auth('groom'));
+    const res = await api()
+      .post(`/api/v1/incidents/${incidentId}/photo`)
+      .set(auth('groom'))
+      .attach('file', PNG_BYTES, 'incident-2.png');
+    expect(res.status).toBe(201);
+    expect(res.body.photoUrl).not.toBe(before.body.photoUrl);
+    const old = await api().get(before.body.photoUrl).set(auth('groom'));
+    expect(old.status).toBe(404);
+  });
+
+  it('UC-19: only a GROOM can upload an incident photo (403 for TRAINER/VET)', async () => {
+    for (const role of ['trainer', 'vet'] as const) {
+      const res = await api()
+        .post(`/api/v1/incidents/${incidentId}/photo`)
+        .set(auth(role))
+        .attach('file', PNG_BYTES, 'incident.png');
+      expect(res.status).toBe(403);
+    }
+  });
+
+  it('UC-19: rejects a request with no file (400)', async () => {
+    const res = await api()
+      .post(`/api/v1/incidents/${incidentId}/photo`)
+      .set(auth('groom'));
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('UC-19: rejects a file that is not a jpg/png/webp image (400)', async () => {
+    const res = await api()
+      .post(`/api/v1/incidents/${incidentId}/photo`)
+      .set(auth('groom'))
+      .attach('file', Buffer.from('not an image'), {
+        filename: 'notes.txt',
+        contentType: 'text/plain',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('UC-19: photo upload on an unknown incident is 404', async () => {
+    const res = await api()
+      .post('/api/v1/incidents/00000000-0000-4000-8000-000000000000/photo')
+      .set(auth('groom'))
+      .attach('file', PNG_BYTES, 'incident.png');
+    expect(res.status).toBe(404);
+  });
+
   it('UC-19: another owner cannot fetch the incident photo (403)', async () => {
     const incident = await api()
       .get(`/api/v1/incidents/${incidentId}`)
