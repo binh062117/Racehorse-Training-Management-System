@@ -7,7 +7,7 @@ import { useAuth } from '../auth/useAuth';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Notification, Paginated } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card } from '../ds/ui';
+import { Badge, Btn, Card, Icon, notificationIcon, notificationTone, tones } from '../ds/ui';
 
 const PAGE_SIZE = 20;
 
@@ -23,7 +23,7 @@ export function NotificationsPage() {
   const { data, loading, error, reload } = useCachedResource(
     `notifications:${user?.id ?? 'anonymous'}:${page}`,
     () =>
-      api.get<Paginated<Notification>>('/notifications', { params: { type: 'AI_RISK_ALERT', page, limit: PAGE_SIZE } })
+      api.get<Paginated<Notification>>('/notifications', { params: { page, limit: PAGE_SIZE } })
         .then((response) => response.data),
   );
   const notifications = data?.data ?? [];
@@ -65,7 +65,7 @@ export function NotificationsPage() {
   return (
     <>
       <section className="hero px-8 py-7 flex flex-col gap-2">
-        <div className="lbl">Cảnh báo AI</div>
+        <div className="lbl">Thông báo</div>
         <h1 className="disp text-[48px] mt-1">{t('notificationsPage.title')}</h1>
         <p className="text-hero-muted">{t('notificationsPage.description')}</p>
       </section>
@@ -88,16 +88,21 @@ export function NotificationsPage() {
                 onClick={() => void markRead(notification)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') void markRead(notification); }}
                 aria-label={notification.read ? t('notificationsPage.read') : t('notificationsPage.markRead')}
-                className={`block w-full px-5 py-3.5 border-b border-line-soft last:border-0 text-left ${notification.read ? 'bg-white cursor-default' : 'bg-subtle cursor-pointer'}`}
+                className={`flex gap-3 w-full px-5 py-3.5 border-b border-line-soft last:border-0 text-left ${notification.read ? 'bg-white cursor-default' : 'bg-subtle cursor-pointer'}`}
               >
-                <span className="flex justify-between gap-3">
-                  <strong>{notification.message}</strong>
-                  <span className="flex items-center gap-2 flex-none">
-                    {!notification.read && <Badge tone="warn">{t('notificationsPage.unread')}</Badge>}
-                    <Btn sm v="d" disabled={updatingId !== null} onClick={(e) => void remove(notification, e)}>Xoá</Btn>
-                  </span>
+                <span className={`w-8 h-8 rounded-btn flex items-center justify-center flex-none ${tones[notificationTone[notification.type] ?? 'neu']}`}>
+                  <Icon name={notificationIcon[notification.type] ?? 'bell'} />
                 </span>
-                <span className="cap block mt-1">{formatDateTime(notification.createdAt)}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="flex justify-between gap-3">
+                    <strong>{notification.message}</strong>
+                    <span className="flex items-center gap-2 flex-none">
+                      {!notification.read && <Badge tone="warn">{t('notificationsPage.unread')}</Badge>}
+                      <Btn sm v="d" disabled={updatingId !== null} onClick={(e) => void remove(notification, e)}>Xoá</Btn>
+                    </span>
+                  </span>
+                  <span className="cap block mt-1">{formatDateTime(notification.createdAt)}</span>
+                </span>
               </div>
             ))}
           </Card>

@@ -479,7 +479,7 @@
     "ACCOUNT_DISABLED": "Account disabled",
     "FORBIDDEN": "You are not allowed to do this",
     "NOT_FOUND": "Not found",
-    "CONFLICT": "This email is already registered",
+    "CONFLICT": "Conflicts with existing data",
     "TOKEN_EXPIRED": "Expired, please try again",
     "TOKEN_INVALID": "Invalid or expired",
     "INTERNAL": "System error"

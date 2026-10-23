@@ -39,7 +39,7 @@ export function Icon({ name, className = 'w-4 h-4', label }: { name: string; cla
 
 /* ---------- badges ---------- */
 export type Tone = 'ok' | 'warn' | 'bad' | 'info' | 'neu' | 'lock';
-const tones: Record<Tone, string> = {
+export const tones: Record<Tone, string> = {
   ok: 'text-ok bg-ok-bg', warn: 'text-warn bg-warn-bg', bad: 'text-bad bg-bad-bg', info: 'text-info bg-info-bg',
   neu: 'text-neu bg-neu-bg border border-line', lock: 'text-bad bg-bad-bg border border-bad',
 };
@@ -48,6 +48,12 @@ export function Badge({ tone = 'neu', className = '', children }: { tone?: Tone;
 }
 export const healthTone: Record<string, Tone> = { FIT: 'ok', MONITORING: 'warn', QUARANTINED: 'bad', INJURED: 'bad' };
 export const careerTone: Record<string, Tone> = { ACTIVE: 'ok', RESTING: 'warn', RETIRED: 'neu' };
+export const notificationTone: Record<string, Tone> = {
+  TRAINING_LOCKED: 'bad', TRAINING_UNLOCKED: 'ok', INCIDENT_REPORTED: 'bad', FITNESS_WARNING: 'warn', AI_RISK_ALERT: 'bad',
+};
+export const notificationIcon: Record<string, string> = {
+  TRAINING_LOCKED: 'lock', TRAINING_UNLOCKED: 'unlock', INCIDENT_REPORTED: 'alert', FITNESS_WARNING: 'heart', AI_RISK_ALERT: 'sparkle',
+};
 export const fitColor = (v: number | null | undefined) => (v == null ? '#9ca3af' : v >= 80 ? '#3a6b4a' : v >= 60 ? '#8a6218' : '#8a2020');
 export function LockBadge({ children = 'Locked', className = '' }: { children?: ReactNode; className?: string }) {
   return <Badge tone="lock" className={className}><Icon name="lock" className="w-3.5 h-3.5" />{children}</Badge>;

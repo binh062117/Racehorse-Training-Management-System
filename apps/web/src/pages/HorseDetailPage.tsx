@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
 import { SessionsTab } from './horse/SessionsTab';
+import { TrainingProgressTab } from './horse/TrainingProgressTab';
 import { HealthTab } from './horse/HealthTab';
 import { FeedingTab } from './horse/FeedingTab';
 import { PlansTab } from './horse/PlansTab';
@@ -25,11 +26,12 @@ const TAB_ITEMS: [Tab, string][] = [
   ['pedigree', 'Phả hệ'],
   ['plans', 'Giáo án huấn luyện'],
   ['sessions', 'Buổi tập luyện'],
+  ['progress', 'Tiến độ huấn luyện'],
   ['health', 'Hồ sơ y tế'],
   ['feeding', 'Khẩu phần ăn'],
 ];
 
-type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'health' | 'feeding';
+type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'progress' | 'health' | 'feeding';
 
 function calculateAge(birthDate: string | null): string {
   if (!birthDate) return '—';
@@ -65,6 +67,7 @@ export function HorseDetailPage() {
     rawTab === 'pedigree' ||
     rawTab === 'plans' ||
     rawTab === 'sessions' ||
+    rawTab === 'progress' ||
     rawTab === 'health' ||
     rawTab === 'feeding'
       ? rawTab
@@ -247,6 +250,9 @@ export function HorseDetailPage() {
       )}
       {visitedTabs.has('sessions') && (
         <div hidden={tab !== 'sessions'}><SessionsTab horseId={horse.id} isLocked={horse.locked} lockReason={horse.lockReason} /></div>
+      )}
+      {visitedTabs.has('progress') && (
+        <div hidden={tab !== 'progress'}><TrainingProgressTab horseId={horse.id} /></div>
       )}
       {visitedTabs.has('health') && (
         <div hidden={tab !== 'health'}><HealthTab horse={horse} /></div>
