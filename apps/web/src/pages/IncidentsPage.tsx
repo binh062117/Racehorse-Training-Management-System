@@ -4,7 +4,7 @@ import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { InjuryLocationsSection } from '../components/health/InjuryLocationsSection';
 import { api, getFileUrl } from '../lib/api';
-import { formatDate, formatDateTime } from '../lib/format';
+import { formatDate, formatTime } from '../lib/format';
 import { useCachedResource } from '../lib/useCachedResource';
 import type {
   Horse,
@@ -14,7 +14,7 @@ import type {
   Paginated,
 } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Field, HeroStats, Icon, Textarea, type Tone } from '../ds/ui';
+import { Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, NativeSelect, PageHeader, Textarea, type Tone } from '../ds/ui';
 
 type IncidentFilter = 'ALL' | IncidentStatus;
 type IncidentData = { horses: Horse[]; incidents: Incident[]; errors: unknown[] };
@@ -76,7 +76,7 @@ export function IncidentsPage() {
   const [filter, setFilter] = useState<IncidentFilter>('ALL');
   const [search, setSearch] = useState('');
 
-  usePageChrome({ crumbs: ['Sức khỏe', t('incidents.title')], search: t('incidents.search'), onSearch: setSearch });
+  usePageChrome({ crumbs: [t('incidents.title')] });
 
   const { data, loading, error, reload } = useCachedResource(
     `health-incidents-${user?.id ?? 'anonymous'}`,
@@ -108,28 +108,21 @@ export function IncidentsPage() {
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div>
-          <div className="lbl">Sức khỏe</div>
-          <h1 className="disp text-[56px] mt-2">{t('incidents.title')}</h1>
-          <p className="text-hero-muted mt-2 max-w-[560px]">{isGroom ? t('incidents.groomDescription') : t('incidents.description')}</p>
-        </div>
-        <HeroStats items={[
-          { label: t('incidents.total'), value: loading && !data ? '…' : counts.ALL },
-          { label: t('incidents.highPriority'), value: loading && !data ? '…' : highSeverityCount, color: '#f3b4b4' },
-          { label: t('incidents.inProgress'), value: loading && !data ? '…' : counts.IN_PROGRESS, color: '#f3d29a' },
-          { label: t('incidents.resolved'), value: loading && !data ? '…' : counts.RESOLVED, color: '#9fd9b1' },
-        ]} />
-      </section>
+      <PageHeader
+        title={t('incidents.title')}
+        sub={loading && !data
+          ? t('incidents.loading')
+          : highSeverityCount > 0
+            ? `${highSeverityCount} sự cố mức nặng chưa xử lý xong · ${counts.OPEN} đang chờ, ${counts.IN_PROGRESS} đang xử lý.`
+            : `Không có sự cố mức nặng nào đang mở · ${counts.RESOLVED} trong ${counts.ALL} sự cố đã xử lý.`}
+        search={{ placeholder: t('incidents.search'), value: search, onChange: setSearch }}
+      />
 
       {isGroom && <CreateIncidentForm horses={incidentData.horses} onCreated={reload} />}
 
-      <div className="flex flex-wrap gap-2.5 items-center" role="group" aria-label={t('incidents.filter')}>
+      <div className="flex flex-wrap gap-2 items-center" role="group" aria-label={t('incidents.filter')}>
         {FILTERS.map((status) => (
-          <button key={status} type="button" onClick={() => setFilter(status)}
-            className={`inline-flex items-center h-[30px] px-3 rounded-full border text-[12.5px] font-medium ${filter === status ? 'bg-navy text-white border-navy' : 'bg-white text-ink border-line'}`}>
-            {t(`incidents.filters.${status}`)} ({counts[status]})
-          </button>
+          <Chip key={status} on={filter === status} onClick={() => setFilter(status)}>{t(`incidents.filters.${status}`)} <ChipCount n={counts[status]} /></Chip>
         ))}
       </div>
 
@@ -137,20 +130,23 @@ export function IncidentsPage() {
       {incidentData.errors.map((loadError, index) => <ErrorText key={index} err={loadError} />)}
 
       {loading && !data ? (
-        <p className="cap">{t('incidents.loading')}</p>
+        <p className="text-muted">{t('incidents.loading')}</p>
       ) : filteredIncidents.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <p className="cap">{incidentData.incidents.length === 0 ? t('incidents.emptyDescription') : t('incidents.noMatch')}</p>
-        </Card>
+        <EmptyState>{incidentData.incidents.length === 0 ? t('incidents.emptyDescription') : t('incidents.noMatch')}</EmptyState>
       ) : (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] border-collapse">
               <thead>
-                <tr className="text-left">
-                  {[t('incidents.reportedDate'), t('incidents.horse'), t('incidents.descriptionLabel'), t('incidents.severity'), t('incidents.statusLabel'), t('incidents.photo'), 'Chấn thương', t('incidents.actions')].map((th) => (
-                    <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
-                  ))}
+                <tr className="text-left text-[12px] text-muted">
+                  <th className="h-10 px-5 font-medium border-b border-line">{t('incidents.reportedDate')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.horse')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.descriptionLabel')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.severity')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.statusLabel')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">Ảnh</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">Chấn thương</th>
+                  <th className="h-10 px-5 font-medium border-b border-line" aria-label={t('incidents.actions')} />
                 </tr>
               </thead>
               <tbody>
@@ -162,7 +158,7 @@ export function IncidentsPage() {
           </div>
         </Card>
       )}
-      {loading && data && <p className="cap">{t('incidents.refreshing')}</p>}
+      {loading && data && <p className="text-[13px] text-muted">{t('incidents.refreshing')}</p>}
     </>
   );
 }
@@ -219,21 +215,15 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
         </div>
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
           <Field label={t('incidents.horse')}>
-            <select
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-              value={horseId} onChange={(event) => setHorseId(event.target.value)} required
-            >
+            <NativeSelect value={horseId} onChange={(event) => setHorseId(event.target.value)} required>
               <option value="">{t('incidents.chooseHorse')}</option>
               {horses.map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
-            </select>
+            </NativeSelect>
           </Field>
-          <Field label={t('incidents.severity')}>
-            <select
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-              value={severity} onChange={(event) => setSeverity(event.target.value as IncidentSeverity)}
-            >
+          <Field label={t('incidents.severity')} hint={severity === 'HIGH' ? 'Mức nặng sẽ tự khóa tập ngựa cho đến khi sự cố được xử lý xong.' : undefined} err={severity === 'HIGH'}>
+            <NativeSelect value={severity} onChange={(event) => setSeverity(event.target.value as IncidentSeverity)}>
               {(['LOW', 'MEDIUM', 'HIGH'] as const).map((level) => <option key={level} value={level}>{t(`incidents.severities.${level}`)}</option>)}
-            </select>
+            </NativeSelect>
           </Field>
         </div>
         <Field label={t('incidents.descriptionLabel')}>
@@ -282,29 +272,29 @@ function IncidentRow({ incident, canAdvance, isVet, onChanged }: { incident: Inc
   return (
     <>
       <tr className="border-b border-line-soft hover:bg-subtle align-top">
-        <td className="px-4 py-3">
-          <div className="text-[13px]">{formatDate(incident.createdAt)}</div>
-          <div className="cap">{formatDateTime(incident.createdAt)}</div>
+        <td className="px-5 py-3 whitespace-nowrap num">
+          <div>{formatDate(incident.createdAt)}</div>
+          <div className="text-[12.5px] text-muted">{formatTime(incident.createdAt)}</div>
         </td>
         <td className="px-4 py-3">
-          <strong>{incident.horse.name}</strong>
-          <div className="cap">{t('incidents.reportedBy', { name: incident.reportedBy.name })}</div>
+          <span className="font-medium whitespace-nowrap">{incident.horse.name}</span>
+          <div className="text-[12.5px] text-muted whitespace-nowrap">{t('incidents.reportedBy', { name: incident.reportedBy.name })}</div>
         </td>
-        <td className="px-4 py-3 max-w-[280px]">{incident.description}</td>
+        <td className="px-4 py-3 min-w-[220px] max-w-[320px]">{incident.description}</td>
         <td className="px-4 py-3"><Badge tone={SEVERITY_TONE[incident.severity]}>{t(`incidents.severities.${incident.severity}`)}</Badge></td>
         <td className="px-4 py-3"><Badge tone={STATUS_TONE[incident.status]}>{t(`incidents.status.${incident.status}`)}</Badge></td>
         <td className="px-4 py-3">
-          {photoUrl ? <a href={photoUrl} target="_blank" rel="noreferrer" className="font-semibold text-info">{t('incidents.openPhoto')}</a> : <span className="cap">—</span>}
+          {photoUrl ? <a href={photoUrl} target="_blank" rel="noreferrer" className="font-semibold text-info">{t('incidents.openPhoto')}</a> : <span className="text-muted">Không</span>}
         </td>
         <td className="px-4 py-3">
-          <Btn sm onClick={() => setInjuriesOpen((v) => !v)}><Icon name={injuriesOpen ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />Chi tiết</Btn>
+          <Btn sm v="g" onClick={() => setInjuriesOpen((v) => !v)}><Icon name={injuriesOpen ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />Chi tiết</Btn>
         </td>
-        <td className="px-4 py-3">
+        <td className="pl-4 pr-5 py-3 text-right">
           {canAdvance && next ? (
             <Btn sm disabled={busy} onClick={() => void advance()}>
               {busy ? t('incidents.updating') : t('incidents.moveTo', { status: t(`incidents.status.${next}`) })}
             </Btn>
-          ) : <span className="cap">{formatDate(incident.updatedAt)}</span>}
+          ) : <span className="num text-[12.5px] text-muted whitespace-nowrap">Cập nhật {formatDate(incident.updatedAt)}</span>}
         </td>
       </tr>
       {injuriesOpen && (

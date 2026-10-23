@@ -1,4 +1,4 @@
-import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
 /* ---------- icons (stroke, 24px grid) ---------- */
@@ -15,7 +15,7 @@ const P: Record<string, string[]> = {
   search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Z', 'm21 21-4.3-4.3'],
   chevDown: ['m6 9 6 6 6-6'], chevRight: ['m9 18 6-6-6-6'], chevLeft: ['m15 18-6-6 6-6'],
   plus: ['M12 5v14M5 12h14'], check: ['M20 6 9 17l-5-5'], x: ['M18 6 6 18M6 6l12 12'],
-  lock: ['M4 11h16v10H4z', 'M8 11V7a4 4 0 0 1 8 0v4'], unlock: ['M4 11h16v10H4z', 'M8 11V7a4 4 0 0 1 7.5-2'],
+  lock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 8 0v4'], unlock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 7.5-2'],
   edit: ['M12 20h9', 'M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'], trash: ['M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6'],
   user: ['M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z', 'M4 21a8 8 0 0 1 16 0'], flag: ['M4 22V4M4 4h13l-2 4 2 4H4'],
   download: ['M12 3v12M7 10l5 5 5-5M5 21h14'], external: ['M7 17 17 7M7 7h10v10'],
@@ -27,47 +27,61 @@ const P: Record<string, string[]> = {
   sparkle: ['M12 3v4M12 17v4M3 12h4M17 12h4', 'M8 8 6 6M18 18l-2-2M16 8l2-2M6 18l2-2'],
   eye: ['M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
   eyeOff: ['M2 12s3.5-7 10-7c2 0 3.6.6 4.9 1.4M22 12s-3.5 7-10 7c-2 0-3.6-.6-4.9-1.4', 'M9.9 9.9a3 3 0 0 0 4.2 4.2', 'M3 3l18 18'],
+  menu: ['M4 6h16M4 12h16M4 18h16'], logout: ['M15 4h4v16h-4', 'M10 8l-4 4 4 4', 'M6 12h10'],
 };
 export function Icon({ name, className = 'w-4 h-4', label }: { name: string; className?: string; label?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={'flex-none ' + className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+    <svg viewBox="0 0 24 24" className={'flex-none ' + className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
       aria-hidden={label ? undefined : 'true'} role={label ? 'img' : undefined} aria-label={label}>
       {(P[name] || []).map((d, i) => <path key={i} d={d} />)}
     </svg>
   );
 }
 
-/* ---------- badges ---------- */
+/* ---------- status ---------- */
 export type Tone = 'ok' | 'warn' | 'bad' | 'info' | 'neu' | 'lock';
+/** Pale tint with dark ink of the same hue — the only way status shows colour. */
 export const tones: Record<Tone, string> = {
-  ok: 'text-ok bg-ok-bg', warn: 'text-warn bg-warn-bg', bad: 'text-bad bg-bad-bg', info: 'text-info bg-info-bg',
-  neu: 'text-neu bg-neu-bg border border-line', lock: 'text-bad bg-bad-bg border border-bad',
+  ok: 'text-ok-ink bg-ok-bg', warn: 'text-warn-ink bg-warn-bg', bad: 'text-bad-ink bg-bad-bg', info: 'text-info-ink bg-info-bg',
+  neu: 'text-neu-ink bg-neu-bg', lock: 'text-bad-ink bg-bad-bg',
 };
 export function Badge({ tone = 'neu', className = '', children }: { tone?: Tone; className?: string; children: ReactNode }) {
-  return <span className={`inline-flex items-center gap-[5px] h-[22px] px-2 rounded-badge text-[10.5px] font-bold uppercase tracking-[.05em] whitespace-nowrap leading-none ${tones[tone]} ${className}`}>{children}</span>;
+  return <span className={`inline-flex flex-none items-center gap-1 h-[22px] px-2 rounded-badge text-[12px] font-medium whitespace-nowrap leading-none ${tones[tone]} ${className}`}>{children}</span>;
 }
 export const healthTone: Record<string, Tone> = { FIT: 'ok', MONITORING: 'warn', QUARANTINED: 'bad', INJURED: 'bad' };
-export const careerTone: Record<string, Tone> = { ACTIVE: 'ok', RESTING: 'warn', RETIRED: 'neu' };
+export const careerTone: Record<string, Tone> = { ACTIVE: 'ok', RESTING: 'neu', RETIRED: 'neu' };
+export const healthLabel: Record<string, string> = { FIT: 'Khỏe mạnh', MONITORING: 'Cần theo dõi', QUARANTINED: 'Cách ly', INJURED: 'Chấn thương' };
+export const careerLabel: Record<string, string> = { ACTIVE: 'Đang thi đấu', RESTING: 'Nghỉ dưỡng', RETIRED: 'Giải nghệ' };
+export function HealthBadge({ status }: { status: string }) {
+  return <Badge tone={healthTone[status] ?? 'neu'}>{healthLabel[status] ?? status}</Badge>;
+}
+export function CareerBadge({ status }: { status: string }) {
+  return <Badge tone={careerTone[status] ?? 'neu'}>{careerLabel[status] ?? status}</Badge>;
+}
 export const notificationTone: Record<string, Tone> = {
   TRAINING_LOCKED: 'bad', TRAINING_UNLOCKED: 'ok', INCIDENT_REPORTED: 'bad', FITNESS_WARNING: 'warn', AI_RISK_ALERT: 'bad',
 };
 export const notificationIcon: Record<string, string> = {
   TRAINING_LOCKED: 'lock', TRAINING_UNLOCKED: 'unlock', INCIDENT_REPORTED: 'alert', FITNESS_WARNING: 'heart', AI_RISK_ALERT: 'sparkle',
 };
-export const fitColor = (v: number | null | undefined) => (v == null ? '#9ca3af' : v >= 80 ? '#3a6b4a' : v >= 60 ? '#8a6218' : '#8a2020');
-export function LockBadge({ children = 'Locked', className = '' }: { children?: ReactNode; className?: string }) {
-  return <Badge tone="lock" className={className}><Icon name="lock" className="w-3.5 h-3.5" />{children}</Badge>;
+/** Fitness scale: ≥80 good, 60–79 watch, <60 low. Grey when not assessed. */
+export const fitColor = (v: number | null | undefined) => (v == null ? '#9ca3af' : v >= 80 ? '#247b50' : v >= 60 ? '#b45309' : '#c4242a');
+export function LockBadge({ children = 'Khóa tập', className = '' }: { children?: ReactNode; className?: string }) {
+  return <Badge tone="lock" className={className}><Icon name="lock" className="w-3 h-3" />{children}</Badge>;
+}
+/** Lock reasons are written by the backend as "Incident: …" — show them in the UI's language. */
+export function lockReasonText(reason: string | null | undefined): string {
+  if (!reason) return 'Chưa có lý do cụ thể';
+  return reason.replace(/^Incident:\s*/i, 'Sự cố: ');
 }
 
 /* ---------- buttons ---------- */
-type BtnVariant = 'p' | 's' | 'd' | 'g' | 'light' | 'ghostDark';
+type BtnVariant = 'p' | 's' | 'd' | 'g';
 const btnV: Record<BtnVariant, string> = {
   p: 'bg-navy text-white hover:bg-navy-hover',
-  s: 'bg-white text-navy border-line hover:bg-cream',
-  d: 'bg-bad text-white hover:bg-[#741a1a]',
-  g: 'bg-transparent text-navy hover:bg-info-bg',
-  light: 'bg-cream text-navy hover:bg-white',
-  ghostDark: 'bg-white/10 text-white border-white/20 hover:bg-white/15',
+  s: 'bg-white text-ink border-line-strong hover:bg-subtle',
+  d: 'bg-white text-bad border-bad-bd hover:bg-bad-bg',
+  g: 'bg-transparent text-ink hover:bg-cream',
 };
 interface BtnProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   to?: string;
@@ -75,7 +89,7 @@ interface BtnProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   sm?: boolean;
 }
 export function Btn({ to, v = 's', sm, className = '', children, ...rest }: BtnProps) {
-  const cls = `inline-flex items-center justify-center gap-2 rounded-btn border border-transparent font-semibold whitespace-nowrap no-underline transition-colors disabled:bg-line-soft disabled:text-faint disabled:border-line-soft disabled:cursor-not-allowed ${sm ? 'h-8 px-3 text-[12.5px]' : 'h-10 px-4 text-[13px]'} ${btnV[v]} ${className}`;
+  const cls = `inline-flex items-center justify-center gap-1.5 rounded-btn border border-transparent font-medium whitespace-nowrap no-underline transition-colors active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 ${sm ? 'h-8 px-3 text-[13px]' : 'h-9 px-3.5 text-[13.5px]'} ${btnV[v]} ${className}`;
   if (to) return <Link to={to} className={cls}>{children}</Link>;
   return <button type="button" className={cls} {...rest}>{children}</button>;
 }
@@ -86,195 +100,190 @@ export function Card({ className = '', children, ...rest }: { className?: string
 }
 export function CardHeader({ title, children, className = '' }: { title: ReactNode; children?: ReactNode; className?: string }) {
   return (
-    <div className={`flex flex-wrap items-center gap-3 px-5 py-4 border-b border-line-soft ${className}`}>
+    <div className={`flex flex-wrap items-center gap-3 px-5 py-3.5 border-b border-line-soft ${className}`}>
       {typeof title === 'string' ? <h2 className="flex-1 text-[15px] font-semibold leading-5">{title}</h2> : title}
       {children}
     </div>
   );
 }
-export function Kpi({ label, value, small, color, sub }: { label: string; value: ReactNode; small?: ReactNode; color?: string; sub?: ReactNode }) {
+
+/**
+ * The screen's title row: breadcrumb, h1, one sentence about the data (the
+ * finding, not the interface), then search and the real actions on the right.
+ */
+export function PageHeader({ crumbs, title, sub, actions, search }: {
+  crumbs?: [string, string][];
+  title: ReactNode;
+  sub?: ReactNode;
+  actions?: ReactNode;
+  search?: { placeholder: string; value: string; onChange: (v: string) => void };
+}) {
   return (
-    <div className="flex flex-col gap-1.5 px-5 py-4">
-      <span className="lbl">{label}</span>
-      <span className="font-display font-bold text-[36px] leading-9 num" style={{ color }}>{value}{small && <small className="font-sans text-[12.5px] font-medium text-muted ml-1">{small}</small>}</span>
-      {sub && <span className="cap">{sub}</span>}
-    </div>
+    <header className="flex flex-wrap items-end gap-x-6 gap-y-3">
+      <div className="min-w-0 flex-[1_1_320px]">
+        {crumbs && crumbs.length > 0 && (
+          <nav aria-label="Đường dẫn" className="flex items-center gap-1.5 text-[13px] text-muted mb-1">
+            {crumbs.map(([label, to]) => (
+              <span key={to} className="flex items-center gap-1.5">
+                <Link to={to} className="no-underline text-muted hover:text-ink">{label}</Link>
+                <Icon name="chevRight" className="w-3.5 h-3.5" />
+              </span>
+            ))}
+          </nav>
+        )}
+        <h1 className="text-[24px] leading-8 font-semibold tracking-[-0.01em]">{title}</h1>
+        {sub && <p className="text-[14px] text-muted mt-1 max-w-[720px]">{sub}</p>}
+      </div>
+      {(search || actions) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {search && (
+            <label className="flex items-center gap-2 h-9 w-[260px] max-w-full rounded-btn border border-line-strong bg-white px-3 text-muted focus-within:border-info">
+              <Icon name="search" />
+              <input type="search" placeholder={search.placeholder} aria-label={search.placeholder} value={search.value}
+                onChange={(e) => search.onChange(e.target.value)} className="flex-1 min-w-0 outline-none bg-transparent text-ink text-[13.5px]" />
+            </label>
+          )}
+          {actions}
+        </div>
+      )}
+    </header>
   );
 }
-export function HeroStat({ label, value, small, color, first }: { label: string; value: ReactNode; small?: ReactNode; color?: string; first?: boolean }) {
+
+/**
+ * Headline figures as one container split by 1px dividers — label over value,
+ * no tiles, no icons. `lead` makes one figure the screen's answer.
+ */
+export function KpiStrip({ items }: { items: { label: string; value: ReactNode; unit?: ReactNode; sub?: ReactNode; tone?: 'bad' | 'ok' | 'warn'; lead?: boolean }[] }) {
+  const toneCls = { bad: 'text-bad', ok: 'text-ok', warn: 'text-warn' };
+  const cols = { 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4', 5: 'md:grid-cols-5' }[items.length] ?? 'md:grid-cols-4';
+  // 1px dividers come from the 1px grid gap over the border colour, so they stay
+  // exact at every column count; an odd last cell spans the phone's 2-up grid.
   return (
-    <div className={`flex flex-col gap-1 ${first ? '' : 'pl-6 border-l border-white/10'} pr-6`}>
-      <span className="lbl">{label}</span>
-      <span className="font-display font-bold text-[44px] leading-10 num" style={{ color }}>{value}{small && <small className="font-sans text-[13px] font-medium text-hero-muted ml-1">{small}</small>}</span>
-    </div>
+    <Card className={`grid grid-cols-2 ${cols} gap-px bg-line overflow-hidden`}>
+      {items.map((k, i) => (
+        <div key={k.label} className={`bg-white px-5 py-4 min-w-0 ${items.length % 2 === 1 && i === items.length - 1 ? 'col-span-2 md:col-span-1' : ''}`}>
+          <div className="text-[13px] text-muted">{k.label}</div>
+          <div className={`num mt-1 font-semibold leading-tight ${k.lead ? 'text-[30px]' : 'text-[24px]'} ${k.tone ? toneCls[k.tone] : 'text-ink'}`}>
+            {k.value}{k.unit && <span className="text-[14px] font-normal text-muted ml-1">{k.unit}</span>}
+          </div>
+          {k.sub && <div className="text-[12px] text-muted mt-1">{k.sub}</div>}
+        </div>
+      ))}
+    </Card>
   );
 }
-export function HeroStats({ items }: { items: { label: string; value: ReactNode; small?: ReactNode; color?: string }[] }) {
-  return <div className="flex flex-wrap gap-y-4">{items.map((s, i) => <HeroStat key={s.label} first={i === 0} {...s} />)}</div>;
+
+/** Table header cell: sentence-case grey 12px, no band. Add pl-5/pr-5 on the edge columns. */
+export const thCls = 'h-10 px-4 text-left text-[12px] font-medium text-muted border-b border-line whitespace-nowrap';
+
+/** One sentence in the block's frame when it has nothing to show. */
+export function EmptyState({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-dashed border-line-strong px-4 py-3.5 text-[13.5px] text-muted">
+      <span>{children}</span>{action}
+    </div>
+  );
 }
 
 /* ---------- racing identity ---------- */
-const SILK_LETTERS = ['a', 'b', 'c', 'd', 'e', 'f'];
-function hashSilk(key: string): string {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return SILK_LETTERS[h % SILK_LETTERS.length];
+/** Saddle-cloth number. Renders nothing when the horse has no number, so an
+ *  empty cloth never reads as a stray "—" button. */
+export function Cloth({ n, className = '' }: { n: number | string | null | undefined; className?: string }) {
+  if (n == null || n === '') return null;
+  return <span className={`cloth ${className}`} title="Số áo đua">{n}</span>;
 }
-export function silkOf(ownerKey: string | null | undefined): string {
-  return 'silk silk-' + (ownerKey ? hashSilk(ownerKey) : 'a');
-}
-export function Silk({ owner, size = 30, className = '' }: { owner?: string | null; size?: number; className?: string }) {
-  return <span aria-hidden="true" className={`${silkOf(owner)} ${className}`} style={{ width: size, height: size }} />;
-}
-export function Cloth({ n, inv, lg, className = '' }: { n: ReactNode; inv?: boolean; lg?: boolean; className?: string }) {
-  return <span className={`cloth ${inv ? 'cloth-inv' : ''} ${className}`} style={lg ? { minWidth: 44, height: 50, fontSize: 32, borderRadius: 6 } : undefined}>{n}</span>;
-}
-export function HorseIdent({ horse, size = 30, nameClass = 'text-[19px] leading-5', sub }: { horse: { no: ReactNode; owner?: string | null; name: string }; size?: number; nameClass?: string; sub?: ReactNode }) {
-  return (
-    <span className="flex items-center gap-2 min-w-0">
-      <Cloth n={horse.no} />
-      <Silk owner={horse.owner} size={size} />
-      <span className="min-w-0">
-        <span className={`disp block truncate ${nameClass}`}>{horse.name}</span>
-        {sub && <span className="cap block">{sub}</span>}
-      </span>
-    </span>
-  );
-}
-export function FormGuide({ form, dark }: { form: string; dark?: boolean }) {
-  return (
-    <span className="inline-flex gap-[3px]">
-      {form.split('').map((v, i) => {
-        const win = v === '1', place = v === '2' || v === '3';
-        const cls = dark
-          ? (win ? 'bg-[#4f8a62] text-white border-[#4f8a62]' : 'bg-white/10 text-hero-line border-white/15')
-          : (win ? 'bg-ok text-white border-ok' : place ? 'bg-white text-ink border-line' : 'bg-cream text-muted border-line');
-        return <i key={i} className={`not-italic w-5 h-5 rounded-badge inline-flex items-center justify-center font-display font-bold text-[13px] border ${cls}`}>{v}</i>;
-      })}
-    </span>
-  );
+export const HORSE_LOGO = '/icons/manager-horse-head.png';
+/** The horse's photo, or the club's horse-head mark when there is none or it fails to load. */
+export function HorseAvatar({ src, name, size = 36, className = '', onClick }: { src?: string | null; name: string; size?: number; className?: string; onClick?: () => void }) {
+  const [broken, setBroken] = useState(false);
+  const photo = src && !broken;
+  const inner = photo
+    ? <img src={src} alt={name} onError={() => setBroken(true)} className="w-full h-full object-cover" />
+    : <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain p-[14%]" />;
+  const cls = `inline-flex flex-none items-center justify-center rounded-full overflow-hidden bg-white border border-line ${className}`;
+  if (onClick && photo) {
+    return <button type="button" onClick={onClick} aria-label={`Xem ảnh lớn ${name}`} className={`${cls} cursor-zoom-in`} style={{ width: size, height: size }}>{inner}</button>;
+  }
+  return <span className={cls} style={{ width: size, height: size }}>{inner}</span>;
 }
 
 /* ---------- controls ---------- */
-export function Seg({ options, value, onChange, dark }: { options: (string | [string, ReactNode])[]; value: string; onChange?: (k: string) => void; dark?: boolean }) {
+export function Seg({ options, value, onChange }: { options: (string | [string, ReactNode])[]; value: string; onChange?: (k: string) => void }) {
   return (
-    <div role="tablist" className={`inline-flex p-[3px] gap-0.5 rounded-btn border ${dark ? 'bg-white/5 border-white/15' : 'bg-white border-line'}`}>
+    <div role="tablist" className="inline-flex p-[3px] gap-0.5 rounded-btn bg-cream">
       {options.map((o) => {
         const [k, l] = Array.isArray(o) ? o : [o, o];
         const on = k === value;
         return <button key={k} type="button" role="tab" aria-selected={on} onClick={() => onChange?.(k)}
-          className={`h-[30px] px-3 rounded-md text-[12.5px] ${on ? (dark ? 'bg-cream text-navy font-semibold' : 'bg-navy text-white font-semibold') : (dark ? 'text-hero-line' : 'text-muted font-medium')}`}>{l}</button>;
+          className={`h-[28px] px-3 rounded-[5px] text-[13px] ${on ? 'bg-white text-ink font-medium shadow-[0_1px_2px_rgba(17,24,39,.08)]' : 'text-muted hover:text-ink'}`}>{l}</button>;
       })}
     </div>
   );
 }
 export function Chip({ on, onClick, children, className = '' }: { on?: boolean; onClick?: () => void; children: ReactNode; className?: string }) {
   return <button type="button" aria-pressed={on} onClick={onClick}
-    className={`inline-flex items-center gap-1.5 h-[30px] px-3 rounded-full border text-[12.5px] font-medium ${on ? 'bg-navy text-white border-navy' : 'bg-white text-ink border-line'} ${className}`}>{children}</button>;
+    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-btn border text-[13px] transition-colors ${on ? 'bg-navy text-white border-navy' : 'bg-white text-ink border-line-strong hover:bg-subtle'} ${className}`}>{children}</button>;
+}
+/** A filter count inside a Chip — inherits the chip's colour so it stays legible when active. */
+export function ChipCount({ n }: { n: number }) {
+  return <span className="num opacity-70">{n}</span>;
 }
 export function Field({ label, htmlFor, req, hint, err, children, className = '' }: { label?: string; htmlFor?: string; req?: boolean; hint?: ReactNode; err?: boolean; children: ReactNode; className?: string }) {
   return (
     <div className={`flex flex-col gap-1.5 min-w-0 ${className}`}>
-      {label && <label htmlFor={htmlFor} className="text-[12.5px] font-semibold">{label}{req && <span className="text-bad"> *</span>}</label>}
+      {label && <label htmlFor={htmlFor} className="text-[13px] font-medium">{label}{req && <span className="text-bad"> *</span>}</label>}
       {children}
-      {hint && <span className={`text-[11.5px] leading-4 ${err ? 'text-bad font-medium' : 'text-muted'}`}>{hint}</span>}
+      {hint && <span className={`text-[12px] leading-4 ${err ? 'text-bad font-medium' : 'text-muted'}`}>{hint}</span>}
     </div>
   );
 }
-const inputCls = (err?: boolean, ro?: boolean) => `h-10 w-full rounded-btn border bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info ${err ? 'border-bad ring-1 ring-bad' : 'border-line'} ${ro ? 'bg-cream text-muted' : ''}`;
+export const inputCls = (err?: boolean, ro?: boolean) => `h-10 w-full rounded-btn border bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15 ${err ? 'border-bad ring-2 ring-bad/15' : 'border-line-strong'} ${ro ? 'bg-subtle text-muted' : ''}`;
 export function Input({ err, ro, className = '', ...rest }: InputHTMLAttributes<HTMLInputElement> & { err?: boolean; ro?: boolean }) {
   return <input className={`${inputCls(err, ro)} ${className}`} readOnly={ro} {...rest} />;
 }
 export function Textarea({ className = '', ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={`w-full min-h-[88px] rounded-btn border border-line bg-white px-3 py-2.5 text-[13px] leading-[19px] outline-none focus:border-info focus:ring-1 focus:ring-info resize-y ${className}`} {...rest} />;
+  return <textarea className={`w-full min-h-[88px] rounded-btn border border-line-strong bg-white px-3 py-2.5 text-[14px] leading-5 outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15 resize-y ${className}`} {...rest} />;
 }
-export function Select({ options, className = '', ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { options: string[] }) {
+/** A native select styled like Input, with real id/label options. */
+export function NativeSelect({ className = '', children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className={`relative flex items-center ${className}`}>
-      <select className={`${inputCls()} appearance-none pr-9`} {...rest}>{options.map((o) => <option key={o}>{o}</option>)}</select>
+      <select className={`${inputCls()} appearance-none pr-9 disabled:bg-subtle disabled:text-muted`} {...rest}>{children}</select>
       <Icon name="chevDown" className="w-4 h-4 absolute right-3 text-muted pointer-events-none" />
     </div>
   );
 }
-export function SearchInput({ placeholder, className = '', value, onChange }: { placeholder?: string; className?: string; value?: string; onChange?: (v: string) => void }) {
-  return (
-    <label className={`flex items-center gap-2 h-9 rounded-btn border border-line bg-white px-3 text-muted ${className}`}>
-      <Icon name="search" />
-      <input type="search" placeholder={placeholder} aria-label={placeholder} value={value} onChange={(e) => onChange?.(e.target.value)} className="flex-1 min-w-0 border-0 outline-none bg-transparent text-ink" />
-    </label>
-  );
-}
-export function OptionCard({ on, disabled, onClick, children, className = '' }: { on?: boolean; disabled?: boolean; onClick?: () => void; children: ReactNode; className?: string }) {
-  return (
-    <button type="button" role="radio" aria-checked={on} aria-disabled={disabled} onClick={disabled ? undefined : onClick}
-      className={`flex items-center gap-3 w-full text-left rounded-btn border px-3 py-2.5 ${disabled ? 'bg-cream text-faint cursor-not-allowed border-line' : on ? 'border-info ring-1 ring-info bg-[#f7f9fd]' : 'border-line bg-white hover:bg-subtle'} ${className}`}>
-      <span className={`w-4 h-4 flex-none rounded-full border-[1.5px] inline-flex items-center justify-center bg-white ${on ? 'border-info' : 'border-line-strong'}`}>{on && <span className="w-2 h-2 rounded-full bg-info" />}</span>
-      {children}
-    </button>
-  );
+export function Select({ options, className = '', ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { options: string[] }) {
+  return <NativeSelect className={className} {...rest}>{options.map((o) => <option key={o}>{o}</option>)}</NativeSelect>;
 }
 
 /* ---------- feedback ---------- */
 type AlertTone = 'bad' | 'warn' | 'info' | 'ok';
-const alertTone: Record<AlertTone, string> = { bad: 'bg-bad-bg border-bad-bd text-bad', warn: 'bg-warn-bg border-warn-bd text-warn', info: 'bg-info-bg border-info-bd text-info', ok: 'bg-ok-bg border-ok-bd text-ok' };
+const alertTone: Record<AlertTone, string> = { bad: 'bg-bad-bg border-bad-bd text-bad-ink', warn: 'bg-warn-bg border-warn-bd text-warn-ink', info: 'bg-info-bg border-info-bd text-info-ink', ok: 'bg-ok-bg border-ok-bd text-ok-ink' };
 export function Alert({ tone = 'info', icon = 'info', title, children, action, className = '' }: { tone?: AlertTone; icon?: string; title?: ReactNode; children?: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div role={tone === 'bad' ? 'alert' : 'status'} className={`flex gap-3 items-start rounded-btn border px-4 py-3 ${alertTone[tone]} ${className}`}>
-      <Icon name={icon} className="w-5 h-5 mt-px" />
-      <div className="flex-1">{title && <div className="font-semibold">{title}</div>}{children && <div className="text-ink mt-0.5">{children}</div>}</div>
+    <div role={tone === 'bad' ? 'alert' : 'status'} className={`flex gap-3 items-start rounded-card border px-4 py-3 text-[13.5px] ${alertTone[tone]} ${className}`}>
+      <Icon name={icon} className="w-4 h-4 mt-0.5" />
+      <div className="flex-1 min-w-0">{title && <div className="font-semibold">{title}</div>}{children && <div className={title ? 'mt-0.5' : ''}>{children}</div>}</div>
       {action}
     </div>
   );
 }
+/** A progress track at the true ratio. */
 export function Bar({ pct, color = '#1a4b8a', className = 'w-16' }: { pct: number; color?: string; className?: string }) {
-  return <span className={`inline-block h-1.5 rounded bg-line-soft overflow-hidden flex-none ${className}`}><i className="block h-full rounded" style={{ width: pct + '%', background: color }} /></span>;
-}
-export function Sev({ level, dark }: { level: 0 | 1 | 2 | 3; dark?: boolean }) {
-  const c = ['#3a6b4a', '#8a6218', '#8a2020', '#5e1414'][level];
-  const n = ['Thấp', 'Trung bình', 'Cao', 'Khẩn cấp'][level];
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.05em]" style={{ color: dark ? '#f3b4b4' : c }}>
-      {n}<i className="inline-flex gap-0.5">{[0, 1, 2, 3].map((k) => <b key={k} className="w-[5px] h-3 rounded-[1px]" style={{ background: k <= level ? (dark ? '#f3b4b4' : c) : (dark ? 'rgba(255,255,255,.2)' : '#e2e0db') }} />)}</i>
-    </span>
-  );
+  const w = Math.max(0, Math.min(100, pct));
+  return <span className={`block h-1.5 rounded-full bg-line-soft overflow-hidden ${className}`}><span className="block h-full rounded-full" style={{ width: w + '%', background: color }} /></span>;
 }
 export function Tip({ left, top, children }: { left: number | string; top: number | string; children: ReactNode }) {
-  return <div className="absolute pointer-events-none bg-navy text-white rounded-btn px-2.5 py-2 text-xs shadow-pop whitespace-nowrap -translate-x-1/2 -translate-y-full -mt-3" style={{ left, top }}>{children}</div>;
-}
-export function Stepper({ steps, current }: { steps: string[]; current: number }) {
-  return (
-    <div className="flex flex-wrap items-center gap-y-2">
-      {steps.map((s, i) => {
-        const done = i < current, cur = i === current;
-        return (
-          <span key={s} className="flex items-center">
-            {i > 0 && <span className={`w-9 h-0.5 mx-2.5 ${done || cur ? 'bg-ok-on' : 'bg-white/20'}`} />}
-            <span className={`flex items-center gap-2 text-[12.5px] font-semibold ${done || cur ? 'text-white' : 'text-hero-label'}`}>
-              <b className={`w-[26px] h-[26px] rounded-full inline-flex items-center justify-center font-display text-[15px] border-[1.5px] ${done ? 'bg-ok-on border-ok-on text-navy' : cur ? 'bg-cream border-cream text-navy' : 'border-white/30'}`}>{done ? '✓' : i + 1}</b>{s}
-            </span>
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-export function Tabs({ items }: { items: [string, ReactNode, boolean?][] }) {
-  return (
-    <nav className="flex gap-1 border-b border-line overflow-x-auto" aria-label="Mục">
-      {items.map(([to, label, ext]) => (
-        <NavLink key={to} to={to} end className={({ isActive }) => `inline-flex items-center gap-2 h-10 px-3.5 -mb-px border-b-2 whitespace-nowrap no-underline ${isActive ? 'text-info border-info font-semibold' : 'text-muted border-transparent font-medium hover:text-ink'}`}>
-          {label}{ext && <Icon name="external" className="w-3.5 h-3.5" />}
-        </NavLink>
-      ))}
-    </nav>
-  );
+  return <div className="absolute pointer-events-none bg-navy text-white rounded-btn px-2.5 py-1.5 text-xs shadow-pop whitespace-nowrap -translate-x-1/2 -translate-y-full -mt-3" style={{ left, top }}>{children}</div>;
 }
 export function SubNav({ items }: { items: [string, ReactNode, (number | null)?][] }) {
   return (
-    <nav className="flex flex-wrap gap-1 p-1 bg-[#efede8] rounded-card w-fit max-w-full">
+    <nav className="flex flex-wrap gap-0.5 p-[3px] bg-cream rounded-btn w-fit max-w-full">
       {items.map(([to, label, n]) => (
-        <NavLink key={to} to={to} end className={({ isActive }) => `inline-flex items-center gap-2 h-9 px-3.5 rounded-[7px] text-[12.5px] font-semibold no-underline ${isActive ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>
-          {label}{n ? <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-bad text-white text-[10.5px] inline-flex items-center justify-center">{n}</span> : null}
+        <NavLink key={to} to={to} end className={({ isActive }) => `inline-flex items-center gap-2 h-8 px-3 rounded-[5px] text-[13px] no-underline ${isActive ? 'bg-white text-ink font-medium shadow-[0_1px_2px_rgba(17,24,39,.08)]' : 'text-muted hover:text-ink'}`}>
+          {label}{n ? <span className="num min-w-[18px] h-[18px] px-1.5 rounded-full bg-bad text-white text-[11px] inline-flex items-center justify-center">{n}</span> : null}
         </NavLink>
       ))}
     </nav>
@@ -291,25 +300,24 @@ export function Modal({ open, onClose, width = 560, labelledBy, children }: { op
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-navy/40" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
-      <div role="dialog" aria-modal="true" aria-labelledby={labelledBy} className="w-full max-h-full overflow-auto bg-white border border-line rounded-xl shadow-pop flex flex-col" style={{ maxWidth: width }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[rgba(17,24,39,.42)]" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={labelledBy} className="w-full max-h-full overflow-auto bg-white rounded-card shadow-pop flex flex-col animate-sheet" style={{ maxWidth: width }}>
         {children}
       </div>
     </div>
   );
 }
-export function ModalHead({ icon, tone = 'info', title, sub, onClose, id }: { icon?: string; tone?: 'bad' | 'info' | 'ok' | 'warn'; title: ReactNode; sub?: ReactNode; onClose?: () => void; id?: string }) {
-  const t = { bad: 'bg-bad-bg text-bad', info: 'bg-info-bg text-info', ok: 'bg-ok-bg text-ok', warn: 'bg-warn-bg text-warn' }[tone];
+/** Dialog title row. A destructive dialog (tone="bad") colours its title, never an icon tile. */
+export function ModalHead({ tone = 'info', title, sub, onClose, id }: { icon?: string; tone?: 'bad' | 'info' | 'ok' | 'warn'; title: ReactNode; sub?: ReactNode; onClose?: () => void; id?: string }) {
   return (
     <div className="flex items-start gap-3 px-6 pt-5 pb-4">
-      {icon && <span className={`w-10 h-10 rounded-card flex items-center justify-center flex-none ${t}`}><Icon name={icon} className="w-5 h-5" /></span>}
-      <div className="flex-1"><h2 id={id} className="text-base font-semibold">{title}</h2>{sub && <p className="text-muted mt-1">{sub}</p>}</div>
-      <button type="button" aria-label="Đóng" onClick={onClose} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream"><Icon name="x" /></button>
+      <div className="flex-1 min-w-0"><h2 id={id} className={`text-[17px] leading-6 font-semibold ${tone === 'bad' ? 'text-bad' : ''}`}>{title}</h2>{sub && <p className="text-[13.5px] text-muted mt-1">{sub}</p>}</div>
+      <button type="button" aria-label="Đóng" onClick={onClose} className="w-8 h-8 -mr-2 -mt-1 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="x" /></button>
     </div>
   );
 }
 export const ModalBody = ({ children }: { children: ReactNode }) => <div className="px-6 pb-5 flex flex-col gap-4">{children}</div>;
-export const ModalFoot = ({ children }: { children: ReactNode }) => <div className="flex flex-wrap justify-end items-center gap-2 px-6 py-4 border-t border-line-soft bg-subtle rounded-b-xl">{children}</div>;
+export const ModalFoot = ({ children }: { children: ReactNode }) => <div className="flex flex-wrap justify-end items-center gap-2 px-6 py-3.5 border-t border-line-soft">{children}</div>;
 
 /** Full-screen click-to-view for a thumbnail image (e.g. a horse's photo). */
 export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: string; open: boolean; onClose: () => void }) {
@@ -321,7 +329,7 @@ export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: s
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-navy/80" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[rgba(17,24,39,.86)]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <button type="button" onClick={onClose} aria-label="Đóng" className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20">
         <Icon name="x" className="w-5 h-5" />
       </button>
@@ -331,25 +339,13 @@ export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: s
 }
 
 /* ---------- small charts ---------- */
-export function Ring({ value, size = 60, stroke = 5, color, track = '#eceae4', text, textColor = '#1a1f2e', label }: { value: number; size?: number; stroke?: number; color: string; track?: string; text?: ReactNode; textColor?: string; label?: string }) {
+export function Ring({ value, size = 52, stroke = 4, color, track = '#eff0f3', text, textColor = '#1a1f2e', label }: { value: number; size?: number; stroke?: number; color: string; track?: string; text?: ReactNode; textColor?: string; label?: string }) {
   const r = size / 2 - stroke, c = 2 * Math.PI * r;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label || `${value}`}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label || `${value}`} className="flex-none">
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${(value / 100) * c} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-      <text x="50%" y="50%" dy=".35em" textAnchor="middle" fontFamily="Barlow Condensed, Arial Narrow, sans-serif" fontWeight="700" fontSize={size * 0.32} fill={textColor}>{text ?? value}</text>
-    </svg>
-  );
-}
-export function Sparkline({ values, w = 120, h = 30, color = '#2f62a8', dot = true, className = '' }: { values: number[]; w?: number; h?: number; color?: string; dot?: boolean; className?: string }) {
-  const min = 55, max = 90;
-  const y = (v: number) => (h - 2 - ((v - min) / (max - min)) * (h - 4)).toFixed(1);
-  const step = (w - 4) / (values.length - 1);
-  const pts = values.map((v, i) => `${(2 + i * step).toFixed(1)},${y(v)}`).join(' ');
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={className} aria-hidden="true">
-      <polyline fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" points={pts} />
-      {dot && <circle cx={w - 2} cy={Number(y(values[values.length - 1]))} r="3" fill={color} />}
+      {value > 0 && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${(value / 100) * c} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
+      <text x="50%" y="50%" dy=".35em" textAnchor="middle" fontFamily="Inter, sans-serif" fontWeight="600" fontSize={size * 0.3} fill={textColor} style={{ fontVariantNumeric: 'tabular-nums' }}>{text ?? value}</text>
     </svg>
   );
 }

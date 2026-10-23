@@ -179,7 +179,7 @@ function EditPedigree({ horseId, onCancel, onSaved }: { horseId: string; onCance
     }
   };
 
-  const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info disabled:bg-cream disabled:text-muted';
+  const selectCls = 'h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15 disabled:bg-cream disabled:text-muted';
   const options = (selectedId: string, otherId: string) => (
     <>
       <option value="">{t('pedigree.unknown')}</option>

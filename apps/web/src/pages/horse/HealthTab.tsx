@@ -15,7 +15,7 @@ import { TreatmentPlansSection } from '../../components/health/TreatmentPlansSec
 import { InjuryLocationsSection } from '../../components/health/InjuryLocationsSection';
 import { AiInsightCard } from '../../components/horse/AiInsightCard';
 import { formatDate } from '../../lib/format';
-import { Badge, Btn, Card, Field, Icon, Textarea, healthTone } from '../../ds/ui';
+import { Btn, Card, EmptyState, Field, Icon, Textarea } from '../../ds/ui';
 
 /* ========== Main component ========== */
 export function HealthTab({ horse }: { horse: Horse }) {
@@ -48,8 +48,8 @@ export function HealthTab({ horse }: { horse: Horse }) {
       <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
           <h2 className="text-[15px] font-semibold">Hồ sơ khám bệnh</h2>
-          <p className="cap mt-0.5">
-            {isVet ? 'Ghi nhận kết quả khám, chẩn đoán và cập nhật tình trạng sức khỏe.' : 'Lịch sử khám bệnh và chẩn đoán của chiến mã.'}
+          <p className="text-[13px] text-muted mt-0.5">
+            {loading ? 'Đang tải…' : records.length === 0 ? 'Chưa có lần khám nào.' : `${records.length} lần khám · gần nhất ${formatDate(records[0].examDate)}`}
           </p>
         </div>
         {isVet && <Btn v="p" onClick={() => setModalOpen(true)}><Icon name="plus" />Ghi nhận hồ sơ khám</Btn>}
@@ -57,35 +57,14 @@ export function HealthTab({ horse }: { horse: Horse }) {
 
       {canUseAi && <AiInsightCard horseId={horse.id} />}
 
-      <Card className="flex gap-6 items-center px-5 py-3.5">
-        <div>
-          <span className="cap">Trạng thái sức khỏe hiện tại</span>
-          <div className="mt-1">
-            <Badge tone={healthTone[horse.healthStatus]}>{horse.healthStatus}</Badge>
-            {horse.locked && <Badge tone="bad" className="ml-1.5">Khóa tập</Badge>}
-          </div>
-        </div>
-        <div className="border-l border-line pl-6">
-          <span className="cap">Tổng số lần khám</span>
-          <div className="font-bold text-xl mt-0.5">{loading ? '...' : records.length}</div>
-        </div>
-        {records.length > 0 && (
-          <div className="border-l border-line pl-6">
-            <span className="cap">Lần khám gần nhất</span>
-            <div className="font-semibold mt-0.5">{formatDate(records[0].examDate)}</div>
-          </div>
-        )}
-      </Card>
-
       {loading ? (
-        <p className="cap">Đang tải hồ sơ...</p>
+        <p className="text-muted">Đang tải hồ sơ…</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <p className="cap">{t('health.empty')}</p>
-          {isVet && <Btn v="p" className="mt-3" onClick={() => setModalOpen(true)}>Tạo hồ sơ khám đầu tiên</Btn>}
-        </Card>
+        <EmptyState action={isVet ? <Btn sm v="p" onClick={() => setModalOpen(true)}>Tạo hồ sơ khám đầu tiên</Btn> : undefined}>
+          {t('health.empty')}
+        </EmptyState>
       ) : (
         <ul className="list-none p-0 flex flex-col gap-3">
           {records.map((r) => <RecordItem key={r.id} record={r} isVet={isVet} onChanged={load} />)}
@@ -152,10 +131,10 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
   return (
     <li>
       <Card className="p-5">
-        <div className="flex justify-between items-center mb-2.5">
-          <div>
-            <strong className="text-[15px]">{formatDate(record.examDate)}</strong>
-            <span className="cap ml-2.5">Bác sĩ: {record.vet.name}</span>
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
+          <div className="flex items-baseline gap-2.5">
+            <strong className="num text-[15px]">{formatDate(record.examDate)}</strong>
+            <span className="text-[13px] text-muted">Bác sĩ {record.vet.name}</span>
           </div>
           <div className="flex gap-1.5">
             {record.attachmentPath && <Btn sm onClick={download}>{t('health.openAttachment')}</Btn>}
@@ -176,8 +155,8 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
         )}
 
         {isVet && (
-          <form onSubmit={upload} className="flex gap-2 mt-2.5">
-            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="flex-1 text-[12.5px]" />
+          <form onSubmit={upload} className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-line-soft">
+            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" aria-label="Chọn file đính kèm" className="flex-1 min-w-0" />
             <Btn sm type="submit" disabled={busy}>{t('health.uploadAttachment')}</Btn>
           </form>
         )}

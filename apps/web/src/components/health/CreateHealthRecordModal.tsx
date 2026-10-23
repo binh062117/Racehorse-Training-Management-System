@@ -84,7 +84,7 @@ export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, h
         <ModalBody>
           <ErrorText err={err} />
 
-          <Field label="Chiến mã khám">
+          <Field label="Ngựa được khám">
             <Input value={horseName} disabled ro />
           </Field>
 
@@ -108,7 +108,7 @@ export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, h
 
           <Field label="Cập nhật trạng thái sức khỏe" hint="Thay đổi trạng thái y tế của ngựa sau khám. Bỏ trống nếu không đổi.">
             <select
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
               value={healthStatus} onChange={(e) => setHealthStatus(e.target.value as HealthStatus | '')}
             >
               <option value="">— Không thay đổi trạng thái —</option>

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 const FEATURES: { label: string; icon: ReactNode }[] = [
   {
-    label: 'Hồ sơ & phả hệ từng chiến mã',
+    label: 'Hồ sơ & phả hệ từng ngựa',
     icon: <><circle cx="6" cy="6" r="2.2" /><circle cx="6" cy="18" r="2.2" /><circle cx="18" cy="12" r="2.2" /><path d="M8.2 6h2.3A3.5 3.5 0 0 1 14 9.5V12m0 0v2.5a3.5 3.5 0 0 1-3.5 3.5H8.2M14 12h1.8" /></>,
   },
   {
@@ -28,14 +28,14 @@ const ROLES = ['Quản lý', 'Huấn luyện viên', 'Thú y', 'Chăm sóc', 'Ch
  * cover a color (navy/cream/ink/line-strong) and kept as one-off accent
  * blues (#5b9bd5 / #8fb8e0) where the canvas intentionally departs from the
  * flatter brand-blue used elsewhere, to preserve that banner's own look. */
-export function AuthLayout({ eyebrow, title, subtitle, children }: { eyebrow: string; title: string; subtitle?: string; children: ReactNode }) {
+/* `eyebrow` is accepted for the callers' sake but no longer shown: the form side
+ * leads with its title, the way every app screen does. */
+export function AuthLayout({ title, subtitle, children }: { eyebrow?: string; title: string; subtitle?: string; children: ReactNode }) {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-page">
-      <div
-        className="relative overflow-hidden flex flex-col justify-between gap-10 px-8 py-10 lg:px-16 lg:py-14 lg:min-h-screen bg-navy text-cream"
-        style={{ backgroundImage: 'radial-gradient(60% 55% at 88% 92%, rgba(91,155,213,0.20), rgba(91,155,213,0) 70%)' }}
-      >
-        <svg aria-hidden="true" viewBox="0 0 980 760" className="hidden lg:block pointer-events-none absolute -right-[300px] -bottom-[110px] w-[980px] h-[760px]">
+      <div className="relative overflow-hidden flex flex-col justify-between gap-10 px-6 py-8 sm:px-8 lg:px-16 lg:py-14 lg:min-h-screen bg-navy text-cream">
+        {/* The track ornament sits in the bottom-right corner, behind the copy column's right edge, never under the text. */}
+        <svg aria-hidden="true" viewBox="0 0 980 760" className="hidden xl:block pointer-events-none absolute -right-[460px] -bottom-[400px] w-[980px] h-[760px]">
           <defs>
             <pattern id="auth-chk" width="16" height="16" patternUnits="userSpaceOnUse">
               <rect x="0" y="0" width="8" height="8" fill="#f5f4f1" />
@@ -53,38 +53,33 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: { eyebrow: st
           <rect x="124" y="192" width="732" height="376" rx="188" fill="none" stroke="#5b9bd5" strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round" pathLength={1000} strokeDasharray="90 910" strokeDashoffset={-240} />
           <rect x="556" y="116" width="16" height="190" fill="url(#auth-chk)" opacity="0.32" />
         </svg>
-        <img
-          aria-hidden="true" alt="" src="/icons/manager-horse-head.png"
-          className="hidden lg:block pointer-events-none absolute -right-[60px] -bottom-[30px] w-[500px] h-[500px] object-contain invert mix-blend-screen opacity-20"
-        />
 
         <div className="relative flex items-center gap-3">
-          <span className="w-14 h-14 rounded-full bg-white flex-none overflow-hidden flex items-center justify-center">
+          <span className="w-11 h-11 lg:w-12 lg:h-12 rounded-full bg-white flex-none overflow-hidden flex items-center justify-center">
             <img src="/icons/manager-horse-head.png" alt="Logo Racehorse Club" className="w-full h-full object-contain scale-[1.35]" />
           </span>
-          <span className="text-[13px] font-semibold tracking-[.16em] uppercase text-[#b7c0cc]">Racehorse Club</span>
+          <span className="leading-tight"><span className="block text-[15px] font-semibold text-white">Racehorse Club</span><span className="block text-[12.5px] text-[#b7c0cc]">Huấn luyện &amp; quản lý</span></span>
         </div>
 
         <div className="relative flex flex-col gap-7">
           <div className="flex flex-col gap-[18px]">
-            <div className="text-[11px] font-semibold tracking-[.14em] uppercase text-[#8fb8e0]">Hệ thống huấn luyện &amp; quản lý</div>
-            <h1 className="m-0 max-w-[640px] text-[34px] lg:text-[54px] leading-[1.07] font-semibold tracking-[-0.025em]">
+            <h1 className="m-0 max-w-[600px] text-[30px] sm:text-[36px] lg:text-[50px] leading-[1.08] font-semibold tracking-[-0.025em] text-white">
               Quản lý &amp; huấn luyện <span className="text-[#5b9bd5]">ngựa đua</span> chuyên nghiệp
             </h1>
-            <p className="m-0 max-w-[520px] text-[17px] leading-relaxed text-[#b7c0cc]">
+            <p className="m-0 max-w-[520px] text-[15px] lg:text-[17px] leading-relaxed text-[#c3cbd6]">
               Nền tảng hợp nhất hồ sơ ngựa, giáo án huấn luyện, hồ sơ y tế và giải đua cho toàn bộ câu lạc bộ.
             </p>
           </div>
 
-          <div className="hidden lg:grid grid-cols-2 gap-3 max-w-[620px]">
+          <div className="hidden lg:grid grid-cols-2 gap-x-8 gap-y-4 max-w-[560px] pt-6 border-t border-white/10">
             {FEATURES.map(({ label, icon }) => (
-              <div key={label} className="flex items-center gap-3.5 px-4 py-3.5 rounded-[10px] border border-white/10 bg-white/[.04]">
-                <span className="w-10 h-10 flex-none rounded-lg bg-[#5b9bd5]/[.16] text-[#8fb8e0] flex items-center justify-center">
-                  <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <div key={label} className="flex items-center gap-3">
+                <span className="flex-none text-[#8fb8e0]">
+                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                     {icon}
                   </svg>
                 </span>
-                <div className="text-[14px] leading-[1.35] font-medium">{label}</div>
+                <div className="text-[14px] leading-[1.35] text-[#e3e8ee]">{label}</div>
               </div>
             ))}
           </div>
@@ -92,20 +87,19 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: { eyebrow: st
 
         <div className="relative flex flex-col gap-4">
           <div className="hidden lg:flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[12px] text-[#98a3b3]">Dành cho</span>
+            <span className="mr-1 text-[12.5px] text-[#aab4c2]">Dành cho</span>
             {ROLES.map((role) => (
-              <span key={role} className="px-3 py-1 rounded-full border border-white/[.16] text-[12px] text-[#d3d9e1]">{role}</span>
+              <span key={role} className="px-2.5 py-1 rounded-badge border border-white/[.16] text-[12.5px] text-[#d3d9e1]">{role}</span>
             ))}
           </div>
-          <div className="text-[12px] text-[#98a3b3]">© {new Date().getFullYear()} Racehorse Club · SWP391</div>
+          <div className="text-[12.5px] text-[#aab4c2]">© {new Date().getFullYear()} Racehorse Club · SWP391</div>
         </div>
       </div>
 
-      <div className="flex items-center justify-center p-6 lg:p-14">
+      <div className="flex items-center justify-center px-4 py-8 sm:p-10 lg:p-14">
         <div className="w-full max-w-[400px]">
-          <div className="lbl">{eyebrow}</div>
-          <h2 className="disp text-[32px] mt-1">{title}</h2>
-          {subtitle && <p className="cap mt-2 mb-2">{subtitle}</p>}
+          <h2 className="text-[24px] leading-8 font-semibold tracking-[-0.01em]">{title}</h2>
+          {subtitle && <p className="text-[14px] text-muted mt-1">{subtitle}</p>}
           <div className="flex flex-col gap-4 mt-6">{children}</div>
         </div>
       </div>

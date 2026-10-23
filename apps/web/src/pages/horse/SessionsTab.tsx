@@ -6,7 +6,7 @@ import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate, fromDateTimeLocal } from '../../lib/format';
 import {
-  Alert, Badge, Btn, Card, Field, Icon, Modal, ModalBody, ModalFoot, ModalHead, Textarea, type Tone,
+  Badge, Btn, Card, EmptyState, Field, Icon, Input, Modal, ModalBody, ModalFoot, ModalHead, NativeSelect, Textarea, type Tone,
 } from '../../ds/ui';
 
 const sessionTime = new Intl.DateTimeFormat('vi-VN', {
@@ -25,7 +25,7 @@ export function SessionsTab(props: Props) {
   return <SessionsContent key={props.horseId} {...props} />;
 }
 
-function SessionsContent({ horseId, isLocked, lockReason }: Props) {
+function SessionsContent({ horseId, isLocked }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const role = user?.role;
@@ -117,14 +117,12 @@ function SessionsContent({ horseId, isLocked, lockReason }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      {isLocked && (
-        <Alert tone="bad" icon="lock" title={t('session.locked')}>
-          {lockReason}
-        </Alert>
-      )}
-
+      {/* The lock itself is announced once, in the horse page's alert above the tabs. */}
       <div className="flex justify-between items-center flex-wrap gap-2.5">
-        <h2 className="text-[15px] font-semibold">{t('session.heading')}</h2>
+        <div>
+          <h2 className="text-[15px] font-semibold">{t('session.heading')}</h2>
+          {isLocked && <p className="text-[13px] text-muted mt-0.5">Đang khóa tập — chưa thể lên lịch buổi mới.</p>}
+        </div>
         {canCreate && !isLocked && (
           <Btn v="p" onClick={() => { setCreated(false); setCreating(true); }}><Icon name="plus" />{t('session.openSchedule')}</Btn>
         )}
@@ -138,18 +136,18 @@ function SessionsContent({ horseId, isLocked, lockReason }: Props) {
         onCreated={() => { setCreating(false); setCreated(true); void load(); }}
       />
 
-      <p className="cap">{t('session.displayTime')}</p>
       {loading ? (
-        <p className="cap" role="status">{t('session.loading')}</p>
+        <p className="text-muted" role="status">{t('session.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : sessions.length === 0 ? (
-        <p className="cap">{t('session.empty')}</p>
+        <EmptyState>{t('session.empty')}</EmptyState>
       ) : (
         <div className="flex flex-col gap-5">
+          <p className="text-[12px] text-muted -mb-2">{t('session.displayTime')}</p>
           {[...days].map(([date, entries]) => (
             <section key={date} aria-label={date}>
-              <h3 className="lbl mb-2">{date}</h3>
+              <h3 className="num text-[13px] font-semibold text-muted mb-2">{date}</h3>
               <ul className="list-none p-0 flex flex-col gap-2.5">
                 {entries.map((s) => (
                   <SessionItem
@@ -232,13 +230,13 @@ function CreateSessionForm({
         <ModalBody>
           <Field label={t('session.scheduledAt')} hint={t('session.localTime', { zone: Intl.DateTimeFormat().resolvedOptions().timeZone })}>
             <input
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
               type="datetime-local" autoFocus value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} disabled={busy} required
             />
           </Field>
           <Field label={t('session.plan')}>
             <select
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
               value={planId} onChange={(e) => setPlanId(e.target.value)} disabled={busy || plansLoading || !!plansErr}
             >
               <option value="">{t('session.noPlan')}</option>
@@ -255,7 +253,7 @@ function CreateSessionForm({
           )}
           <Field label={t('session.type')}>
             <input
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
               value={type} onChange={(e) => setType(e.target.value)} placeholder="gallop, sprint, trot…" maxLength={80} disabled={busy} required
             />
           </Field>
@@ -316,49 +314,42 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
 
   return (
     <li>
-      <Card className="p-4">
-        <div className="flex justify-between items-start gap-3 flex-wrap">
-          <time className="disp text-2xl" dateTime={session.scheduledAt}>{sessionTime.format(new Date(session.scheduledAt))}</time>
-          <div className="flex items-center gap-2">
-            <strong>{session.type}</strong>
+      <Card className="p-4 flex gap-4">
+        <time className="num w-[52px] flex-none text-[18px] leading-6 font-semibold" dateTime={session.scheduledAt}>
+          {sessionTime.format(new Date(session.scheduledAt))}
+        </time>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start gap-3 flex-wrap">
+            <div className="font-semibold leading-6">{session.type}</div>
             <Badge tone={STATUS_TONE[session.status]}>{t(`session.displayStatus.${session.status}`)}</Badge>
           </div>
-        </div>
-        <div className="mt-2 text-[13px]">
-          <div className="lbl">{t('session.planSummary')}</div>
-          <div className={hasPlan ? '' : 'cap'}>{planLabel}</div>
-          <div className="cap mt-0.5">{t('session.trainer')}: {session.trainer.name}</div>
-          {session.notes && <div className="cap mt-0.5">{t('session.notes')}: {session.notes}</div>}
-        </div>
-        {(session.resultMetric || session.resultValue != null) && (
-          <div className="text-[12.5px] mt-1.5">{t('session.result')}: {session.resultMetric ?? '—'} = {session.resultValue ?? '—'}</div>
-        )}
+          <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[13px]">
+            <dt className="text-muted">{t('session.planSummary')}</dt>
+            <dd className={hasPlan ? '' : 'text-muted'}>{planLabel}</dd>
+            <dt className="text-muted">{t('session.trainer')}</dt>
+            <dd>{session.trainer.name}</dd>
+            {session.notes && <><dt className="text-muted">{t('session.notes')}</dt><dd>{session.notes}</dd></>}
+            {(session.resultMetric || session.resultValue != null) && (
+              <><dt className="text-muted">{t('session.result')}</dt><dd className="num">{session.resultMetric ?? 'Chỉ số'}: <strong>{session.resultValue ?? 'Chưa có'}</strong></dd></>
+            )}
+          </dl>
 
-        {editable && !editing && <Btn sm className="mt-2.5" onClick={() => setEditing(true)}>{t('common.update')}</Btn>}
+          {editable && !editing && <Btn sm className="mt-3" onClick={() => setEditing(true)}>{t('common.update')}</Btn>}
 
         {editing && (
           <form onSubmit={save} className="flex flex-col gap-3 mt-3.5 pt-3.5 border-t border-line-soft">
             <Field label={t('session.status')}>
-              <select
-                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-                value={status} onChange={(e) => setStatus(e.target.value as 'DONE' | 'CANCELLED' | '')}
-              >
+              <NativeSelect value={status} onChange={(e) => setStatus(e.target.value as 'DONE' | 'CANCELLED' | '')}>
                 <option value="">{t('session.keepPlanned')}</option>
-                <option value="DONE">DONE</option>
-                <option value="CANCELLED">CANCELLED</option>
-              </select>
+                <option value="DONE">{t('session.displayStatus.DONE')}</option>
+                <option value="CANCELLED">{t('session.displayStatus.CANCELLED')}</option>
+              </NativeSelect>
             </Field>
             <Field label={t('session.resultMetric')}>
-              <input
-                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-                value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} placeholder="time_1200m_s"
-              />
+              <Input value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} placeholder="Ví dụ: thời gian 1200m (giây)" />
             </Field>
             <Field label={t('session.resultValue')}>
-              <input
-                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-                type="number" step="any" value={resultValue} onChange={(e) => setResultValue(e.target.value)}
-              />
+              <Input type="number" step="any" value={resultValue} onChange={(e) => setResultValue(e.target.value)} />
             </Field>
             {isTrainer && <Field label={t('session.notes')}><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></Field>}
             <ErrorText err={err} />
@@ -368,6 +359,7 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, onChan
             </div>
           </form>
         )}
+        </div>
       </Card>
     </li>
   );

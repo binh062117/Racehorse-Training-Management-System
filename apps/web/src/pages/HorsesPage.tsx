@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
-import type { Horse, HealthStatus, Paginated } from '../lib/types';
+import type { Horse, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { CreateHorseModal } from '../components/horse/CreateHorseModal';
@@ -10,34 +10,16 @@ import { EditHorseModal } from '../components/horse/EditHorseModal';
 import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Badge, Btn, Card, Chip, Cloth, HeroStats, Icon, LockBadge, Ring, Seg,
-  careerTone, fitColor, healthTone,
+  Btn, Card, CareerBadge, Chip, ChipCount, Cloth, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip,
+  LockBadge, PageHeader, Ring, Seg, fitColor, lockReasonText,
 } from '../ds/ui';
-
-/** Small badge mark used next to the saddle-cloth number in horse rows/cards. */
-function HorseMark({ size = 30 }: { size?: number }) {
-  return (
-    <span
-      className="rounded-full bg-white border border-line flex-none inline-flex items-center justify-center overflow-hidden"
-      style={{ width: size, height: size }}
-    >
-      <img src="/icons/manager-horse-head.png" alt="" className="w-full h-full object-contain p-[3px]" />
-    </span>
-  );
-}
 
 type Filter = 'all' | 'locked' | 'injured' | 'mon';
 const FILTERS: [Filter, string, (h: Horse) => boolean][] = [
   ['all', 'Tất cả', () => true],
   ['locked', 'Khóa tập', (h) => h.locked],
-  ['injured', 'Chấn thương / Cách ly', (h) => h.healthStatus === 'INJURED' || h.healthStatus === 'QUARANTINED'],
+  ['injured', 'Chấn thương / cách ly', (h) => h.healthStatus === 'INJURED' || h.healthStatus === 'QUARANTINED'],
   ['mon', 'Cần theo dõi', (h) => h.healthStatus === 'MONITORING'],
-];
-const HEALTH_DIST: { key: HealthStatus; label: string; color: string }[] = [
-  { key: 'FIT', label: 'Khỏe mạnh', color: '#6fae84' },
-  { key: 'MONITORING', label: 'Cần theo dõi', color: '#e0b55a' },
-  { key: 'QUARANTINED', label: 'Cách ly', color: '#d98080' },
-  { key: 'INJURED', label: 'Chấn thương', color: '#b94a4a' },
 ];
 
 function calculateAge(birthDate: string | null): number | null {
@@ -47,6 +29,11 @@ function calculateAge(birthDate: string | null): number | null {
   const years = Math.floor((Date.now() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
   return years >= 0 ? years : null;
 }
+const genderText = (g: Horse['gender']) => (g === 'MALE' ? 'Đực' : g === 'FEMALE' ? 'Cái' : 'Chưa rõ giới tính');
+const ageText = (birthDate: string | null) => {
+  const age = calculateAge(birthDate);
+  return age != null ? `${age} tuổi` : 'Chưa rõ tuổi';
+};
 
 export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const { user } = useAuth();
@@ -76,135 +63,115 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
     api.get<Paginated<Horse>>('/horses', { params: queryParams }).then((r) => r.data),
   );
   const all = data?.data ?? [];
-  const bySearch = debouncedSearch.trim()
-    ? all.filter((h) => h.name.toLowerCase().includes(debouncedSearch.trim().toLowerCase()))
-    : all;
+  const q = debouncedSearch.trim().toLowerCase();
+  const bySearch = q ? all.filter((h) => h.name.toLowerCase().includes(q)) : all;
   const rows = [...bySearch].filter(FILTERS.find((f) => f[0] === filter)![2])
     .sort((a, b) => (b.fitnessScore ?? -1) - (a.fitnessScore ?? -1));
 
   const locked = all.filter((h) => h.locked).length;
   const active = all.filter((h) => h.status === 'ACTIVE').length;
   const scored = all.filter((h) => h.fitnessScore != null);
-  const avgFit = scored.length ? (scored.reduce((s, h) => s + (h.fitnessScore ?? 0), 0) / scored.length).toFixed(1) : '—';
-  const healthCounts = HEALTH_DIST.map((d) => ({ ...d, n: all.filter((h) => h.healthStatus === d.key).length }));
+  const avgFit = scored.length ? (scored.reduce((s, h) => s + (h.fitnessScore ?? 0), 0) / scored.length).toFixed(1) : null;
 
-  const title = personal ? 'Ngựa của tôi' : 'Chuồng ngựa';
-  usePageChrome({ crumbs: ['Ngựa đua', title], search: 'Tìm theo tên ngựa…', onSearch: setSearch });
+  const title = personal ? 'Ngựa của tôi' : 'Ngựa đua';
+  usePageChrome({ crumbs: [title] });
+
+  const sub = loading && all.length === 0
+    ? 'Đang tải danh sách ngựa…'
+    : `${all.length} ngựa${locked > 0 ? ` · ${locked} đang khóa tập` : ''}${personal ? ' thuộc sở hữu của bạn' : ''}.`;
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div className="flex flex-wrap gap-6 items-end">
-          <div className="flex-[1_1_360px] min-w-0">
-            <div className="lbl">Mùa giải 2026 · Racehorse Club</div>
-            <h1 className="disp text-[64px] mt-2">{title}</h1>
-            <p className="text-hero-muted mt-2.5 max-w-[520px]">
-              {isManager
-                ? 'Toàn bộ ngựa của câu lạc bộ — trạng thái thi đấu, sức khỏe và thể trạng hiện tại.'
-                : personal
-                  ? 'Ngựa thuộc sở hữu của bạn.'
-                  : 'Danh sách ngựa theo phân quyền của bạn.'}
-            </p>
-          </div>
-          {isManager && (
-            <div className="flex flex-wrap gap-2">
-              <Btn v="light" onClick={() => setCreateOpen(true)}><Icon name="plus" />Thêm ngựa</Btn>
-            </div>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-y-6 items-end">
-          <HeroStats items={[
-            { label: 'Tổng đàn', value: all.length, small: 'ngựa' },
-            { label: 'Đang thi đấu', value: active, small: `/ ${all.length}` },
-            { label: 'Fitness TB', value: avgFit },
-            { label: 'Khóa tập', value: locked, small: 'ngựa', color: '#f3b4b4' },
-          ]} />
-          <div className="flex-[1_1_320px] min-w-[260px] pl-6 border-l border-white/10">
-            <span className="lbl">Sức khỏe đàn ngựa</span>
-            <div className="flex gap-0.5 h-2.5 rounded overflow-hidden mt-2" role="img" aria-label={healthCounts.map((d) => `${d.label} ${d.n}`).join(', ')}>
-              {healthCounts.map((d) => (
-                <i key={d.key} className="block" style={{ width: all.length ? `${(d.n / all.length) * 100}%` : 0, background: d.color }} />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-x-3.5 gap-y-1 mt-2 text-[11.5px] text-hero-line">
-              {healthCounts.map((d) => (
-                <span key={d.key} className="flex gap-1.5 items-center"><i className="w-2 h-2 rounded-sm" style={{ background: d.color }} />{d.label} <b className="text-white">{d.n}</b></span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        title={title}
+        sub={sub}
+        search={{ placeholder: 'Tìm theo tên ngựa', value: search, onChange: setSearch }}
+        actions={isManager ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />Thêm ngựa</Btn> : undefined}
+      />
 
-      <div className="flex flex-wrap gap-2.5 items-center">
+      <KpiStrip items={[
+        { label: 'Tổng số ngựa', value: all.length },
+        { label: 'Đang thi đấu', value: active, unit: `/ ${all.length}` },
+        { label: 'Thể lực trung bình', value: avgFit ?? '—', unit: avgFit ? '/100' : undefined, sub: scored.length < all.length ? `${scored.length} trong ${all.length} ngựa đã đánh giá` : undefined },
+        { label: 'Đang khóa tập', value: locked, tone: locked > 0 ? 'bad' : undefined },
+      ]} />
+
+      <div className="flex flex-wrap gap-2 items-center">
         {FILTERS.map(([k, l, fn]) => (
-          <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{l} <span className={filter === k ? 'text-hero-line' : 'text-muted'}>{bySearch.filter(fn).length}</span></Chip>
+          <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{l} <ChipCount n={bySearch.filter(fn).length} /></Chip>
         ))}
-        <div className="ml-auto flex gap-2.5 items-center">
-          <span className="cap">Sắp xếp: Fitness ↓</span>
-          <Seg options={[['cards', 'Thẻ'], ['table', 'Bảng']]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} />
-        </div>
+        <div className="ml-auto"><Seg options={[['cards', 'Thẻ'], ['table', 'Bảng']]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} /></div>
       </div>
 
       <ErrorText err={loadErr} />
 
       {loading && rows.length === 0 ? (
-        <p className="cap">Đang tải danh sách ngựa…</p>
+        <p className="text-muted">Đang tải danh sách ngựa…</p>
       ) : rows.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <p className="cap">Không tìm thấy hồ sơ ngựa nào phù hợp với bộ lọc hiện tại.</p>
-        </Card>
+        <EmptyState action={filter !== 'all' || q ? <Btn sm onClick={() => { setFilter('all'); setSearch(''); }}>Xóa bộ lọc</Btn> : undefined}>
+          {all.length === 0 ? 'Chưa có hồ sơ ngựa nào.' : 'Không có ngựa nào khớp với bộ lọc hiện tại.'}
+        </EmptyState>
       ) : view === 'cards' ? (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))' }}>
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(290px, 100%), 1fr))' }}>
           {rows.map((h) => <HorseCard key={h.id} h={h} canManage={isManager} onEdit={() => setEditingHorse(h)} onDelete={() => setDeletingHorse(h)} />)}
         </div>
       ) : (
         <Card>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse">
+            <table className="w-full min-w-[960px] border-collapse">
               <thead>
-                <tr className="text-left">
-                  {['Ngựa', 'Chủ sở hữu', 'Giống', 'Fitness', 'Trạng thái', 'Sức khỏe', 'Khóa tập', ...(isManager ? ['Thao tác'] : [])].map((t) => (
-                    <th key={t} className="h-[42px] px-4 bg-cream lbl border-b border-line">{t}</th>
-                  ))}
+                <tr className="text-left text-[12px] text-muted">
+                  <th className="h-10 px-5 font-medium border-b border-line">Ngựa</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">Chủ sở hữu</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">Giống</th>
+                  <th className="h-10 px-4 font-medium border-b border-line text-right">Thể lực</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">Thi đấu</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">Sức khỏe</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">Khóa tập</th>
+                  {isManager && <th className="h-10 px-5 border-b border-line" aria-label="Thao tác" />}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((h) => {
-                  const age = calculateAge(h.birthDate);
-                  return (
-                    <tr key={h.id} className={`border-b border-line-soft hover:bg-subtle ${h.locked ? 'bg-[#fdfbfb]' : ''}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Cloth n={h.saddleNumber ?? '—'} /><HorseMark />
-                          <div>
-                            <Link to={`/horses/${h.id}`} className="font-semibold text-ink no-underline">{h.name}</Link>
-                            <div className="cap num">{h.gender === 'MALE' ? 'Đực' : h.gender === 'FEMALE' ? 'Cái' : '—'} · {age != null ? `${age} tuổi` : '—'}</div>
-                          </div>
+                {rows.map((h) => (
+                  <tr key={h.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 flex justify-center"><Cloth n={h.saddleNumber} /></span>
+                        <HorseAvatar src={getFileUrl(h.photoUrl)} name={h.name} size={32} />
+                        <div className="min-w-0">
+                          <Link to={`/horses/${h.id}`} className="font-medium text-ink no-underline hover:text-info">{h.name}</Link>
+                          <div className="text-[12.5px] text-muted">{genderText(h.gender)} · {ageText(h.birthDate)}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{h.owner.name}</td>
+                    <td className="px-4 py-3 text-muted">{h.breed ?? '—'}</td>
+                    <td className="px-4 py-3 text-right num">
+                      {h.fitnessScore != null ? <span className="font-semibold" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore}</span> : <span className="text-muted">—</span>}
+                    </td>
+                    <td className="px-4 py-3"><CareerBadge status={h.status} /></td>
+                    <td className="px-4 py-3"><HealthBadge status={h.healthStatus} /></td>
+                    <td className="px-4 py-3 max-w-[260px]">
+                      {h.locked
+                        ? <div className="flex flex-col gap-1 items-start"><LockBadge /><span className="text-[12.5px] text-muted line-clamp-1" title={lockReasonText(h.lockReason)}>{lockReasonText(h.lockReason)}</span></div>
+                        : <span className="text-muted">—</span>}
+                    </td>
+                    {isManager && (
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-1">
+                          <button type="button" aria-label={`Sửa ${h.name}`} onClick={() => setEditingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
+                          <button type="button" aria-label={`Xóa ${h.name}`} onClick={() => setDeletingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
                         </div>
                       </td>
-                      <td className="px-4 py-3">{h.owner.name}</td>
-                      <td className="px-4 py-3">{h.breed ?? '—'}</td>
-                      <td className="px-4 py-3"><b className="num" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore ?? '—'}</b></td>
-                      <td className="px-4 py-3"><Badge tone={careerTone[h.status]}>{h.status}</Badge></td>
-                      <td className="px-4 py-3"><Badge tone={healthTone[h.healthStatus]}>{h.healthStatus}</Badge></td>
-                      <td className="px-4 py-3">{h.locked ? <LockBadge>{h.lockReason ?? 'Đã khóa'}</LockBadge> : <span className="cap">—</span>}</td>
-                      {isManager && (
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1.5">
-                            <Btn sm onClick={() => setEditingHorse(h)}><Icon name="edit" className="w-3.5 h-3.5" />Sửa</Btn>
-                            <Btn sm v="d" onClick={() => setDeletingHorse(h)}><Icon name="trash" className="w-3.5 h-3.5" />Xóa</Btn>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
+                    )}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </Card>
       )}
-      <div className="flex items-center gap-3"><span className="cap">Hiển thị {rows.length} / {all.length} ngựa</span></div>
+      {rows.length > 0 && <p className="text-[13px] text-muted">Hiển thị {rows.length} trong {all.length} ngựa · xếp theo thể lực, cao nhất trước</p>}
 
       <CreateHorseModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onCreated={load} />
       <EditHorseModal horse={editingHorse} isOpen={editingHorse !== null} onClose={() => setEditingHorse(null)} onUpdated={load} />
@@ -214,41 +181,44 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 }
 
 function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: boolean; onEdit: () => void; onDelete: () => void }) {
-  const age = calculateAge(h.birthDate);
-  const photo = getFileUrl(h.photoUrl);
   return (
-    <div className={`relative flex flex-col rounded-xl border border-line overflow-hidden text-ink transition hover:border-line-strong hover:shadow-lift ${h.locked ? 'hatch' : 'bg-white'}`}>
-      {h.locked && <span className="lockband" aria-hidden="true">Khóa</span>}
-      <Link to={`/horses/${h.id}`} aria-label={`Hồ sơ ${h.name}`} className="flex gap-3 items-start p-4 pb-3 no-underline text-ink">
-        {photo ? (
-          <img src={photo} alt="" className="w-9 h-9 rounded-full object-cover flex-none border border-line" />
-        ) : (
-          <Cloth n={h.saddleNumber ?? '—'} />
-        )}
-        <HorseMark size={34} />
-        <div className="flex-1 min-w-0"><div className="disp text-2xl leading-6 truncate">{h.name}</div><div className="cap num mt-1">{h.breed ?? 'Chưa rõ giống'} · {age != null ? `${age} tuổi` : 'Chưa rõ tuổi'}</div></div>
+    <div className="group flex flex-col bg-white rounded-card border border-line transition-colors hover:border-line-strong">
+      <Link to={`/horses/${h.id}`} aria-label={`Hồ sơ ${h.name}`} className="flex gap-3 items-center px-4 pt-4 no-underline text-ink">
+        <HorseAvatar src={getFileUrl(h.photoUrl)} name={h.name} size={40} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[16px] font-semibold leading-5 truncate group-hover:text-info">{h.name}</span>
+            <Cloth n={h.saddleNumber} />
+          </div>
+          <div className="text-[12.5px] text-muted mt-0.5 truncate">{h.breed ?? 'Chưa rõ giống'} · {ageText(h.birthDate)}</div>
+        </div>
       </Link>
-      <div className="flex items-center gap-3.5 px-4 pb-3.5">
-        <Ring value={h.fitnessScore ?? 0} color={fitColor(h.fitnessScore)} text={h.fitnessScore ?? '—'} label={`Fitness ${h.fitnessScore ?? 'chưa đánh giá'}`} />
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          <div className="flex justify-between items-baseline"><span className="lbl">Thể trạng</span></div>
-          <span className="cap">{h.fitnessScore != null ? `${h.fitnessScore} / 100` : 'Chưa đánh giá'}</span>
-          <div className="flex items-center gap-2"><span className="lbl">Giới tính</span><span className="cap">{h.gender === 'MALE' ? 'Đực' : h.gender === 'FEMALE' ? 'Cái' : 'Chưa rõ'}</span></div>
+
+      <div className="flex items-center gap-3 px-4 pt-4">
+        <Ring value={h.fitnessScore ?? 0} size={44} color={fitColor(h.fitnessScore)} text={h.fitnessScore ?? '—'} label={`Thể lực ${h.fitnessScore ?? 'chưa đánh giá'}`} />
+        <div className="min-w-0">
+          <div className="text-[13px] text-muted">Thể lực</div>
+          <div className="text-[13.5px]">{h.fitnessScore != null ? <><span className="num font-medium">{h.fitnessScore}</span><span className="text-muted"> / 100</span></> : <span className="text-muted">Chưa đánh giá</span>}</div>
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5 px-4 pb-3.5">
-        <Badge tone={careerTone[h.status]}>{h.status}</Badge>
-        <Badge tone={healthTone[h.healthStatus]}>{h.healthStatus}</Badge>
-        {h.locked && <LockBadge>{h.lockReason ?? 'Đã khóa'}</LockBadge>}
+
+      <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+        <CareerBadge status={h.status} />
+        <HealthBadge status={h.healthStatus} />
+        {h.locked && <LockBadge />}
       </div>
-      <div className="mt-auto flex items-center gap-2 px-4 py-2.5 border-t border-line-soft bg-subtle">
-        <span className="cap flex-1 min-w-0 truncate">Chủ sở hữu <b className="text-ink">{h.owner.name}</b></span>
-        {canManage && (
-          <div className="flex gap-1">
-            <button type="button" aria-label="Sửa" onClick={onEdit} className="w-7 h-7 rounded-btn inline-flex items-center justify-center text-muted hover:bg-white hover:text-ink"><Icon name="edit" className="w-3.5 h-3.5" /></button>
-            <button type="button" aria-label="Xóa" onClick={onDelete} className="w-7 h-7 rounded-btn inline-flex items-center justify-center text-muted hover:bg-white hover:text-bad"><Icon name="trash" className="w-3.5 h-3.5" /></button>
-          </div>
-        )}
+      {h.locked && <p className="px-4 pt-2 text-[12.5px] text-bad-ink line-clamp-2" title={lockReasonText(h.lockReason)}>{lockReasonText(h.lockReason)}</p>}
+
+      <div className="mt-auto pt-4">
+        <div className="flex items-center gap-2 px-4 h-11 border-t border-line-soft">
+          <span className="text-[13px] text-muted flex-1 min-w-0 truncate">Chủ sở hữu <span className="text-ink">{h.owner.name}</span></span>
+          {canManage && (
+            <div className="flex gap-0.5 -mr-1.5">
+              <button type="button" aria-label={`Sửa ${h.name}`} onClick={onEdit} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
+              <button type="button" aria-label={`Xóa ${h.name}`} onClick={onDelete} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

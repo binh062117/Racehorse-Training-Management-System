@@ -3,7 +3,7 @@ import { api } from '../../lib/api';
 import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate } from '../../lib/format';
-import { Bar, Card } from '../../ds/ui';
+import { Bar, Card, CardHeader, EmptyState, KpiStrip } from '../../ds/ui';
 import { LineChart } from '../../ds/charts';
 
 const WEEKS = 8;
@@ -60,7 +60,7 @@ function ProgressContent({ horseId }: { horseId: string }) {
     return () => controller.abort();
   }, [horseId]);
 
-  if (loading) return <p className="cap" role="status">Đang tải tiến độ huấn luyện…</p>;
+  if (loading) return <p className="text-muted" role="status">Đang tải tiến độ huấn luyện…</p>;
   if (err) return <ErrorText err={err} />;
 
   const total = sessions.length;
@@ -87,64 +87,65 @@ function ProgressContent({ horseId }: { horseId: string }) {
   const maxValue = Math.max(4, ...values);
   const now = new Date().getTime();
 
+  if (total === 0 && plans.length === 0) {
+    return <EmptyState>Ngựa chưa có giáo án hay buổi tập nào — tiến độ sẽ hiện ở đây khi huấn luyện viên bắt đầu lên lịch.</EmptyState>;
+  }
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          ['Tổng số buổi tập', total],
-          ['Đã hoàn thành', done],
-          ['Đã hủy', cancelled],
-          ['Tỷ lệ hoàn thành', completionRate != null ? `${completionRate}%` : '—'],
-        ].map(([label, value]) => (
-          <Card key={label} className="p-4">
-            <span className="cap">{label}</span>
-            <div className="num font-bold text-xl mt-0.5">{value}</div>
-          </Card>
-        ))}
-      </div>
+      {total > 0 && <KpiStrip items={[
+        { label: 'Tổng số buổi tập', value: total, sub: planned ? `${planned} buổi chưa diễn ra` : undefined },
+        { label: 'Đã hoàn thành', value: done },
+        { label: 'Đã hủy', value: cancelled, tone: cancelled > 0 ? 'warn' : undefined },
+        { label: 'Tỷ lệ hoàn thành', value: completionRate ?? <span className="text-muted text-[16px] font-normal">Chưa có</span>, unit: completionRate != null ? '%' : undefined, lead: completionRate != null },
+      ]} />}
 
-      <Card className="p-5">
-        <h3 className="text-[15px] font-semibold mb-1">Buổi tập hoàn thành theo tuần</h3>
-        <p className="cap mb-3">{WEEKS} tuần gần nhất · còn {planned} buổi đã lên lịch chưa diễn ra</p>
-        {total === 0 ? (
-          <p className="cap">Chưa có buổi tập nào để thống kê.</p>
-        ) : (
-          <LineChart
-            values={values}
-            labels={labels}
-            min={0}
-            max={maxValue}
-            ticks={[0, Math.round(maxValue / 2), maxValue]}
-            color="#1a4b8a"
-            describe="Số buổi tập hoàn thành mỗi tuần"
-          />
-        )}
+      <Card>
+        <CardHeader title="Buổi tập hoàn thành theo tuần"><span className="text-[13px] text-muted">{WEEKS} tuần gần nhất</span></CardHeader>
+        <div className="px-5 pt-3 pb-4">
+          {total === 0 ? (
+            <EmptyState>Chưa có buổi tập nào để thống kê.</EmptyState>
+          ) : (
+            // A wide viewBox keeps the chart's text near its true size when the card is wide.
+            <div className="max-w-[960px]">
+              <LineChart
+                values={values}
+                labels={labels}
+                min={0}
+                max={maxValue}
+                ticks={[0, Math.round(maxValue / 2), maxValue]}
+                W={900}
+                H={230}
+                describe="Số buổi tập hoàn thành mỗi tuần"
+              />
+            </div>
+          )}
+        </div>
       </Card>
 
-      <Card className="p-5">
-        <h3 className="text-[15px] font-semibold mb-3">Tiến độ theo giáo án</h3>
+      <Card>
+        <CardHeader title="Tiến độ theo giáo án" />
         {plans.length === 0 ? (
-          <p className="cap">Chiến mã chưa có giáo án huấn luyện nào.</p>
+          <div className="p-4"><EmptyState>Ngựa chưa có giáo án huấn luyện nào.</EmptyState></div>
         ) : (
-          <div className="flex flex-col gap-3.5">
+          <ul className="list-none m-0 p-0">
             {plans.map((p) => {
               const start = new Date(p.startDate).getTime();
               const end = p.endDate ? new Date(p.endDate).getTime() : null;
               const pct = end != null && end > start ? Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100))) : null;
+              const over = end != null && now > end;
               return (
-                <div key={p.id}>
+                <li key={p.id} className="px-5 py-3.5 border-b border-line-soft last:border-0">
                   <div className="flex justify-between items-baseline gap-3">
-                    <span className="font-medium truncate">{p.goal}</span>
-                    <span className="cap num flex-none">{pct != null ? `${pct}%` : 'Không giới hạn'}</span>
+                    <span className="font-medium min-w-0 truncate">{p.goal}</span>
+                    <span className="num text-[13px] text-muted flex-none">{pct != null ? `${pct}%` : 'Dài hạn'}</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <Bar pct={pct ?? (now >= start ? 100 : 0)} color="#1a4b8a" className="flex-1" />
-                  </div>
-                  <p className="cap mt-1">{formatDate(p.startDate)} — {p.endDate ? formatDate(p.endDate) : 'không giới hạn'}</p>
-                </div>
+                  {pct != null && <Bar pct={pct} color={over ? '#9ca3af' : '#1a4b8a'} className="mt-2" />}
+                  <p className="num text-[12.5px] text-muted mt-1.5">{formatDate(p.startDate)} – {p.endDate ? formatDate(p.endDate) : 'không giới hạn'}</p>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </Card>
     </div>

@@ -1,13 +1,12 @@
 import {
-  createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode,
+  createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
 } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
-import { formatDateTime } from '../lib/format';
 import type { Notification, Paginated, Role } from '../lib/types';
-import { Icon, notificationIcon, notificationTone, tones } from './ui';
+import { HORSE_LOGO, Icon } from './ui';
 
 interface NavItem {
   to: string;
@@ -21,82 +20,29 @@ const NAV: NavItem[] = [
   { to: '/horses', label: 'Ngựa đua', icon: 'horse' },
   { to: '/plans', label: 'Giáo án huấn luyện', icon: 'plans' },
   { to: '/races', label: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
-  { to: '/vaccinations', label: 'Tiêm phòng & Tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
+];
+const HEALTH_NAV: NavItem[] = [
   { to: '/health-records', label: 'Hồ sơ khám bệnh', icon: 'steth', roles: ['VET'] },
+  { to: '/vaccinations', label: 'Tiêm phòng & tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
   { to: '/incidents', label: 'Sự cố y tế', icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
 ];
 const ADMIN_NAV: NavItem[] = [
-  { to: '/admin/users', label: 'Phân quyền (RBAC)', icon: '/icons/manager-horse-head.png', roles: ['MANAGER'] },
+  { to: '/admin/users', label: 'Phân quyền tài khoản', icon: 'user', roles: ['MANAGER'] },
 ];
-
-function Sidebar() {
-  const { user } = useAuth();
-  const role = user?.role ?? null;
-  const visible = (item: NavItem) => !item.roles || (role && item.roles.includes(role));
-  return (
-    <nav aria-label="Điều hướng chính" className="flex flex-col gap-0.5 px-3 py-[18px] text-hero-line bg-navy flex-[1_1_240px] max-w-full md:flex-[0_0_240px]"
-      style={{ backgroundImage: 'radial-gradient(120% 60% at 0% 100%, rgba(90,135,200,.14), transparent 60%)' }}>
-      <Link to="/dashboard" className="flex items-center gap-2.5 px-2 pb-[18px] no-underline">
-        <span className="w-[34px] h-[34px] rounded-full bg-cream text-navy flex items-center justify-center text-xs font-bold tracking-wider">RH</span>
-        <span><span className="block text-white font-semibold text-[13.5px] leading-[18px]">Racehorse Club</span><span className="block text-[11px] leading-[14px] text-slate-400">Training &amp; Management</span></span>
-      </Link>
-      <div className="px-3 pt-2.5 pb-1.5 text-[10.5px] font-semibold tracking-[.08em] uppercase text-[#7c8aa0]">Vận hành</div>
-      {NAV.filter(visible).map(({ to, label, icon }) => (
-        <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-2.5 h-10 px-3 rounded-btn no-underline text-[13px] whitespace-nowrap ${isActive ? 'bg-white/[.12] text-white font-semibold ring-1 ring-inset ring-white/[.08]' : 'text-hero-line font-medium hover:bg-white/[.07] hover:text-white'}`}>
-          <Icon name={icon} />{label}
-        </NavLink>
-      ))}
-      {ADMIN_NAV.some(visible) && (
-        <>
-          <div className="px-3 pt-3.5 pb-1.5 text-[10.5px] font-semibold tracking-[.08em] uppercase text-[#7c8aa0]">Quản trị</div>
-          {ADMIN_NAV.filter(visible).map(({ to, label, icon }) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-2.5 h-10 px-3 rounded-btn no-underline text-[13px] whitespace-nowrap ${isActive ? 'bg-white/[.12] text-white font-semibold ring-1 ring-inset ring-white/[.08]' : 'text-hero-line font-medium hover:bg-white/[.07] hover:text-white'}`}>
-              {icon.startsWith('/') ? (
-                <span className="w-4 h-4 rounded-full bg-white flex-none inline-flex items-center justify-center overflow-hidden">
-                  <img src={icon} alt="" className="w-full h-full object-contain" />
-                </span>
-              ) : <Icon name={icon} />}
-              {label}
-            </NavLink>
-          ))}
-        </>
-      )}
-      <div className="mt-auto pt-3.5 px-3 border-t border-white/[.08] text-[11.5px] text-slate-400">{user?.name}</div>
-    </nav>
-  );
-}
-
-function useOutside(ref: React.RefObject<HTMLElement | null>, onOut: () => void) {
-  useEffect(() => {
-    const h = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && onOut();
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [ref, onOut]);
-}
 
 const POLL_MS = 20_000;
 
-function Notifications() {
-  const [items, setItems] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
-  useOutside(ref, () => setOpen(false));
-
+/** Unread notifications for the nav count; refreshed on a timer and on demand. */
+function useUnreadCount(): number {
+  const [count, setCount] = useState(0);
   const load = useCallback(async () => {
     try {
-      const [recentRes, unreadRes] = await Promise.all([
-        api.get<Paginated<Notification>>('/notifications', { params: { limit: 6 } }),
-        api.get<Paginated<Notification>>('/notifications', { params: { unread: true, limit: 1 } }),
-      ]);
-      setItems(recentRes.data.data);
-      setUnreadCount(unreadRes.data.meta.total);
+      const res = await api.get<Paginated<Notification>>('/notifications', { params: { unread: true, limit: 1 } });
+      setCount(res.data.meta.total);
     } catch {
-      // bell just shows stale data until the next poll
+      // the count just stays stale until the next poll
     }
   }, []);
-
   useEffect(() => {
     void load();
     const timer = setInterval(() => void load(), POLL_MS);
@@ -107,59 +53,53 @@ function Notifications() {
       window.removeEventListener('notifications:changed', onChanged);
     };
   }, [load]);
+  return count;
+}
 
-  const markReadAndGo = async (n: Notification) => {
-    setOpen(false);
-    if (!n.read) {
-      try {
-        await api.patch(`/notifications/${n.id}/read`);
-        window.dispatchEvent(new Event('notifications:changed'));
-      } catch {
-        // non-critical
-      }
-    }
-    navigate('/notifications');
-  };
+const navRow = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-2.5 h-8 px-2.5 rounded-btn no-underline text-[14px] transition-colors ${isActive ? 'bg-[#e3e6eb] text-ink font-medium' : 'text-[#3f444a] hover:bg-[#e9ecf0] hover:text-ink'}`;
 
+function NavGroup({ title, items }: { title?: string; items: NavItem[] }) {
+  if (items.length === 0) return null;
   return (
-    <div className="relative" ref={ref}>
-      <button type="button" aria-label={`Thông báo (${unreadCount} chưa đọc)`} aria-expanded={open} onClick={() => setOpen(!open)}
-        className={`relative w-10 h-10 rounded-btn border bg-white inline-flex items-center justify-center ${unreadCount > 0 ? 'border-bad text-bad animate-live' : 'border-line text-ink'}`}>
-        <Icon name="bell" />{unreadCount > 0 && <span className="absolute top-2 right-[9px] w-2 h-2 rounded-full bg-bad border-2 border-white" />}
-      </button>
-      {open && (
-        <div className="absolute right-0 top-12 z-40 w-[360px] bg-white border border-line rounded-xl shadow-pop overflow-hidden">
-          <div className="flex items-center px-4 py-3.5 border-b border-line-soft"><span className="flex-1 font-semibold text-[15px]">Thông báo</span>
-            <Link to="/notifications" onClick={() => setOpen(false)} className="text-[11.5px] font-semibold text-info no-underline">Xem tất cả</Link></div>
-          {items.length === 0 ? (
-            <div className="px-4 py-6 text-center text-muted text-[12.5px]">Chưa có thông báo nào.</div>
-          ) : items.map((n) => (
-            <button key={n.id} type="button" onClick={() => void markReadAndGo(n)}
-              className={`w-full text-left flex gap-3 px-4 py-3 border-b border-line-soft ${!n.read ? 'bg-subtle' : 'bg-white'}`}>
-              <span className={`w-8 h-8 rounded-btn flex items-center justify-center flex-none ${tones[notificationTone[n.type] ?? 'neu']}`}><Icon name={notificationIcon[n.type] ?? 'bell'} /></span>
-              <span className="flex-1 min-w-0"><span className="block font-semibold line-clamp-2">{n.message}</span><span className="cap num">{formatDateTime(n.createdAt)}</span></span>
-              {!n.read && <span className="w-2 h-2 rounded-full bg-info mt-1.5 flex-none" aria-label="Chưa đọc" />}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="flex flex-col gap-0.5">
+      {title && <div className="px-2.5 pt-5 pb-1.5 text-[12px] font-medium text-muted">{title}</div>}
+      {items.map(({ to, label, icon }) => (
+        <NavLink key={to} to={to} className={navRow}>
+          <Icon name={icon} className="w-4 h-4 text-muted" />{label}
+        </NavLink>
+      ))}
     </div>
   );
 }
 
-function UserMenu() {
+function Brand() {
+  return (
+    <Link to="/dashboard" className="flex items-center gap-2.5 no-underline">
+      <span className="w-8 h-8 rounded-full bg-white border border-line flex-none overflow-hidden flex items-center justify-center">
+        <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain scale-[1.25]" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[14px] font-semibold leading-[18px] text-ink">Racehorse Club</span>
+        <span className="block text-[12px] leading-4 text-muted">Huấn luyện &amp; quản lý</span>
+      </span>
+    </Link>
+  );
+}
+
+function initials(name?: string) {
+  if (!name) return 'U';
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+}
+
+/** Navigation shared by the desktop sidebar and the phone sheet. */
+function NavContent({ unread }: { unread: number }) {
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useOutside(ref, () => setOpen(false));
-
-  const initials = (name?: string) => {
-    if (!name) return 'U';
-    const parts = name.trim().split(/\s+/);
-    return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
-  };
+  const role = user?.role ?? null;
+  const visible = (item: NavItem) => !item.roles || (role !== null && item.roles.includes(role));
 
   const handleLogout = async () => {
     if (!window.confirm(t('nav.logoutConfirm'))) return;
@@ -168,45 +108,53 @@ function UserMenu() {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1 text-muted text-[12px]">
-        <button type="button" className="hover:text-ink disabled:text-navy disabled:font-semibold" onClick={() => i18n.changeLanguage('vi')} disabled={i18n.language === 'vi'}>VI</button>
-        <span aria-hidden>/</span>
-        <button type="button" className="hover:text-ink disabled:text-navy disabled:font-semibold" onClick={() => i18n.changeLanguage('en')} disabled={i18n.language === 'en'}>EN</button>
-      </div>
-      <div className="relative" ref={ref}>
-        <button type="button" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)} className="flex items-center gap-2.5 h-11 pl-1.5 pr-2.5 rounded-btn border border-line bg-white text-left">
-          <span className="w-[30px] h-[30px] rounded-full bg-navy text-white inline-flex items-center justify-center text-[11px] font-bold">{initials(user?.name)}</span>
-          <span><span className="block text-[12.5px] font-semibold leading-4">{user?.name}</span><span className="block text-[11px] text-muted leading-[14px]">{user?.role ? t(`role.${user.role}`) : ''}</span></span>
-          <Icon name="chevDown" className="w-3.5 h-3.5" />
+    <div className="flex flex-col h-full">
+      <div className="px-2.5 pb-4"><Brand /></div>
+      <nav aria-label="Điều hướng chính" className="flex flex-col flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-0.5">
+          {NAV.filter(visible).map(({ to, label, icon }) => (
+            <NavLink key={to} to={to} className={navRow}>
+              <Icon name={icon} className="w-4 h-4 text-muted" />{label}
+            </NavLink>
+          ))}
+          <NavLink to="/notifications" className={navRow}>
+            <Icon name="bell" className="w-4 h-4 text-muted" />
+            <span className="flex-1">Thông báo</span>
+            {unread > 0 && <span className="num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center" aria-label={`${unread} chưa đọc`}>{unread}</span>}
+          </NavLink>
+        </div>
+        <NavGroup title="Sức khỏe" items={HEALTH_NAV.filter(visible)} />
+        <NavGroup title="Quản trị" items={ADMIN_NAV.filter(visible)} />
+      </nav>
+      <div className="mt-3 pt-3 border-t border-line flex items-center gap-2.5 px-1">
+        <span className="w-8 h-8 rounded-full bg-navy text-white flex-none inline-flex items-center justify-center text-[12px] font-semibold">{initials(user?.name)}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13.5px] font-medium leading-[18px] truncate">{user?.name}</span>
+          <span className="block text-[12px] leading-4 text-muted truncate">{user?.role ? t(`role.${user.role}`) : ''}</span>
+        </span>
+        <button type="button" onClick={() => void i18n.changeLanguage(i18n.language === 'vi' ? 'en' : 'vi')}
+          className="h-8 px-2 rounded-btn text-[12px] font-medium text-muted hover:bg-[#e9ecf0] hover:text-ink" aria-label="Đổi ngôn ngữ">
+          {i18n.language === 'vi' ? 'VI' : 'EN'}
         </button>
-        {open && (
-          <ul role="listbox" className="absolute right-0 top-12 z-40 w-48 bg-white border border-line rounded-xl shadow-pop py-1.5">
-            <li><button type="button" onClick={() => void handleLogout()} className="w-full text-left px-3 h-9 flex items-center gap-2 hover:bg-subtle text-bad"><Icon name="x" className="w-4 h-4" />{t('nav.logout')}</button></li>
-          </ul>
-        )}
+        <button type="button" onClick={() => void handleLogout()} aria-label={t('nav.logout')} title={t('nav.logout')}
+          className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-[#e9ecf0] hover:text-ink">
+          <Icon name="logout" />
+        </button>
       </div>
     </div>
   );
 }
 
-/* ---------- chrome context: lets a page set its own crumbs/search without re-mounting the shell ---------- */
+/* ---------- chrome context: lets a page name itself for the phone bar and the browser tab ---------- */
 export type Crumb = string | [string, string];
 interface Chrome {
   crumbs: Crumb[];
-  search?: string;
-  onSearch?: (v: string) => void;
   wide: boolean;
 }
 const DEFAULT_CHROME: Chrome = { crumbs: [], wide: true };
-/** Shown for a route that hasn't been migrated to call usePageChrome() yet. */
-function fallbackCrumb(pathname: string): string {
-  const seg = pathname.split('/').filter(Boolean)[0] ?? 'dashboard';
-  return seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ');
-}
 const ChromeContext = createContext<{ setChrome: (c: Partial<Chrome>) => void } | null>(null);
 
-/** Call once per page to set the topbar breadcrumb / search box. */
+/** Call once per page to name it (phone top bar + document title). */
 export function usePageChrome(chrome: Partial<Chrome>) {
   const ctx = useContext(ChromeContext);
   // Re-run when the serialized chrome changes (pages pass plain data, not stable refs).
@@ -217,60 +165,76 @@ export function usePageChrome(chrome: Partial<Chrome>) {
   }, [ctx, key]);
 }
 
-/** Route-level shell: sidebar + topbar. Rendered once by Layout.tsx; pages
- * customize the topbar via usePageChrome() instead of re-wrapping.
+/** Route-level shell: sidebar + canvas. Rendered once by Layout.tsx.
  *
- * Chrome lives in a ref (not state) and is reset synchronously during render
- * whenever the path changes — before the new route's own usePageChrome
- * effect runs — so a page that never calls usePageChrome never shows the
- * previous page's stale breadcrumb/search box.
+ * Chrome and the phone menu are stored together with the path they belong to,
+ * so on navigation they read as reset straight away — a page never shows the
+ * previous page's name, and the menu sheet closes — without effects or refs.
  */
 export function AppShell({ children }: { children: ReactNode }) {
-  const location = useLocation();
-  const [, forceRender] = useReducer((n: number) => n + 1, 0);
-  const chromeRef = useRef<Chrome>(DEFAULT_CHROME);
-  const lastPathRef = useRef(location.pathname);
-  if (lastPathRef.current !== location.pathname) {
-    lastPathRef.current = location.pathname;
-    chromeRef.current = DEFAULT_CHROME;
-  }
-  const chrome = chromeRef.current;
+  const { pathname } = useLocation();
+  const [chromeState, setChromeState] = useState<{ path: string; chrome: Chrome }>({ path: pathname, chrome: DEFAULT_CHROME });
+  const chrome = chromeState.path === pathname ? chromeState.chrome : DEFAULT_CHROME;
   const setChrome = useCallback((patch: Partial<Chrome>) => {
-    chromeRef.current = { ...chromeRef.current, ...patch };
-    forceRender();
-  }, []);
+    setChromeState((prev) => ({ path: pathname, chrome: { ...(prev.path === pathname ? prev.chrome : DEFAULT_CHROME), ...patch } }));
+  }, [pathname]);
   const ctxValue = useMemo(() => ({ setChrome }), [setChrome]);
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const menuOpen = menuPath === pathname;
+  const setMenuOpen = (open: boolean) => setMenuPath(open ? pathname : null);
+  const unread = useUnreadCount();
+
+  const last = chrome.crumbs[chrome.crumbs.length - 1];
+  const pageName = last ? (Array.isArray(last) ? last[0] : last) : '';
+  useEffect(() => {
+    document.title = pageName ? `${pageName} · Racehorse Club` : 'Racehorse Club';
+  }, [pageName]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuPath(null);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
 
   return (
     <ChromeContext.Provider value={ctxValue}>
-      <div className="flex flex-wrap min-h-screen bg-page">
-        <Sidebar />
-        <div className="flex-[999_1_560px] min-w-0 flex flex-col">
-          <header className="min-h-14 bg-white border-b border-line flex flex-wrap items-center gap-x-5 gap-y-3 px-8 py-2">
-            <div className="flex items-center gap-2 text-muted">
-              {(() => {
-                const crumbs = chrome.crumbs.length > 0 ? chrome.crumbs : [fallbackCrumb(location.pathname)];
-                return crumbs.map((c, i) => (
-                  <span key={i} className="flex items-center gap-2">
-                    {i > 0 && <span aria-hidden="true">/</span>}
-                    {i === crumbs.length - 1 ? <b className="text-ink font-semibold">{Array.isArray(c) ? c[0] : c}</b> : Array.isArray(c) ? <Link to={c[1]} className="no-underline text-muted">{c[0]}</Link> : <span>{c}</span>}
-                  </span>
-                ));
-              })()}
-            </div>
-            <div className="ml-auto flex flex-wrap items-center gap-3">
-              {chrome.search !== undefined && (
-                <label className="flex items-center gap-2 h-9 w-[300px] max-w-full rounded-btn border border-line px-3 text-muted">
-                  <Icon name="search" />
-                  <input type="search" placeholder={chrome.search} aria-label={chrome.search} onChange={(e) => chrome.onSearch?.(e.target.value)} className="flex-1 min-w-0 outline-none bg-transparent text-ink" />
-                </label>
-              )}
-              <Notifications />
-              <UserMenu />
-            </div>
-          </header>
-          <main className={`flex flex-col gap-5 px-8 pt-7 pb-12 w-full ${chrome.wide ? 'max-w-[1400px]' : 'max-w-[1240px]'}`}>{children}</main>
+      <div className="min-h-screen bg-page md:flex">
+        {/* Desktop sidebar: on the page ground, one hairline from the canvas. */}
+        <aside className="hidden md:flex flex-none w-[244px] h-screen sticky top-0 border-r border-line px-3 pt-5 pb-3">
+          <div className="w-full"><NavContent unread={unread} /></div>
+        </aside>
+
+        {/* Phone: the sidebar folds into a top bar and a full-screen sheet. */}
+        <div className="md:hidden sticky top-0 z-30 h-[52px] bg-page/95 border-b border-line flex items-center gap-3 px-4">
+          <Link to="/dashboard" aria-label="Racehorse Club" className="w-8 h-8 rounded-full bg-white border border-line overflow-hidden flex items-center justify-center flex-none">
+            <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain scale-[1.25]" />
+          </Link>
+          <span className="flex-1 min-w-0 truncate text-[15px] font-semibold">{pageName || 'Racehorse Club'}</span>
+          {unread > 0 && (
+            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-ink" aria-label={`Thông báo, ${unread} chưa đọc`}>
+              <Icon name="bell" className="w-5 h-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-bad" />
+            </Link>
+          )}
+          <button type="button" onClick={() => setMenuOpen(true)} aria-label="Mở menu" aria-expanded={menuOpen}
+            className="w-10 h-10 inline-flex items-center justify-center rounded-btn text-ink hover:bg-cream">
+            <Icon name="menu" className="w-5 h-5" />
+          </button>
         </div>
+        {menuOpen && (
+          <div className="md:hidden fixed inset-0 z-40 bg-page animate-sheet flex flex-col px-3 pt-4 pb-4" role="dialog" aria-modal="true" aria-label="Điều hướng">
+            <button type="button" onClick={() => setMenuOpen(false)} aria-label="Đóng menu"
+              className="absolute top-3 right-3 w-10 h-10 inline-flex items-center justify-center rounded-btn text-ink hover:bg-cream">
+              <Icon name="x" className="w-5 h-5" />
+            </button>
+            <NavContent unread={unread} />
+          </div>
+        )}
+
+        <main className={`flex-1 min-w-0 flex flex-col gap-5 px-4 sm:px-6 lg:px-8 pt-5 md:pt-8 pb-14 w-full mx-auto ${chrome.wide ? 'max-w-[1320px]' : 'max-w-[1120px]'}`}>
+          {children}
+        </main>
       </div>
     </ChromeContext.Provider>
   );

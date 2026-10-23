@@ -6,7 +6,7 @@ import type { Paginated, Role, User } from '../lib/types';
 import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, HeroStats, Icon, type Tone } from '../ds/ui';
+import { Badge, Btn, Card, EmptyState, Icon, KpiStrip, NativeSelect, PageHeader, type Tone } from '../ds/ui';
 
 const ROLES: Role[] = ['MANAGER', 'TRAINER', 'VET', 'GROOM', 'OWNER'];
 const STATUS_TONE: Record<User['status'], Tone> = { ACTIVE: 'ok', PENDING: 'warn', DISABLED: 'bad' };
@@ -39,41 +39,50 @@ export function AdminUsersPage() {
   const pending = users.filter((u) => u.status === 'PENDING').length;
   const active = users.filter((u) => u.status === 'ACTIVE').length;
   const disabled = users.filter((u) => u.status === 'DISABLED').length;
+  // Accounts waiting for a decision are the reason to open this screen — list them first.
+  const order: Record<User['status'], number> = { PENDING: 0, ACTIVE: 1, DISABLED: 2 };
+  const sorted = [...users].sort((a, b) => order[a.status] - order[b.status]);
+
+  const sub = loading
+    ? t('user.loading')
+    : pending > 0
+      ? `${pending} tài khoản đang chờ duyệt — chọn vai trò rồi bấm duyệt.`
+      : `Không có tài khoản nào chờ duyệt · ${active} đang hoạt động.`;
+  const th = 'h-10 px-4 text-[12px] font-medium text-muted border-b border-line';
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div>
-          <div className="lbl">Quản trị hệ thống</div>
-          <h1 className="disp text-[56px] mt-2">{t('nav.users')}</h1>
-        </div>
-        <HeroStats items={[
-          { label: 'Tổng tài khoản', value: users.length },
-          { label: 'Chờ duyệt', value: pending, color: pending > 0 ? '#f3d29a' : undefined },
-          { label: 'Đang hoạt động', value: active, color: '#9fd9b1' },
-          { label: 'Đã khóa', value: disabled },
-        ]} />
-      </section>
+      <PageHeader title={t('nav.users')} sub={sub} />
+
+      <KpiStrip items={[
+        { label: 'Tổng tài khoản', value: users.length },
+        { label: 'Chờ duyệt', value: pending, tone: pending > 0 ? 'warn' : undefined, lead: pending > 0 },
+        { label: 'Đang hoạt động', value: active },
+        { label: 'Đã khóa', value: disabled },
+      ]} />
 
       {loading ? (
-        <p className="cap">{t('user.loading')}</p>
+        <p className="text-muted">{t('user.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : users.length === 0 ? (
-        <Card className="px-5 py-10 text-center"><p className="cap">{t('user.empty')}</p></Card>
+        <EmptyState>{t('user.empty')}</EmptyState>
       ) : (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] border-collapse">
               <thead>
                 <tr className="text-left">
-                  {[t('auth.name'), t('auth.email'), t('user.role'), t('user.status'), t('user.created'), ''].map((th) => (
-                    <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
-                  ))}
+                  <th className={`${th} pl-5`}>{t('auth.name')}</th>
+                  <th className={th}>{t('auth.email')}</th>
+                  <th className={th}>{t('user.role')}</th>
+                  <th className={th}>{t('user.status')}</th>
+                  <th className={th}>{t('user.created')}</th>
+                  <th className={`${th} pr-5`} aria-label="Thao tác" />
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
+                {sorted.map((u) => (
                   <UserRow key={u.id} user={u} isSelf={u.id === currentUser?.id} onChanged={load} />
                 ))}
               </tbody>
@@ -133,24 +142,20 @@ function UserRow({ user, isSelf, onChanged }: { user: User; isSelf: boolean; onC
   };
 
   return (
-    <tr className="border-b border-line-soft hover:bg-subtle align-top">
-      <td className="px-4 py-3 font-medium">{user.name}</td>
-      <td className="px-4 py-3 cap">{user.email}</td>
+    <tr className={`border-b border-line-soft last:border-0 hover:bg-subtle align-middle ${user.status === 'DISABLED' ? 'text-muted' : ''}`}>
+      <td className="pl-5 pr-4 py-3 font-medium">{user.name}{isSelf && <span className="ml-1.5 text-[12px] font-normal text-muted">(bạn)</span>}</td>
+      <td className="px-4 py-3 text-muted">{user.email}</td>
       <td className="px-4 py-3">
         {user.status === 'PENDING' ? (
-          <select
-            className="h-9 rounded-btn border border-line bg-white px-2.5 text-[12.5px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-            value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
-          >
+          <NativeSelect aria-label={t('user.role')} className="w-[160px]" value={role} onChange={(e) => setRole(e.target.value as Role)}>
             {ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}
-          </select>
-        ) : user.role ? t(`role.${user.role}`) : '—'}
+          </NativeSelect>
+        ) : user.role ? t(`role.${user.role}`) : <span className="text-muted">Chưa gán</span>}
       </td>
       <td className="px-4 py-3"><Badge tone={STATUS_TONE[user.status]}>{t(`user.statusLabel.${user.status}`)}</Badge></td>
-      <td className="px-4 py-3 cap">{formatDate(user.createdAt)}</td>
-      <td className="px-4 py-3">
-        <div className="flex flex-wrap gap-1.5">
+      <td className="px-4 py-3 num text-muted whitespace-nowrap">{formatDate(user.createdAt)}</td>
+      <td className="pl-4 pr-5 py-3">
+        <div className="flex flex-wrap justify-end gap-1.5">
           {user.status === 'PENDING' && (
             <>
               <Btn sm v="p" disabled={busy} onClick={() => patch({ role, status: 'ACTIVE' })}><Icon name="check" className="w-3.5 h-3.5" />{t('user.approve')}</Btn>
