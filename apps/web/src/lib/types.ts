@@ -144,6 +144,27 @@ export interface HealthRecord {
   createdAt: string;
 }
 
+export interface TreatmentPlan {
+  id: string;
+  healthRecordId: string;
+  description: string;
+  startDate: string;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Medication {
+  id: string;
+  healthRecordId: string;
+  treatmentPlanId: string;
+  name: string;
+  dosage: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+}
+
 export interface FeedingRecord {
   id: string;
   horseId: string;

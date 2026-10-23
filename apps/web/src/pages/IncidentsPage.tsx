@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
+import { InjuryLocationsSection } from '../components/health/InjuryLocationsSection';
 import { api, getFileUrl } from '../lib/api';
 import { formatDate, formatDateTime } from '../lib/format';
 import { useCachedResource } from '../lib/useCachedResource';
@@ -147,14 +148,14 @@ export function IncidentsPage() {
             <table className="w-full min-w-[980px] border-collapse">
               <thead>
                 <tr className="text-left">
-                  {[t('incidents.reportedDate'), t('incidents.horse'), t('incidents.descriptionLabel'), t('incidents.severity'), t('incidents.statusLabel'), t('incidents.photo'), t('incidents.actions')].map((th) => (
+                  {[t('incidents.reportedDate'), t('incidents.horse'), t('incidents.descriptionLabel'), t('incidents.severity'), t('incidents.statusLabel'), t('incidents.photo'), 'Chấn thương', t('incidents.actions')].map((th) => (
                     <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filteredIncidents.map((incident) => (
-                  <IncidentRow key={incident.id} incident={incident} canAdvance={isVet} onChanged={reload} />
+                  <IncidentRow key={incident.id} incident={incident} canAdvance={isVet} isVet={isVet} onChanged={reload} />
                 ))}
               </tbody>
             </table>
@@ -256,10 +257,11 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
   );
 }
 
-function IncidentRow({ incident, canAdvance, onChanged }: { incident: Incident; canAdvance: boolean; onChanged: () => Promise<void> }) {
+function IncidentRow({ incident, canAdvance, isVet, onChanged }: { incident: Incident; canAdvance: boolean; isVet: boolean; onChanged: () => Promise<void> }) {
   const { t } = useTranslation();
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [injuriesOpen, setInjuriesOpen] = useState(false);
   const next = NEXT_STATUS[incident.status];
   const photoUrl = getFileUrl(incident.photoUrl);
 
@@ -295,6 +297,9 @@ function IncidentRow({ incident, canAdvance, onChanged }: { incident: Incident; 
           {photoUrl ? <a href={photoUrl} target="_blank" rel="noreferrer" className="font-semibold text-info">{t('incidents.openPhoto')}</a> : <span className="cap">—</span>}
         </td>
         <td className="px-4 py-3">
+          <Btn sm onClick={() => setInjuriesOpen((v) => !v)}><Icon name={injuriesOpen ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />Chi tiết</Btn>
+        </td>
+        <td className="px-4 py-3">
           {canAdvance && next ? (
             <Btn sm disabled={busy} onClick={() => void advance()}>
               {busy ? t('incidents.updating') : t('incidents.moveTo', { status: t(`incidents.status.${next}`) })}
@@ -302,7 +307,14 @@ function IncidentRow({ incident, canAdvance, onChanged }: { incident: Incident; 
           ) : <span className="cap">{formatDate(incident.updatedAt)}</span>}
         </td>
       </tr>
-      {error && <tr><td colSpan={7} className="px-4 pb-3"><ErrorText err={error} /></td></tr>}
+      {injuriesOpen && (
+        <tr className="border-b border-line-soft bg-subtle">
+          <td colSpan={8} className="px-4 py-3">
+            <InjuryLocationsSection basePath={`/incidents/${incident.id}`} isVet={isVet} />
+          </td>
+        </tr>
+      )}
+      {error && <tr><td colSpan={8} className="px-4 pb-3"><ErrorText err={error} /></td></tr>}
     </>
   );
 }
