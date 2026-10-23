@@ -62,7 +62,7 @@ const RAIL_FADE = 'whitespace-nowrap transition-opacity duration-150 opacity-0 g
 const navRow = ({ isActive }: { isActive: boolean }) =>
   // Navy rail, the same ground as the login banner: the active row is a lighter navy
   // with a brand-blue marker, idle rows are soft white.
-  `relative flex items-center gap-3 h-9 px-3 rounded-btn no-underline text-[14px] transition-colors ${isActive ? 'bg-navy-track text-white font-medium before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-[#5b9bd5] [&_svg]:text-[#8fb8e0]' : 'text-[#c3cbd6] hover:bg-white/[.06] hover:text-white'}`;
+  `relative flex items-center gap-3 h-9 px-3 rounded-btn no-underline text-[14px] transition-colors [&_svg]:transition-transform [&_svg]:duration-300 hover:[&_svg]:scale-[1.18] ${isActive ? 'bg-navy-track text-white font-medium before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-[#5b9bd5] [&_svg]:text-[#8fb8e0]' : 'text-[#c3cbd6] hover:bg-white/[.06] hover:text-white'}`;
 
 function NavGroup({ title, items, rail }: { title?: string; items: NavItem[]; rail: boolean }) {
   if (items.length === 0) return null;

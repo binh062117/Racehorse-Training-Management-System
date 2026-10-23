@@ -72,6 +72,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const active = all.filter((h) => h.status === 'ACTIVE').length;
   const scored = all.filter((h) => h.fitnessScore != null);
   const avgFit = scored.length ? (scored.reduce((s, h) => s + (h.fitnessScore ?? 0), 0) / scored.length).toFixed(1) : null;
+  const avgFitNum = avgFit != null ? Number(avgFit) : null;
 
   const title = personal ? 'Ngựa của tôi' : 'Ngựa đua';
   usePageChrome({ crumbs: [title] });
@@ -92,7 +93,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
       <KpiStrip items={[
         { label: 'Tổng số ngựa', value: all.length },
         { label: 'Đang thi đấu', value: active, unit: `/ ${all.length}` },
-        { label: 'Thể lực trung bình', value: avgFit ?? '—', unit: avgFit ? '/100' : undefined, sub: scored.length < all.length ? `${scored.length} trong ${all.length} ngựa đã đánh giá` : undefined },
+        { label: 'Thể lực trung bình', value: avgFitNum ?? '—', unit: avgFit ? '/100' : undefined, sub: scored.length < all.length ? `${scored.length} trong ${all.length} ngựa đã đánh giá` : undefined },
         { label: 'Đang khóa tập', value: locked, tone: locked > 0 ? 'bad' : undefined },
       ]} />
 
@@ -147,7 +148,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                     <td className="px-4 py-3">{h.owner.name}</td>
                     <td className="px-4 py-3 text-muted">{h.breed ?? '—'}</td>
                     <td className="px-4 py-3 text-right num">
-                      {h.fitnessScore != null ? <span className="font-semibold" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore}</span> : <span className="text-muted">—</span>}
+                      {h.fitnessScore != null ? <span className="font-semibold hop" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore}</span> : <span className="text-muted">—</span>}
                     </td>
                     <td className="px-4 py-3"><CareerBadge status={h.status} /></td>
                     <td className="px-4 py-3"><HealthBadge status={h.healthStatus} /></td>
@@ -182,7 +183,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 
 function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: boolean; onEdit: () => void; onDelete: () => void }) {
   return (
-    <div className="group flex flex-col bg-white rounded-card border border-line transition-colors hover:border-line-strong">
+    <div className="group lift hover-hop flex flex-col bg-white rounded-card border border-line hover:border-line-strong">
       <Link to={`/horses/${h.id}`} aria-label={`Hồ sơ ${h.name}`} className="flex gap-3 items-center px-4 pt-4 no-underline text-ink">
         <HorseAvatar src={getFileUrl(h.photoUrl)} name={h.name} size={40} />
         <div className="flex-1 min-w-0">

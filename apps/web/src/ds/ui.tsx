@@ -1,4 +1,4 @@
-import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
 /* ---------- icons (stroke, 24px grid) ---------- */
@@ -78,7 +78,7 @@ export function lockReasonText(reason: string | null | undefined): string {
 /* ---------- buttons ---------- */
 type BtnVariant = 'p' | 's' | 'd' | 'g';
 const btnV: Record<BtnVariant, string> = {
-  p: 'bg-info text-white hover:bg-info-ink',
+  p: 'bg-info text-white hover:bg-info-ink hover:shadow-[0_6px_16px_rgba(26,75,138,.25)]',
   s: 'bg-white text-ink border-line-strong hover:bg-subtle',
   d: 'bg-white text-bad border-bad-bd hover:bg-bad-bg',
   g: 'bg-transparent text-ink hover:bg-cream',
@@ -89,7 +89,7 @@ interface BtnProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   sm?: boolean;
 }
 export function Btn({ to, v = 's', sm, className = '', children, ...rest }: BtnProps) {
-  const cls = `inline-flex items-center justify-center gap-1.5 rounded-btn border border-transparent font-medium whitespace-nowrap no-underline transition-colors active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 ${sm ? 'h-8 px-3 text-[13px]' : 'h-9 px-3.5 text-[13.5px]'} ${btnV[v]} ${className}`;
+  const cls = `inline-flex items-center justify-center gap-1.5 rounded-btn border border-transparent font-medium whitespace-nowrap no-underline transition-[color,background-color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed disabled:active:translate-y-0 ${sm ? 'h-8 px-3 text-[13px]' : 'h-9 px-3.5 text-[13.5px]'} ${btnV[v]} ${className}`;
   if (to) return <Link to={to} className={cls}>{children}</Link>;
   return <button type="button" className={cls} {...rest}>{children}</button>;
 }
@@ -131,7 +131,7 @@ export function PageHeader({ crumbs, title, sub, actions, search }: {
             ))}
           </nav>
         )}
-        <h1 className="text-[24px] leading-8 font-semibold tracking-[-0.01em]">{title}</h1>
+        <h1 className="text-[24px] leading-8 font-semibold tracking-[-0.01em]">{typeof title === 'string' ? <WaveText text={title} /> : title}</h1>
         {sub && <p className="text-[14px] text-muted mt-1 max-w-[720px]">{sub}</p>}
       </div>
       {(search || actions) && (
@@ -162,15 +162,58 @@ export function KpiStrip({ items }: { items: { label: string; value: ReactNode; 
   return (
     <Card className={`grid grid-cols-2 ${cols} gap-px bg-line overflow-hidden`}>
       {items.map((k, i) => (
-        <div key={k.label} className={`bg-white px-5 py-4 min-w-0 ${items.length % 2 === 1 && i === items.length - 1 ? 'col-span-2 md:col-span-1' : ''}`}>
-          <div className="text-[13px] text-muted">{k.label}</div>
+        <div key={k.label} className={`hover-hop group/kpi bg-white px-5 py-4 min-w-0 transition-colors hover:bg-subtle ${items.length % 2 === 1 && i === items.length - 1 ? 'col-span-2 md:col-span-1' : ''}`}>
+          <div className="text-[13px] text-muted transition-colors group-hover/kpi:text-ink">{k.label}</div>
           <div className={`num mt-1 font-semibold leading-tight ${k.lead ? 'text-[30px]' : 'text-[24px]'} ${k.tone ? toneCls[k.tone] : k.lead ? 'text-info' : 'text-ink'}`}>
-            {k.value}{k.unit && <span className="text-[14px] font-normal text-muted ml-1">{k.unit}</span>}
+            <span className="hop">{typeof k.value === 'number' ? <CountUp value={k.value} /> : k.value}</span>{k.unit && <span className="text-[14px] font-normal text-muted ml-1">{k.unit}</span>}
           </div>
           {k.sub && <div className="text-[12px] text-muted mt-1">{k.sub}</div>}
         </div>
       ))}
     </Card>
+  );
+}
+
+/* ---------- motion helpers ---------- */
+const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * A number that counts up to its value when it first appears, and glides to a
+ * new value when it changes. Keeps the value's own decimal places.
+ */
+export function CountUp({ value, duration = 800 }: { value: number; duration?: number }) {
+  const [shown, setShown] = useState(() => (prefersReducedMotion() ? value : 0));
+  const from = useRef(shown);
+  useEffect(() => {
+    if (prefersReducedMotion()) { from.current = value; return; }
+    const start = performance.now();
+    const origin = from.current;
+    let frame = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const next = origin + (value - origin) * eased;
+      from.current = next;
+      setShown(next);
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value, duration]);
+  const decimals = (String(value).split('.')[1] ?? '').length;
+  const display = prefersReducedMotion() ? value : shown;
+  return <>{display.toFixed(decimals)}</>;
+}
+
+/** Text whose letters jump in turn while hovered (letters split by grapheme, so Vietnamese marks stay on their letter). */
+export function WaveText({ text }: { text: string }) {
+  const chars = typeof Intl !== 'undefined' && 'Segmenter' in Intl
+    ? [...new Intl.Segmenter('vi', { granularity: 'grapheme' }).segment(text)].map((x) => x.segment)
+    : [...text];
+  return (
+    <span className="wave" aria-label={text}>
+      {chars.map((c, i) => <span key={i} aria-hidden style={{ '--i': i } as CSSProperties}>{c}</span>)}
+    </span>
   );
 }
 
@@ -234,7 +277,7 @@ export function Chip({ on, onClick, children, className = '' }: { on?: boolean; 
 }
 /** A filter count inside a Chip — inherits the chip's colour so it stays legible when active. */
 export function ChipCount({ n }: { n: number }) {
-  return <span className="num opacity-70">{n}</span>;
+  return <span className="num opacity-70 hop">{n}</span>;
 }
 export function Field({ label, htmlFor, req, hint, err, children, className = '' }: { label?: string; htmlFor?: string; req?: boolean; hint?: ReactNode; err?: boolean; children: ReactNode; className?: string }) {
   return (
@@ -347,11 +390,12 @@ export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: s
 
 /* ---------- small charts ---------- */
 export function Ring({ value, size = 52, stroke = 4, color, track = '#eff0f3', text, textColor = '#1a1f2e', label }: { value: number; size?: number; stroke?: number; color: string; track?: string; text?: ReactNode; textColor?: string; label?: string }) {
-  const r = size / 2 - stroke, c = 2 * Math.PI * r;
+  const r = size / 2 - stroke;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label || `${value}`} className="flex-none">
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
-      {value > 0 && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${(value / 100) * c} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
+      {/* pathLength=100 lets the arc draw itself in from 0 with one CSS animation (.ring-arc). */}
+      {value > 0 && <circle className="ring-arc" cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" pathLength={100} strokeDasharray={`${value} 100`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
       <text x="50%" y="50%" dy=".35em" textAnchor="middle" fontFamily="Inter, sans-serif" fontWeight="600" fontSize={size * 0.3} fill={textColor} style={{ fontVariantNumeric: 'tabular-nums' }}>{text ?? value}</text>
     </svg>
   );
