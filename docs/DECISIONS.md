@@ -5,6 +5,30 @@ nhóm). Mới nhất lên đầu.
 
 ---
 
+## 2026-10-24 — Hoàn thiện EX-01 (trùng lịch tập) và UC-19 (ảnh sự cố)
+
+**Nguồn:** yêu cầu người dùng (Bình — 2 việc "In progress" trong sheet) + Claude Code.
+**Quyết định:**
+- **EX-01 kiểm tra cả khi dời giờ** (`PATCH /sessions/:id` có `scheduledAt`),
+  không chỉ lúc tạo — thay mục "Ngoài phạm vi" của
+  [specs/phase-9-training-safety.md](specs/phase-9-training-safety.md): nếu
+  không, dời giờ là đường vòng tạo 2 buổi chồng nhau. Buổi đang dời được loại
+  khỏi phép so (không tự trùng với chính nó); bỏ qua khi cùng request chuyển
+  buổi sang `DONE`/`CANCELLED` (rule chỉ áp cho buổi `PLANNED`).
+- **Thông báo 409 viết bằng tiếng Việt**, nêu loại buổi tập đang trùng và giờ
+  theo `Asia/Ho_Chi_Minh` (trước là tiếng Anh + giờ ISO UTC). Cảnh báo
+  `FITNESS_WARNING` (UC-12) cũng đổi sang giờ VN.
+- **Web kiểm tra trùng ngay khi chọn giờ** (cùng cửa sổ 60 phút, cả form tạo
+  lẫn form dời giờ) và khoá nút lưu — API vẫn là chốt chặn cuối.
+- **`ErrorText` hiện nguyên thông báo server khi nó là tiếng Việt** (viết cho
+  người dùng), còn thông báo tiếng Anh vẫn thay bằng bản dịch theo mã lỗi.
+- **UC-19 phía web:** xem trước ảnh + kiểm tra định dạng/dung lượng (jpg/png/
+  webp, ≤ 5 MB — khớp `UPLOAD_MAX_MB`) trước khi gửi; GROOM thêm/đổi ảnh ngay
+  trên dòng sự cố khi sự cố chưa `RESOLVED` (trước đây ảnh lỗi lúc gửi là mất
+  luôn, không có chỗ tải lại); ảnh thu nhỏ trong bảng, bấm để xem lớn.
+**Trạng thái:** ✅ e2e `training-safety` + `health-injury-ext` + `training`
+(48/48, trong đó 4 test mới cho EX-01, 6 test mới cho UC-19); typecheck/build web.
+
 ## 2026-10-06 — Nối dây nút "Xoá" tài khoản đã duyệt ở Admin Dashboard
 
 **Nguồn:** yêu cầu người dùng.

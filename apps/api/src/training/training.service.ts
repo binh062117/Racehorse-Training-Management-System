@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { HealthStatus, HorseStatus, NotificationType, Prisma, Role, SessionStatus } from '@prisma/client';
+import {
+  HealthStatus,
+  HorseStatus,
+  NotificationType,
+  Prisma,
+  Role,
+  SessionStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AppException } from '../common/app-exception';
@@ -17,6 +24,17 @@ import {
 // docs/specs/phase-9-training-safety.md §5 for why these are fixed
 // constants rather than a `duration` field / env config.
 const SESSION_CONFLICT_WINDOW_MIN = 60;
+
+// Times in user-facing messages read in the club's own timezone.
+const VN_DATE_TIME = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+  hour: '2-digit',
+  minute: '2-digit',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+const formatVnDateTime = (d: Date) => VN_DATE_TIME.format(d);
 const FITNESS_HEART_RATE_MAX = 195;
 const FITNESS_METRIC_KEY = 'heart_rate_max';
 
@@ -65,30 +83,34 @@ export class TrainingService {
   }
 
   /**
-   * EX-01 (Phase 9) — reject creating a new session if the horse already
-   * has a PLANNED one within SESSION_CONFLICT_WINDOW_MIN minutes either
-   * side. Create-time only — see docs/specs/phase-9-training-safety.md §5.
+   * EX-01 — reject a session time if the horse already has a PLANNED one
+   * within SESSION_CONFLICT_WINDOW_MIN minutes either side. Checked when a
+   * session is created and when a planned one is moved to a new time
+   * (`excludeId` = the session being moved, so it never clashes with itself).
    */
   private async assertNoScheduleConflict(
     horseId: string,
     scheduledAt: Date,
+    excludeId?: string,
   ): Promise<void> {
     const windowMs = SESSION_CONFLICT_WINDOW_MIN * 60_000;
     const conflict = await this.prisma.trainingSession.findFirst({
       where: {
         horseId,
         status: SessionStatus.PLANNED,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
         scheduledAt: {
           gte: new Date(scheduledAt.getTime() - windowMs),
           lte: new Date(scheduledAt.getTime() + windowMs),
         },
       },
-      select: { scheduledAt: true },
+      orderBy: { scheduledAt: 'asc' },
+      select: { scheduledAt: true, type: true },
     });
     if (conflict) {
       throw new AppException(
         'CONFLICT',
-        `This horse already has a planned session within ${SESSION_CONFLICT_WINDOW_MIN} minutes of ${conflict.scheduledAt.toISOString()}`,
+        `Ngựa đã có buổi tập "${conflict.type}" lúc ${formatVnDateTime(conflict.scheduledAt)} — hai buổi tập phải cách nhau ít nhất ${SESSION_CONFLICT_WINDOW_MIN} phút.`,
       );
     }
   }
@@ -113,7 +135,7 @@ export class TrainingService {
     await this.notifications.notifyUsers(
       recipients,
       NotificationType.FITNESS_WARNING,
-      `${session.horse.name} ghi nhận ${FITNESS_METRIC_KEY}=${session.resultValue} (>${FITNESS_HEART_RATE_MAX}) ở buổi tập ${session.type} ngày ${session.scheduledAt.toISOString()}`,
+      `${session.horse.name} ghi nhận ${FITNESS_METRIC_KEY}=${session.resultValue} (>${FITNESS_HEART_RATE_MAX}) ở buổi tập ${session.type} lúc ${formatVnDateTime(session.scheduledAt)}`,
     );
   }
 
@@ -259,6 +281,19 @@ export class TrainingService {
     if (dto.resultValue !== undefined) data.resultValue = dto.resultValue;
     if (dto.status !== undefined) data.status = dto.status;
 
+    // EX-01 — moving a planned session must not land it on top of another.
+    // Skipped when the same request closes the session (DONE/CANCELLED),
+    // since only PLANNED sessions take part in the conflict rule.
+    const staysPlanned =
+      dto.status === undefined || dto.status === SessionStatus.PLANNED;
+    if (dto.scheduledAt !== undefined && staysPlanned) {
+      await this.assertNoScheduleConflict(
+        session.horseId,
+        new Date(dto.scheduledAt),
+        session.id,
+      );
+    }
+
     if (dto.status === SessionStatus.DONE) {
       const metric = dto.resultMetric ?? session.resultMetric;
       const value =
@@ -305,7 +340,13 @@ export class TrainingService {
   ): Promise<PlanView> {
     const horse = await this.prisma.horse.findFirst({
       where: { id: horseId, deletedAt: null },
-      select: { id: true, name: true, status: true, healthStatus: true, locked: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        healthStatus: true,
+        locked: true,
+      },
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
 
