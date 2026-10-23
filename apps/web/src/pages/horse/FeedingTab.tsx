@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { FeedingSuggestionCard } from '../../components/horse/FeedingSuggestionCard';
 import { formatDate } from '../../lib/format';
-import { Btn, Card, Field, Icon, Input } from '../../ds/ui';
+import { Btn, Card, EmptyState, Field, Icon, Input, thCls } from '../../ds/ui';
 
 interface FormPrefill {
   feedType: string;
@@ -43,7 +43,7 @@ export function FeedingTab({ horse }: { horse: Horse }) {
         <div>
           <h2 className="text-[15px] font-semibold">Khẩu phần ăn</h2>
           <p className="cap mt-0.5">
-            {isGroom ? 'Ghi lại loại thức ăn và khối lượng mỗi lần cho ăn, phục vụ phân tích dinh dưỡng của AI.' : 'Lịch sử khẩu phần ăn của chiến mã.'}
+            {isGroom ? 'Ghi lại loại thức ăn và khối lượng mỗi lần cho ăn, phục vụ phân tích dinh dưỡng của AI.' : 'Lịch sử khẩu phần ăn của ngựa.'}
           </p>
         </div>
         {isGroom && (
@@ -74,26 +74,28 @@ export function FeedingTab({ horse }: { horse: Horse }) {
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
-        <Card className="px-5 py-10 text-center"><p className="cap">Chưa có bản ghi khẩu phần ăn nào.</p></Card>
+        <EmptyState>Chưa có bản ghi khẩu phần ăn nào.</EmptyState>
       ) : (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead>
-                <tr className="text-left">
-                  {['Ngày', 'Loại thức ăn', 'Khối lượng', 'Ghi chú', 'Người ghi'].map((th) => (
-                    <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
-                  ))}
+                <tr>
+                  <th className={`${thCls} pl-5`}>Ngày</th>
+                  <th className={thCls}>Loại thức ăn</th>
+                  <th className={`${thCls} text-right`}>Khối lượng</th>
+                  <th className={thCls}>Ghi chú</th>
+                  <th className={`${thCls} pr-5`}>Người ghi</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((r) => (
-                  <tr key={r.id} className="border-b border-line-soft hover:bg-subtle">
-                    <td className="px-4 py-3">{formatDate(r.date)}</td>
+                  <tr key={r.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                    <td className="pl-5 pr-4 py-3 num whitespace-nowrap">{formatDate(r.date)}</td>
                     <td className="px-4 py-3">{r.feedType}</td>
-                    <td className="px-4 py-3 num">{r.quantityKg} kg</td>
-                    <td className="px-4 py-3 cap">{r.notes ?? '—'}</td>
-                    <td className="px-4 py-3 cap">{r.recordedBy.name}</td>
+                    <td className="px-4 py-3 num text-right whitespace-nowrap">{r.quantityKg} kg</td>
+                    <td className="px-4 py-3 text-muted">{r.notes ?? ''}</td>
+                    <td className="pl-4 pr-5 py-3 text-muted">{r.recordedBy.name}</td>
                   </tr>
                 ))}
               </tbody>

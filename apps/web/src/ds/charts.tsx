@@ -24,7 +24,7 @@ export const BODY_ZONES: BodyZone[] = (
 
 /** Line chart with crosshair + tooltip on hover. Single series → no legend needed. */
 export function LineChart({
-  values, labels, min = 50, max = 100, ticks = [100, 85, 70, 55], W = 520, H = 190, target, zonesBg, color = '#2f62a8', unit = '', describe,
+  values, labels, min = 50, max = 100, ticks = [100, 85, 70, 55], W = 520, H = 190, target, zonesBg, color = '#1a4b8a', unit = '', describe,
 }: {
   values: number[]; labels: (string | null)[]; min?: number; max?: number; ticks?: number[]; W?: number; H?: number; target?: number; zonesBg?: boolean; color?: string; unit?: string; describe?: string;
 }) {
@@ -39,22 +39,22 @@ export function LineChart({
     <div className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block" role="img" aria-label={describe}>
         {zonesBg && <>
-          <rect x={left} y={y(100)} width={right - left} height={y(80) - y(100)} fill="#edf7f0" opacity={0.6} />
-          <rect x={left} y={y(80)} width={right - left} height={y(60) - y(80)} fill="#fdf6e8" opacity={0.6} />
+          <rect x={left} y={y(100)} width={right - left} height={y(80) - y(100)} fill="#ecf7f0" opacity={0.6} />
+          <rect x={left} y={y(80)} width={right - left} height={y(60) - y(80)} fill="#fdf6e3" opacity={0.6} />
           <text x={right - 4} y={y(100) + 14} textAnchor="end" fontFamily={FONT} fontSize="10.5" fontWeight="600" fill="#3a6b4a">Tốt ≥ 80</text>
           <text x={right - 4} y={y(80) + 14} textAnchor="end" fontFamily={FONT} fontSize="10.5" fontWeight="600" fill="#8a6218">Theo dõi 60–79</text>
         </>}
-        {ticks.map((t) => <g key={t}><line x1={left} x2={right} y1={y(t)} y2={y(t)} stroke="#eceae4" /><text x={left - 8} y={y(t) + 4} textAnchor="end" fontFamily={FONT} fontSize="11" fill="#6b7280">{t}</text></g>)}
+        {ticks.map((t) => <g key={t}><line x1={left} x2={right} y1={y(t)} y2={y(t)} stroke="#eff0f3" /><text x={left - 8} y={y(t) + 4} textAnchor="end" fontFamily={FONT} fontSize="11" fill="#6b7280">{t}</text></g>)}
         {target != null && <line x1={left} x2={right} y1={y(target)} y2={y(target)} stroke="#6b7280" strokeWidth="1.5" strokeDasharray="6 5" />}
         <path d={`M${pts.split(' ').join(' L')} L${x(values.length - 1)},${bottom} L${left},${bottom} Z`} fill={color} fillOpacity={0.08} />
         <polyline fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts} />
-        <line x1={x(h)} x2={x(h)} y1={top} y2={bottom} stroke="#cdc9c3" strokeDasharray="3 3" />
+        <line x1={x(h)} x2={x(h)} y1={top} y2={bottom} stroke="#d1d5db" strokeDasharray="3 3" />
         <circle cx={x(h)} cy={y(values[h])} r="5.5" fill={color} stroke="#fff" strokeWidth="2.5" />
         {labels.map((l, i) => (l ? <text key={i} x={x(i)} y={H - 10} textAnchor="middle" fontFamily={FONT} fontSize="11" fill="#6b7280">{l}</text> : null))}
         {values.map((_, i) => <rect key={i} x={x(i) - colW / 2} y={top - 10} width={colW} height={bottom - top + 15} fill="transparent" onMouseEnter={() => setH(i)} />)}
       </svg>
       <Tip left={`${(x(h) / W) * 100}%`} top={`${(y(values[h]) / H) * 100}%`}>
-        <b className="font-display text-lg">{values[h]}{unit}</b>{d != null && <span className="text-hero-muted"> {d >= 0 ? '+' : ''}{d}</span>}
+        <b className="num text-[15px] font-semibold">{values[h]}{unit}</b>{d != null && <span className="num opacity-70"> {d >= 0 ? '+' : ''}{d}</span>}
       </Tip>
     </div>
   );
@@ -68,8 +68,8 @@ export function Radar({ axes, a, b }: { axes: string[]; a: number[]; b: number[]
   const labelPos: [number, number, 'middle' | 'start' | 'end'][] = [[150, 20, 'middle'], [258, 100, 'start'], [222, 244, 'middle'], [78, 244, 'middle'], [42, 100, 'end']];
   return (
     <svg viewBox="0 0 300 260" className="w-full max-w-[340px] h-auto" role="img" aria-label={axes.map((x, i) => `${x} ${a[i]}`).join(', ')}>
-      {[25, 50, 75, 100].map((r) => <polygon key={r} points={poly([r, r, r, r, r])} fill="none" stroke={r === 100 ? '#e2e0db' : '#eceae4'} />)}
-      {axes.map((_, i) => { const [x2, y2] = pt(100, i); return <line key={i} x1={cx} y1={cy} x2={x2} y2={y2} stroke="#eceae4" />; })}
+      {[25, 50, 75, 100].map((r) => <polygon key={r} points={poly([r, r, r, r, r])} fill="none" stroke={r === 100 ? '#e5e7eb' : '#eff0f3'} />)}
+      {axes.map((_, i) => { const [x2, y2] = pt(100, i); return <line key={i} x1={cx} y1={cy} x2={x2} y2={y2} stroke="#eff0f3" />; })}
       <polygon points={poly(b)} fill="none" stroke="#c8862a" strokeWidth="2" strokeDasharray="5 4" />
       <polygon points={poly(a)} fill="#2f62a8" fillOpacity={0.12} stroke="#2f62a8" strokeWidth="2" strokeLinejoin="round" />
       {a.map((v, i) => { const [x, y] = pt(v, i); return <circle key={i} cx={x} cy={y} r="4.5" fill="#2f62a8" stroke="#fff" strokeWidth="2" />; })}

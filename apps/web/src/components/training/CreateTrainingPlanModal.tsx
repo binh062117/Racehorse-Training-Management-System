@@ -65,7 +65,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
 
     const targetHorseId = defaultHorseId ?? horseId;
     if (!targetHorseId) {
-      setErr(new Error('Vui lòng chọn chiến mã để lập giáo án.'));
+      setErr(new Error('Vui lòng chọn ngựa để lập giáo án.'));
       return;
     }
     if (!goal.trim()) {
@@ -97,7 +97,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
     }
   };
 
-  const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
+  const selectCls = 'h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15';
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} width={560} labelledBy="create-plan-title">
@@ -107,11 +107,11 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
           <ErrorText err={err} />
 
           {defaultHorseId ? (
-            <Field label="Chiến mã áp dụng">
+            <Field label="Ngựa áp dụng">
               <Input value={defaultHorseName ?? defaultHorseId} disabled ro />
             </Field>
           ) : (
-            <Field label="Chọn chiến mã" hint="Ngựa đã giải nghệ (RETIRED) hoặc đang cách ly (QUARANTINED) không xuất hiện trong danh sách.">
+            <Field label="Chọn ngựa" hint="Ngựa đã giải nghệ hoặc đang cách ly không xuất hiện trong danh sách.">
               {loadingHorses ? (
                 <p className="cap">Đang tải danh sách ngựa…</p>
               ) : (
@@ -146,7 +146,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
               )}
               {!selectedHorse.locked && selectedHorse.healthStatus === 'INJURED' && (
                 <>
-                  Ngựa đang trong trạng thái chấn thương (INJURED).
+                  Ngựa đang trong trạng thái chấn thương.
                   Giáo án sẽ được lưu nhưng nên phối hợp với bác sĩ thú y trước khi lên lịch buổi tập thực tế.
                 </>
               )}

@@ -75,7 +75,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
     }
   };
 
-  const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
+  const selectCls = 'h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15';
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="create-horse-title">
@@ -116,9 +116,9 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
 
             <Field label="Trạng thái ban đầu">
               <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as HorseStatus)}>
-                <option value="ACTIVE">Đang hoạt động (ACTIVE)</option>
-                <option value="RESTING">Nghỉ dưỡng (RESTING)</option>
-                <option value="RETIRED">Giải nghệ (RETIRED)</option>
+                <option value="ACTIVE">Đang thi đấu</option>
+                <option value="RESTING">Nghỉ dưỡng</option>
+                <option value="RETIRED">Giải nghệ</option>
               </select>
             </Field>
 

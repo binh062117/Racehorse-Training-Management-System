@@ -262,8 +262,8 @@ export class HorsesService {
       const managerIds = await this.notifications.managerIds();
       const recipients = [existing.ownerId, ...managerIds];
       const message = dto.locked
-        ? `${existing.name} đã bị khoá tập luyện${horse.lockReason ? `: ${horse.lockReason}` : ''}`
-        : `${existing.name} đã được mở khoá tập luyện`;
+        ? `${existing.name} đã bị khóa tập luyện${horse.lockReason ? `: ${horse.lockReason}` : ''}`
+        : `${existing.name} đã được mở khóa tập luyện`;
       await this.notifications.notifyUsers(
         recipients,
         dto.locked

@@ -8,7 +8,7 @@ import { formatDate, toDateInput } from '../lib/format';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, Paginated, Race, RaceDetail, RaceEntry } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Chip, Field, HeroStats, Icon, Input } from '../ds/ui';
+import { Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, Input, NativeSelect, PageHeader } from '../ds/ui';
 
 type RaceFilter = 'ALL' | 'UPCOMING' | 'PAST';
 const EMPTY_RACES: Race[] = [];
@@ -51,14 +51,14 @@ export function RacesPage() {
   const { user } = useAuth();
   const canManage = user?.role === 'MANAGER';
   const [selectedRace, setSelectedRace] = useState<RaceDetail | null>(null);
-  const [filter, setFilter] = useState<RaceFilter>('UPCOMING');
+  const [chosenFilter, setFilter] = useState<RaceFilter | null>(null);
   const [search, setSearch] = useState('');
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<unknown>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingRace, setEditingRace] = useState<Race | null>(null);
 
-  usePageChrome({ crumbs: ['Giải đua', t('races.title')], search: t('races.search'), onSearch: setSearch });
+  usePageChrome({ crumbs: [t('races.title')] });
 
   const { data: raceData, loading, error, reload: loadRaces } = useCachedResource(
     `race-management-${user?.id ?? 'anonymous'}-${canManage}`,
@@ -75,6 +75,8 @@ export function RacesPage() {
 
   const today = toDateInput(new Date().toISOString());
   const summary = useMemo(() => summarizeRaces(races, today), [races, today]);
+  // Until the user picks one, open on upcoming races — or on all of them when none are coming up.
+  const filter: RaceFilter = chosenFilter ?? (summary.upcoming > 0 || races.length === 0 ? 'UPCOMING' : 'ALL');
   const visibleRaces = useMemo(() => getVisibleRaces(races, filter, search, today), [filter, races, search, today]);
 
   const openRace = async (race: Race) => {
@@ -108,28 +110,29 @@ export function RacesPage() {
     if (selectedRace) await openRace(selectedRace);
   };
 
+  const nextRace = useMemo(
+    () => races.filter((r) => isUpcomingRace(r, today)).sort((a, b) => a.date.localeCompare(b.date))[0],
+    [races, today],
+  );
+  const sub = loading && races.length === 0
+    ? t('races.loading')
+    : nextRace
+      ? `Giải gần nhất: ${nextRace.name}, ngày ${formatDate(nextRace.date)}${nextRace.venue ? ` tại ${nextRace.venue}` : ''} · ${summary.upcoming} giải sắp diễn ra.`
+      : `Không có giải nào sắp diễn ra · ${summary.past} giải đã diễn ra.`;
+  const countFor = (value: RaceFilter) => (value === 'ALL' ? races.length : value === 'UPCOMING' ? summary.upcoming : summary.past);
+
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div className="flex flex-wrap gap-6 items-end justify-between">
-          <div>
-            <div className="lbl">Mùa giải 2026 · Racehorse Club</div>
-            <h1 className="disp text-[56px] mt-2">{t('races.title')}</h1>
-            <p className="text-hero-muted mt-2 max-w-[560px]">{t('races.description')}</p>
-          </div>
-          {canManage && (
-            <Btn v="light" onClick={() => { setEditingRace(null); setFormOpen((open) => !open); }}>
-              <Icon name={formOpen && !editingRace ? 'x' : 'plus'} />{formOpen && !editingRace ? t('races.closeForm') : t('races.createRace')}
-            </Btn>
-          )}
-        </div>
-        <HeroStats items={[
-          { label: t('races.total'), value: loading ? '…' : races.length },
-          { label: t('races.upcoming'), value: loading ? '…' : summary.upcoming, color: '#9fd9b1' },
-          { label: t('races.completed'), value: loading ? '…' : summary.past },
-          { label: t('races.withVenue'), value: loading ? '…' : summary.withVenue },
-        ]} />
-      </section>
+      <PageHeader
+        title={t('races.title')}
+        sub={sub}
+        search={{ placeholder: t('races.search'), value: search, onChange: setSearch }}
+        actions={canManage ? (
+          <Btn v="p" onClick={() => { setEditingRace(null); setFormOpen((open) => !open); }}>
+            <Icon name={formOpen && !editingRace ? 'x' : 'plus'} />{formOpen && !editingRace ? t('races.closeForm') : t('races.createRace')}
+          </Btn>
+        ) : undefined}
+      />
 
       {formOpen && canManage && (
         <RaceForm key={editingRace?.id ?? 'new-race'} race={editingRace} onCancel={() => { setFormOpen(false); setEditingRace(null); }} onSaved={onRaceSaved} />
@@ -137,35 +140,31 @@ export function RacesPage() {
 
       <ErrorText err={error} />
 
-      <div className="flex flex-wrap gap-5 items-start">
-        <Card className="flex-[1.3_1_460px] min-w-0 p-5">
-          <div className="flex flex-wrap justify-between items-start gap-3">
-            <div>
-              <h2 className="text-[15px] font-semibold">{t('races.schedule')}</h2>
-              <p className="cap mt-1">{t('races.scheduleDescription')}</p>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(340px,1fr)] items-start">
+        <Card className="min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
+            <h2 className="text-[15px] font-semibold">{t('races.schedule')}</h2>
+            <div className="flex gap-1.5" role="group" aria-label={t('races.filter')}>
+              {(['UPCOMING', 'ALL', 'PAST'] as const).map((value) => (
+                <Chip key={value} on={filter === value} onClick={() => setFilter(value)}>{t(`races.filters.${value}`)} <ChipCount n={countFor(value)} /></Chip>
+              ))}
             </div>
-          </div>
-          <div className="flex gap-2 mt-4" role="group" aria-label={t('races.filter')}>
-            {(['UPCOMING', 'ALL', 'PAST'] as const).map((value) => (
-              <Chip key={value} on={filter === value} onClick={() => setFilter(value)}>{t(`races.filters.${value}`)}</Chip>
-            ))}
           </div>
 
           {loading ? (
-            <p className="cap mt-4">{t('races.loading')}</p>
+            <p className="text-muted px-5 py-4">{t('races.loading')}</p>
           ) : visibleRaces.length === 0 ? (
-            <div className="text-center py-10">
-              <strong className="block">{t('races.emptyTitle')}</strong>
-              <span className="cap">{races.length === 0 ? t('races.emptyDescription') : t('races.noMatch')}</span>
-            </div>
+            <div className="p-5"><EmptyState>{races.length === 0 ? t('races.emptyDescription') : t('races.noMatch')}</EmptyState></div>
           ) : (
-            <div className="overflow-x-auto mt-4">
-              <table className="w-full min-w-[640px] border-collapse">
+            <div className="overflow-x-auto mt-3">
+              <table className="w-full min-w-[600px] border-collapse">
                 <thead>
-                  <tr className="text-left">
-                    {[t('races.race'), t('races.date'), t('races.venue'), t('races.distance'), t('races.statusLabel'), ''].map((th) => (
-                      <th key={th} className="h-[40px] px-3 bg-cream lbl border-b border-line">{th}</th>
-                    ))}
+                  <tr className="text-left text-[12px] text-muted">
+                    <th className="h-10 px-5 font-medium border-b border-line">{t('races.race')}</th>
+                    <th className="h-10 px-3 font-medium border-b border-line">{t('races.date')}</th>
+                    <th className="h-10 px-3 font-medium border-b border-line">{t('races.venue')}</th>
+                    <th className="h-10 px-3 font-medium border-b border-line text-right">{t('races.distance')}</th>
+                    <th className="h-10 px-5 font-medium border-b border-line">{t('races.statusLabel')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,16 +172,15 @@ export function RacesPage() {
                     const isUpcoming = isUpcomingRace(race, today);
                     const isSelected = selectedRace?.id === race.id;
                     return (
-                      <tr key={race.id} className={`border-b border-line-soft hover:bg-subtle ${isSelected ? 'bg-info-bg' : ''}`}>
-                        <td className="px-3 py-2.5">
-                          <button type="button" onClick={() => void openRace(race)} className="font-semibold text-navy">{race.name}</button>
-                          <div className="cap">{race.surface || t('races.surfaceNotSet')}</div>
+                      <tr key={race.id} onClick={() => void openRace(race)} className={`border-b border-line-soft last:border-0 cursor-pointer ${isSelected ? 'bg-cream' : 'hover:bg-subtle'}`}>
+                        <td className="px-5 py-3">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); void openRace(race); }} className="font-medium text-ink text-left hover:text-info">{race.name}</button>
+                          <div className="text-[12.5px] text-muted">{race.surface || t('races.surfaceNotSet')}</div>
                         </td>
-                        <td className="px-3 py-2.5 num">{formatDate(race.date)}</td>
-                        <td className="px-3 py-2.5">{race.venue || '—'}</td>
-                        <td className="px-3 py-2.5 num">{race.distance ? `${race.distance} ${t('races.meters')}` : '—'}</td>
-                        <td className="px-3 py-2.5"><Badge tone={isUpcoming ? 'ok' : 'neu'}>{isUpcoming ? t('races.filters.UPCOMING') : t('races.filters.PAST')}</Badge></td>
-                        <td className="px-3 py-2.5"><Btn sm onClick={() => void openRace(race)}>{t('races.viewDetails')}</Btn></td>
+                        <td className="px-3 py-3 num whitespace-nowrap">{formatDate(race.date)}</td>
+                        <td className="px-3 py-3">{race.venue || <span className="text-muted">—</span>}</td>
+                        <td className="px-3 py-3 num text-right whitespace-nowrap">{race.distance ? <>{race.distance.toLocaleString('vi-VN')}<span className="text-muted"> m</span></> : <span className="text-muted">—</span>}</td>
+                        <td className="px-5 py-3"><Badge tone={isUpcoming ? 'ok' : 'neu'}>{isUpcoming ? t('races.filters.UPCOMING') : t('races.filters.PAST')}</Badge></td>
                       </tr>
                     );
                   })}
@@ -192,7 +190,7 @@ export function RacesPage() {
           )}
         </Card>
 
-        <Card className="flex-[1_1_380px] min-w-0 p-5" aria-live="polite">
+        <Card className="min-w-0 p-5" aria-live="polite">
           {detailLoading ? (
             <p className="cap">{t('races.loadingDetails')}</p>
           ) : detailError ? (
@@ -200,15 +198,15 @@ export function RacesPage() {
           ) : selectedRace ? (
             <>
               <div className="flex justify-between items-start gap-3">
-                <div><p className="lbl">{t('races.raceDetails')}</p><h2 className="disp text-[32px] mt-1">{selectedRace.name}</h2></div>
+                <div className="min-w-0"><p className="lbl">{t('races.raceDetails')}</p><h2 className="text-[18px] leading-6 font-semibold mt-0.5">{selectedRace.name}</h2></div>
                 {canManage && <Btn sm onClick={editRace}><Icon name="edit" className="w-3.5 h-3.5" />{t('races.editRace')}</Btn>}
               </div>
-              <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 mt-4 text-[13px]">
-                <dt className="text-muted">{t('races.date')}</dt><dd className="m-0">{formatDate(selectedRace.date)}</dd>
-                <dt className="text-muted">{t('races.venue')}</dt><dd className="m-0">{selectedRace.venue || '—'}</dd>
-                <dt className="text-muted">{t('races.distance')}</dt><dd className="m-0">{selectedRace.distance ? `${selectedRace.distance} ${t('races.meters')}` : '—'}</dd>
-                <dt className="text-muted">{t('races.surface')}</dt><dd className="m-0">{selectedRace.surface || '—'}</dd>
-                <dt className="text-muted">{t('races.prizePool')}</dt><dd className="m-0">{selectedRace.prizePool == null ? '—' : selectedRace.prizePool.toLocaleString()}</dd>
+              <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 mt-4">
+                <dt className="text-muted">{t('races.date')}</dt><dd className="m-0 num">{formatDate(selectedRace.date)}</dd>
+                <dt className="text-muted">{t('races.venue')}</dt><dd className="m-0">{selectedRace.venue || <span className="text-muted">—</span>}</dd>
+                <dt className="text-muted">{t('races.distance')}</dt><dd className="m-0 num">{selectedRace.distance ? `${selectedRace.distance.toLocaleString('vi-VN')} m` : <span className="text-muted">—</span>}</dd>
+                <dt className="text-muted">{t('races.surface')}</dt><dd className="m-0">{selectedRace.surface || <span className="text-muted">—</span>}</dd>
+                <dt className="text-muted">{t('races.prizePool')}</dt><dd className="m-0 num">{selectedRace.prizePool == null ? <span className="text-muted">—</span> : `${selectedRace.prizePool.toLocaleString('vi-VN')} ₫`}</dd>
               </dl>
 
               {canManage && (
@@ -236,10 +234,9 @@ export function RacesPage() {
               )}
             </>
           ) : (
-            <div className="text-center py-10">
-              <p className="lbl">{t('races.raceDetails')}</p>
-              <h2 className="disp text-[28px] mt-1">{t('races.selectRace')}</h2>
-              <p className="cap mt-2">{t('races.selectRaceDescription')}</p>
+            <div>
+              <h2 className="text-[15px] font-semibold">{t('races.selectRace')}</h2>
+              <p className="text-muted mt-1">{t('races.selectRaceDescription')}</p>
             </div>
           )}
         </Card>
@@ -337,13 +334,10 @@ function AddEntryForm({ horses, enteredHorseIds, onAdded, raceId }: { horses: Ho
     <form onSubmit={submit} className="mt-5 pt-5 border-t border-line-soft">
       <h3 className="text-[13.5px] font-semibold mb-2">{t('races.registerHorse')}</h3>
       <div className="flex gap-2">
-        <select
-          className="h-10 flex-1 rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-          value={horseId} onChange={(event) => setHorseId(event.target.value)} required
-        >
+        <NativeSelect className="flex-1" value={horseId} onChange={(event) => setHorseId(event.target.value)} required>
           <option value="">{t('races.chooseHorse')}</option>
           {eligibleHorses.map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
-        </select>
+        </NativeSelect>
         <Btn v="p" type="submit" disabled={saving || !horseId}>{saving ? t('races.saving') : t('races.register')}</Btn>
       </div>
       {eligibleHorses.length === 0 && <p className="cap mt-2">{t('races.noEligibleHorses')}</p>}
@@ -378,7 +372,7 @@ function EntryResult({ entry, canManage, canViewHorse, onSaved }: {
   return (
     <article className="rounded-btn border border-line p-3">
       <div className="flex items-center gap-3">
-        <span className="disp text-2xl w-10 flex-none text-center">{entry.position ? `#${entry.position}` : '—'}</span>
+        <span className={`num w-10 flex-none text-center text-[18px] font-semibold ${entry.position ? 'text-ink' : 'text-muted'}`}>{entry.position ? `#${entry.position}` : '—'}</span>
         <div className="min-w-0 flex-1">
           {canViewHorse ? (
             <Link to={`/horses/${entry.horse.id}/performance`} className="font-semibold text-navy no-underline">{entry.horse.name}</Link>

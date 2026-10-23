@@ -7,7 +7,7 @@ import { ErrorText } from '../components/ErrorText';
 import { CreateHealthRecordModal } from '../components/health/CreateHealthRecordModal';
 import { formatDate } from '../lib/format';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, HeroStats, Icon, healthTone } from '../ds/ui';
+import { Btn, Card, CardHeader, Chip, ChipCount, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip, LockBadge, PageHeader } from '../ds/ui';
 
 export function HealthRecordsPage() {
   const { user } = useAuth();
@@ -26,7 +26,7 @@ export function HealthRecordsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<HealthStatus | 'ALL'>('ALL');
 
-  usePageChrome({ crumbs: ['Sức khỏe', 'Hồ sơ khám bệnh'], search: 'Tìm theo tên ngựa…', onSearch: setSearch });
+  usePageChrome({ crumbs: ['Sức khỏe', 'Hồ sơ khám bệnh'] });
 
   const loadHorses = useCallback(async () => {
     try {
@@ -71,10 +71,14 @@ export function HealthRecordsPage() {
     return acc;
   }, {} as Record<string, number>);
   const lockedCount = horses.filter((h) => h.locked).length;
+  const fit = healthCounts.FIT ?? 0;
+  const watch = healthCounts.MONITORING ?? 0;
+  const sick = (healthCounts.INJURED ?? 0) + (healthCounts.QUARANTINED ?? 0);
 
+  const q = search.trim().toLowerCase();
   const filteredHorses = horses.filter((h) => {
     if (statusFilter !== 'ALL' && h.healthStatus !== statusFilter) return false;
-    if (search && !h.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (q && !h.name.toLowerCase().includes(q)) return false;
     return true;
   });
 
@@ -84,95 +88,110 @@ export function HealthRecordsPage() {
     setModalOpen(true);
   };
 
-  const handleCreated = () => {
-    void loadHorses().then(() => {
-      if (horses.length > 0) void loadRecords(horses);
-    });
-  };
+  // A new horses array re-runs the records effect, so reloading horses refreshes both lists.
+  const handleCreated = () => { void loadHorses(); };
+
+  const lockedNote = lockedCount ? ` · ${lockedCount} đang khóa tập` : '';
+  const sub = loading
+    ? 'Đang tải dữ liệu sức khỏe…'
+    : horses.length === 0
+      ? 'Chưa có ngựa nào trong hệ thống.'
+      : sick + watch === 0
+        ? `Cả ${horses.length} ngựa đều khỏe mạnh${lockedNote}.`
+        : `${sick + watch} trên ${horses.length} ngựa cần bác sĩ theo dõi${lockedNote}.`;
+
+  const filters: [HealthStatus | 'ALL', string, number][] = [
+    ['ALL', 'Tất cả', horses.length],
+    ['FIT', 'Khỏe mạnh', fit],
+    ['MONITORING', 'Cần theo dõi', watch],
+    ['INJURED', 'Chấn thương', healthCounts.INJURED ?? 0],
+    ['QUARANTINED', 'Cách ly', healthCounts.QUARANTINED ?? 0],
+  ];
+  const th = 'h-10 px-4 text-[12px] font-medium text-muted border-b border-line';
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div>
-          <div className="lbl">Hồ sơ y tế</div>
-          <h1 className="disp text-[56px] mt-2">Quản lý Hồ sơ Khám bệnh</h1>
-          <p className="text-hero-muted mt-2 max-w-[560px]">Tổng quan sức khỏe toàn đàn ngựa. Ghi nhận kết quả khám, chẩn đoán và cập nhật trạng thái y tế.</p>
-        </div>
-        <HeroStats items={[
-          { label: 'Tổng đàn ngựa', value: horses.length },
-          { label: 'Khỏe mạnh', value: healthCounts.FIT ?? 0, color: '#9fd9b1' },
-          { label: 'Cần theo dõi', value: healthCounts.MONITORING ?? 0, color: '#f3d29a' },
-          { label: 'Chấn thương / Cách ly', value: (healthCounts.INJURED ?? 0) + (healthCounts.QUARANTINED ?? 0), color: '#f3b4b4' },
-          { label: 'Khóa tập', value: lockedCount, color: '#f3b4b4' },
-        ]} />
-      </section>
+      <PageHeader
+        title="Hồ sơ khám bệnh"
+        sub={sub}
+        search={{ placeholder: 'Tìm theo tên ngựa', value: search, onChange: setSearch }}
+      />
 
-      <div className="flex flex-wrap gap-2.5 items-center">
-        {(['ALL', 'FIT', 'MONITORING', 'INJURED', 'QUARANTINED'] as const).map((s) => (
-          <button key={s} type="button" onClick={() => setStatusFilter(s)}
-            className={`inline-flex items-center h-[30px] px-3 rounded-full border text-[12.5px] font-medium ${statusFilter === s ? 'bg-navy text-white border-navy' : 'bg-white text-ink border-line'}`}>
-            {s === 'ALL' ? 'Tất cả trạng thái' : s === 'FIT' ? 'Khỏe mạnh' : s === 'MONITORING' ? 'Cần theo dõi' : s === 'INJURED' ? 'Chấn thương' : 'Cách ly'}
-          </button>
+      <KpiStrip items={[
+        { label: 'Tổng đàn', value: horses.length },
+        { label: 'Khỏe mạnh', value: fit, tone: fit > 0 ? 'ok' : undefined },
+        { label: 'Cần theo dõi', value: watch, tone: watch > 0 ? 'warn' : undefined },
+        { label: 'Chấn thương / cách ly', value: sick, tone: sick > 0 ? 'bad' : undefined, lead: sick > 0 },
+        { label: 'Đang khóa tập', value: lockedCount, tone: lockedCount > 0 ? 'bad' : undefined },
+      ]} />
+
+      <div className="flex flex-wrap gap-2 items-center">
+        {filters.map(([k, label, n]) => (
+          <Chip key={k} on={statusFilter === k} onClick={() => setStatusFilter(k)}>{label} <ChipCount n={n} /></Chip>
         ))}
       </div>
 
       <ErrorText err={err} />
 
       {loading ? (
-        <p className="cap">Đang tải dữ liệu...</p>
+        <p className="text-muted">Đang tải dữ liệu…</p>
       ) : (
-        <div className="flex flex-wrap gap-6 items-start">
-          <div className="flex-[1.4_1_480px] min-w-0">
-            <h3 className="text-[15px] font-semibold mb-3">Sơ đồ trạng thái sức khỏe ({filteredHorses.length} ngựa)</h3>
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] border-collapse">
-                  <thead>
-                    <tr className="text-left">
-                      {['Chiến mã', 'Giới tính', 'Giống', 'Trạng thái Y tế', 'Khóa tập', ...(isVet ? ['Thao tác'] : [])].map((th) => (
-                        <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
-                      ))}
+        <div className="grid gap-5 items-start xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+          <Card className="min-w-0">
+            <CardHeader title="Tình trạng từng ngựa"><span className="num text-[13px] text-muted">{filteredHorses.length} ngựa</span></CardHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] border-collapse">
+                <thead>
+                  <tr className="text-left">
+                    <th className={`${th} pl-5`}>Ngựa</th>
+                    <th className={th}>Giống</th>
+                    <th className={th}>Sức khỏe</th>
+                    <th className={`${th} ${isVet ? '' : 'pr-5'}`}>Khóa tập</th>
+                    {isVet && <th className={`${th} pr-5`} aria-label="Thao tác" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredHorses.length === 0 ? (
+                    <tr><td colSpan={isVet ? 5 : 4} className="px-5 py-6 text-center text-muted">Không có ngựa nào khớp với bộ lọc.</td></tr>
+                  ) : filteredHorses.map((h) => (
+                    <tr key={h.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                      <td className="pl-5 pr-4 py-2.5">
+                        <button type="button" onClick={() => navigate(`/horses/${h.id}`)} className="flex items-center gap-2.5 font-medium text-ink hover:text-info text-left whitespace-nowrap">
+                          <HorseAvatar src={h.photoUrl} name={h.name} size={28} />{h.name}
+                        </button>
+                      </td>
+                      <td className="px-4 py-2.5">{h.breed ?? <span className="text-muted">Chưa rõ</span>}</td>
+                      <td className="px-4 py-2.5"><HealthBadge status={h.healthStatus} /></td>
+                      <td className={`px-4 py-2.5 ${isVet ? '' : 'pr-5'}`}>{h.locked ? <LockBadge /> : <span className="text-muted">Không</span>}</td>
+                      {isVet && <td className="pl-4 pr-5 py-2.5 text-right"><Btn sm onClick={() => openModalForHorse(h)}><Icon name="plus" className="w-3.5 h-3.5" />Ghi khám</Btn></td>}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredHorses.length === 0 ? (
-                      <tr><td colSpan={isVet ? 6 : 5} className="text-center py-6"><span className="cap">Không tìm thấy ngựa phù hợp</span></td></tr>
-                    ) : filteredHorses.map((h) => (
-                      <tr key={h.id} className="border-b border-line-soft hover:bg-subtle">
-                        <td className="px-4 py-3"><button type="button" onClick={() => navigate(`/horses/${h.id}`)} className="font-semibold text-navy">{h.name}</button></td>
-                        <td className="px-4 py-3">{h.gender === 'MALE' ? <Badge tone="neu">Đực</Badge> : h.gender === 'FEMALE' ? <Badge tone="neu">Cái</Badge> : <span className="cap">—</span>}</td>
-                        <td className="px-4 py-3">{h.breed ?? '—'}</td>
-                        <td className="px-4 py-3"><Badge tone={healthTone[h.healthStatus]}>{h.healthStatus}</Badge></td>
-                        <td className="px-4 py-3">{h.locked ? <Badge tone="bad">Khóa</Badge> : <span className="cap">—</span>}</td>
-                        {isVet && <td className="px-4 py-3"><Btn sm onClick={() => openModalForHorse(h)}><Icon name="plus" className="w-3.5 h-3.5" />Khám</Btn></td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
-          <div className="flex-[1_1_320px] min-w-0">
-            <h3 className="text-[15px] font-semibold mb-3">Hồ sơ khám gần đây ({records.length})</h3>
+          <Card className="min-w-0">
+            <CardHeader title="Lần khám gần đây"><span className="num text-[13px] text-muted">{records.length}</span></CardHeader>
             {records.length === 0 ? (
-              <Card className="text-center py-6"><p className="cap">Chưa có hồ sơ khám nào trong hệ thống.</p></Card>
+              <div className="p-4"><EmptyState>Chưa có hồ sơ khám nào trong hệ thống.</EmptyState></div>
             ) : (
-              <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
+              <ul className="list-none p-0 m-0">
                 {records.slice(0, 20).map((r) => (
-                  <li key={r.id}>
-                    <Card className="p-3.5 cursor-pointer hover:border-line-strong" onClick={() => navigate(`/horses/${r.horseId}`)}>
-                      <div className="flex justify-between items-center">
-                        <div><strong>{r.horse.name}</strong><span className="cap ml-2">{formatDate(r.examDate)}</span></div>
-                        <span className="cap">BS: {r.vet.name}</span>
+                  <li key={r.id} className="border-b border-line-soft last:border-0">
+                    <button type="button" onClick={() => navigate(`/horses/${r.horseId}?tab=health`)} className="w-full text-left px-5 py-3 hover:bg-subtle">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="font-medium truncate">{r.horse.name}</span>
+                        <span className="num text-[12.5px] text-muted flex-none">{formatDate(r.examDate)}</span>
                       </div>
-                      <p className="text-[12.5px] text-muted mt-1.5">{r.diagnosis.length > 120 ? r.diagnosis.slice(0, 120) + '...' : r.diagnosis}</p>
-                    </Card>
+                      <p className="text-[13px] text-muted mt-0.5 line-clamp-2">{r.diagnosis}</p>
+                      <p className="text-[12px] text-muted mt-1">Bác sĩ {r.vet.name}</p>
+                    </button>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
         </div>
       )}
 

@@ -7,7 +7,7 @@ import { useAuth } from '../auth/useAuth';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Notification, Paginated } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Icon, notificationIcon, notificationTone, tones } from '../ds/ui';
+import { Btn, Card, EmptyState, Icon, PageHeader, notificationIcon, notificationTone } from '../ds/ui';
 
 const PAGE_SIZE = 20;
 
@@ -61,57 +61,70 @@ export function NotificationsPage() {
   };
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const unreadHere = notifications.filter((n) => !n.read).length;
+  const toneText: Record<string, string> = { bad: 'text-bad', ok: 'text-ok', warn: 'text-warn', info: 'text-info', neu: 'text-muted', lock: 'text-bad' };
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-2">
-        <div className="lbl">Thông báo</div>
-        <h1 className="disp text-[48px] mt-1">{t('notificationsPage.title')}</h1>
-        <p className="text-hero-muted">{t('notificationsPage.description')}</p>
-      </section>
+      <PageHeader
+        title={t('notificationsPage.title')}
+        sub={loading ? t('notificationsPage.loading') : total === 0 ? t('notificationsPage.description') : unreadHere > 0
+          ? `${unreadHere} thông báo chưa đọc trong ${notifications.length} mới nhất · tổng ${total}.`
+          : `Đã đọc hết · tổng ${total} thông báo.`}
+      />
 
       <ErrorText err={error} />
       <ErrorText err={actionError} />
 
       {loading ? (
-        <p className="cap" role="status">{t('notificationsPage.loading')}</p>
+        <p className="text-muted" role="status">{t('notificationsPage.loading')}</p>
       ) : notifications.length === 0 ? (
-        <Card className="px-5 py-10 text-center"><p className="cap">{t('notificationsPage.empty')}</p></Card>
+        <EmptyState>{t('notificationsPage.empty')}</EmptyState>
       ) : (
         <>
           <Card className="overflow-hidden">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => void markRead(notification)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') void markRead(notification); }}
-                aria-label={notification.read ? t('notificationsPage.read') : t('notificationsPage.markRead')}
-                className={`flex gap-3 w-full px-5 py-3.5 border-b border-line-soft last:border-0 text-left ${notification.read ? 'bg-white cursor-default' : 'bg-subtle cursor-pointer'}`}
-              >
-                <span className={`w-8 h-8 rounded-btn flex items-center justify-center flex-none ${tones[notificationTone[notification.type] ?? 'neu']}`}>
-                  <Icon name={notificationIcon[notification.type] ?? 'bell'} />
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="flex justify-between gap-3">
-                    <strong>{notification.message}</strong>
-                    <span className="flex items-center gap-2 flex-none">
-                      {!notification.read && <Badge tone="warn">{t('notificationsPage.unread')}</Badge>}
-                      <Btn sm v="d" disabled={updatingId !== null} onClick={(e) => void remove(notification, e)}>Xoá</Btn>
+            <ul className="list-none m-0 p-0">
+              {notifications.map((notification) => {
+                const tone = notificationTone[notification.type] ?? 'neu';
+                return (
+                  <li key={notification.id} className="group flex items-start gap-3 px-5 py-3.5 border-b border-line-soft last:border-0 hover:bg-subtle">
+                    <span className={`mt-0.5 flex-none ${toneText[tone]}`} aria-hidden>
+                      <Icon name={notificationIcon[notification.type] ?? 'bell'} />
                     </span>
-                  </span>
-                  <span className="cap block mt-1">{formatDateTime(notification.createdAt)}</span>
-                </span>
-              </div>
-            ))}
+                    <button
+                      type="button"
+                      onClick={() => void markRead(notification)}
+                      disabled={notification.read}
+                      title={notification.read ? t('notificationsPage.read') : t('notificationsPage.markRead')}
+                      className="flex-1 min-w-0 text-left disabled:cursor-default"
+                    >
+                      <span className={`block ${notification.read ? 'text-muted' : 'text-ink font-medium'}`}>{notification.message.replace(/^⚠️?\s*/u, '')}</span>
+                      <span className="num block text-[12.5px] text-muted mt-0.5">{formatDateTime(notification.createdAt)}</span>
+                    </button>
+                    {!notification.read && <span className="mt-2 w-2 h-2 rounded-full bg-info flex-none" aria-label={t('notificationsPage.unread')} />}
+                    <button
+                      type="button"
+                      aria-label="Xóa thông báo"
+                      title="Xóa thông báo"
+                      disabled={updatingId !== null}
+                      onClick={(e) => void remove(notification, e)}
+                      className="flex-none -my-1 w-8 h-8 inline-flex items-center justify-center rounded-btn text-muted hover:text-bad hover:bg-bad-bg disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
+                    >
+                      <Icon name="trash" className="w-4 h-4" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </Card>
 
-          <div className="flex justify-between items-center">
-            <Btn sm onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || loading}>{t('notificationsPage.previous')}</Btn>
-            <span className="cap">{t('notificationsPage.page', { page, pageCount })}</span>
-            <Btn sm onClick={() => setPage((current) => Math.min(pageCount, current + 1))} disabled={page >= pageCount || loading}>{t('notificationsPage.next')}</Btn>
-          </div>
+          {pageCount > 1 && (
+            <div className="flex justify-between items-center">
+              <Btn sm onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || loading}>{t('notificationsPage.previous')}</Btn>
+              <span className="num text-[13px] text-muted">{t('notificationsPage.page', { page, pageCount })}</span>
+              <Btn sm onClick={() => setPage((current) => Math.min(pageCount, current + 1))} disabled={page >= pageCount || loading}>{t('notificationsPage.next')}</Btn>
+            </div>
+          )}
         </>
       )}
     </>

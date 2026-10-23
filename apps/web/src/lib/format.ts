@@ -28,6 +28,15 @@ export function formatDateTime(iso: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? '—' : dateTimeFmt.format(d);
 }
 
+const timeFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+
+/** Time of day only ("15:49"), in Vietnam's display timezone. */
+export function formatTime(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '—' : timeFmt.format(d);
+}
+
 /** Format an ISO date for <input type="date"> in Vietnam's display timezone. */
 export function toDateInput(iso: string | null | undefined): string {
   if (!iso) return '';

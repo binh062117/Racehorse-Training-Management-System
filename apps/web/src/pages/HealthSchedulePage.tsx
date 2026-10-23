@@ -8,7 +8,7 @@ import { useCachedResource } from '../lib/useCachedResource';
 import { formatDate } from '../lib/format';
 import type { Horse, Paginated, Vaccination } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Chip, Field, Icon, Input, Select } from '../ds/ui';
+import { Badge, Btn, Card, Chip, EmptyState, Field, Icon, Input, NativeSelect, PageHeader, Seg } from '../ds/ui';
 
 export function HealthSchedulePage() {
   const { t } = useTranslation();
@@ -27,83 +27,98 @@ export function HealthSchedulePage() {
     api.get<Paginated<Vaccination>>('/vaccinations', { params: vaccinationParams }).then((r) => r.data.data),
   );
 
+  const isVet = user?.role === 'VET';
+  const [formOpen, setFormOpen] = useState(false);
+
+  const list = records ?? [];
+  const overdue = list.filter((r) => daysUntil(r.nextDueDate) != null && daysUntil(r.nextDueDate)! < 0).length;
+  const dueSoon = list.filter((r) => { const d = daysUntil(r.nextDueDate); return d != null && d >= 0 && d <= 14; }).length;
+  const sub = records === null
+    ? 'Đang tải lịch…'
+    : overdue > 0
+      ? `${overdue} lịch đã quá hạn${dueSoon ? `, ${dueSoon} lịch đến hạn trong 14 ngày tới` : ''}.`
+      : dueSoon > 0
+        ? `${dueSoon} lịch đến hạn trong 14 ngày tới, không có lịch quá hạn.`
+        : 'Không có lịch nào quá hạn hay sắp đến hạn.';
+  const th = 'h-10 px-4 text-[12px] font-medium text-muted border-b border-line';
+
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-2">
-        <div className="lbl">{t('healthSchedule.eyebrow')}</div>
-        <h1 className="disp text-[56px] mt-1">{t('healthSchedule.title')}</h1>
-        <p className="text-hero-muted max-w-[560px]">{t('healthSchedule.description')}</p>
-      </section>
+      <PageHeader
+        title={t('healthSchedule.title')}
+        sub={sub}
+        actions={isVet && !formOpen ? <Btn v="p" onClick={() => setFormOpen(true)}><Icon name="plus" />{t('healthSchedule.new')}</Btn> : undefined}
+      />
 
-      {user?.role === 'VET' && <CreateVaccinationForm onCreated={load} />}
+      {isVet && formOpen && <CreateVaccinationForm onCreated={load} onClose={() => setFormOpen(false)} />}
 
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line-soft">
-          <div className="flex gap-2">
-            <Chip on={upcomingOnly} onClick={() => setUpcomingOnly(true)}>{t('healthSchedule.upcoming')}</Chip>
-            <Chip on={!upcomingOnly} onClick={() => setUpcomingOnly(false)}>{t('healthSchedule.all')}</Chip>
-          </div>
-          <span className="cap num">{records?.length ?? 0}</span>
-        </div>
-        <div className="flex flex-wrap gap-2 px-5 pt-4">
-          {(['ALL', 'VACCINATION', 'DEWORMING'] as const).map((type) => (
-            <Chip key={type} on={careType === type} onClick={() => setCareType(type)}>{t(`healthSchedule.kindOptions.${type}`)}</Chip>
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Seg value={upcomingOnly ? 'up' : 'all'} onChange={(k) => setUpcomingOnly(k === 'up')}
+          options={[['up', t('healthSchedule.upcoming')], ['all', t('healthSchedule.all')]]} />
+        <span className="w-px h-5 bg-line-strong mx-1 hidden sm:block" aria-hidden />
+        {(['ALL', 'VACCINATION', 'DEWORMING'] as const).map((type) => (
+          <Chip key={type} on={careType === type} onClick={() => setCareType(type)}>{t(`healthSchedule.kindOptions.${type}`)}</Chip>
+        ))}
+      </div>
 
-        {error ? (
-          <div className="p-5"><ErrorText err={error} /></div>
-        ) : records === null ? (
-          <p className="cap p-5">…</p>
-        ) : records.length === 0 ? (
-          <div className="p-10 text-center"><p className="cap">{t(upcomingOnly ? 'healthSchedule.emptyUpcoming' : 'healthSchedule.emptyAll')}</p></div>
-        ) : (
-          <div className="overflow-x-auto mt-4">
-            <table className="w-full min-w-[760px] border-collapse">
+      {error ? (
+        <ErrorText err={error} />
+      ) : records === null ? (
+        <p className="text-muted">Đang tải lịch…</p>
+      ) : records.length === 0 ? (
+        <EmptyState>{t(upcomingOnly ? 'healthSchedule.emptyUpcoming' : 'healthSchedule.emptyAll')}</EmptyState>
+      ) : (
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse">
               <thead>
                 <tr className="text-left">
-                  {[t('healthSchedule.horse'), t('healthSchedule.item'), t('healthSchedule.lastDate'), t('healthSchedule.nextDue'), t('healthSchedule.status')].map((th) => (
-                    <th key={th} className="h-[42px] px-5 bg-cream lbl border-y border-line">{th}</th>
-                  ))}
+                  <th className={`${th} pl-5`}>{t('healthSchedule.horse')}</th>
+                  <th className={th}>{t('healthSchedule.item')}</th>
+                  <th className={th}>{t('healthSchedule.kind')}</th>
+                  <th className={`${th} text-right`}>{t('healthSchedule.lastDate')}</th>
+                  <th className={`${th} text-right`}>{t('healthSchedule.nextDue')}</th>
+                  <th className={`${th} pr-5`}>{t('healthSchedule.status')}</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((record) => (
-                  <tr key={record.id} className="border-b border-line-soft hover:bg-subtle">
-                    <td className="px-5 py-3">{record.horse ? <Link to={`/horses/${record.horse.id}`} className="font-semibold text-navy no-underline">{record.horse.name}</Link> : '—'}</td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col gap-1 items-start">
-                        <strong>{record.vaccineName}</strong>
-                        <Badge tone="neu">{t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}</Badge>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">{formatDate(record.date)}</td>
-                    <td className="px-5 py-3">{record.nextDueDate ? formatDate(record.nextDueDate) : t('healthSchedule.noDueDate')}</td>
-                    <td className="px-5 py-3"><DueStatus date={record.nextDueDate} /></td>
+                  <tr key={record.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                    <td className="pl-5 pr-4 py-3">{record.horse ? <Link to={`/horses/${record.horse.id}`} className="font-medium text-ink hover:text-info no-underline">{record.horse.name}</Link> : <span className="text-muted">Không rõ</span>}</td>
+                    <td className="px-4 py-3">{record.vaccineName}</td>
+                    <td className="px-4 py-3 text-muted">{t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}</td>
+                    <td className="px-4 py-3 num text-right text-muted whitespace-nowrap">{formatDate(record.date)}</td>
+                    <td className="px-4 py-3 num text-right whitespace-nowrap">{record.nextDueDate ? formatDate(record.nextDueDate) : <span className="text-muted">{t('healthSchedule.noDueDate')}</span>}</td>
+                    <td className="pl-4 pr-5 py-3"><DueStatus date={record.nextDueDate} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </Card>
+        </Card>
+      )}
     </>
   );
 }
 
-function DueStatus({ date }: { date: string | null }) {
-  const { t } = useTranslation();
-  if (!date) return <Badge tone="neu">{t('healthSchedule.noDueDate')}</Badge>;
-  const due = new Date(date);
+/** Whole days from today until the due date (negative when overdue); null when there is none. */
+function daysUntil(date: string | null | undefined): number | null {
+  if (!date) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const daysUntilDue = Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
-  if (daysUntilDue < 0) return <Badge tone="bad">{t('healthSchedule.overdue')}</Badge>;
-  if (daysUntilDue <= 14) return <Badge tone="warn">{t('healthSchedule.dueSoon')}</Badge>;
+  return Math.ceil((new Date(date).getTime() - today.getTime()) / 86_400_000);
+}
+
+function DueStatus({ date }: { date: string | null }) {
+  const { t } = useTranslation();
+  const d = daysUntil(date);
+  if (d == null) return <Badge tone="neu">{t('healthSchedule.noDueDate')}</Badge>;
+  if (d < 0) return <Badge tone="bad">{t('healthSchedule.overdue')} {-d} ngày</Badge>;
+  if (d <= 14) return <Badge tone="warn">{d === 0 ? 'Đến hạn hôm nay' : `Còn ${d} ngày`}</Badge>;
   return <Badge tone="ok">{t('healthSchedule.scheduled')}</Badge>;
 }
 
-function CreateVaccinationForm({ onCreated }: { onCreated: () => Promise<void> }) {
+function CreateVaccinationForm({ onCreated, onClose }: { onCreated: () => Promise<void>; onClose: () => void }) {
   const { t } = useTranslation();
   const [horses, setHorses] = useState<Horse[]>([]);
   const [horseId, setHorseId] = useState('');
@@ -147,22 +162,17 @@ function CreateVaccinationForm({ onCreated }: { onCreated: () => Promise<void> }
       <Card className="p-5 flex flex-col gap-4">
         <h2 className="text-[15px] font-semibold">{t('healthSchedule.new')}</h2>
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
-          <Field label={t('healthSchedule.horse')}>
-            <select
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-              value={horseId}
-              onChange={(e) => setHorseId(e.target.value)}
-              required
-            >
+          <Field label={t('healthSchedule.horse')} req>
+            <NativeSelect value={horseId} onChange={(e) => setHorseId(e.target.value)} required>
               <option value="">{t('healthSchedule.selectHorse')}</option>
               {horses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
-            </select>
+            </NativeSelect>
           </Field>
           <Field label={t('healthSchedule.kind')}>
-            <Select options={[t('healthSchedule.kindOptions.VACCINATION'), t('healthSchedule.kindOptions.DEWORMING')]}
-              value={t(`healthSchedule.kindOptions.${careType}`)}
-              onChange={(e) => setCareType(e.target.value === t('healthSchedule.kindOptions.DEWORMING') ? 'DEWORMING' : 'VACCINATION')}
-            />
+            <NativeSelect value={careType} onChange={(e) => setCareType(e.target.value as 'VACCINATION' | 'DEWORMING')}>
+              <option value="VACCINATION">{t('healthSchedule.kindOptions.VACCINATION')}</option>
+              <option value="DEWORMING">{t('healthSchedule.kindOptions.DEWORMING')}</option>
+            </NativeSelect>
           </Field>
           <Field label={t('healthSchedule.item')}>
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
@@ -175,9 +185,12 @@ function CreateVaccinationForm({ onCreated }: { onCreated: () => Promise<void> }
           </Field>
         </div>
         <ErrorText err={error} />
-        <Btn v="p" type="submit" disabled={saving || horses.length === 0} className="self-start">
-          <Icon name="plus" />{saving ? t('healthSchedule.saving') : t('common.create')}
-        </Btn>
+        <div className="flex gap-2">
+          <Btn v="p" type="submit" disabled={saving || horses.length === 0}>
+            {saving ? t('healthSchedule.saving') : t('common.create')}
+          </Btn>
+          <Btn v="g" onClick={onClose}>Đóng</Btn>
+        </div>
       </Card>
     </form>
   );
