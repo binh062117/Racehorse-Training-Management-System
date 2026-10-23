@@ -25,7 +25,7 @@ import { FileStorageService } from '../files/file-storage.service';
 import {
   INCIDENT_PHOTO_KIND,
   SAFE_FILENAME,
-  buildIncidentPhotoMulterOptions,
+  buildImageMemoryMulterOptions,
 } from '../files/upload';
 import { IncidentsService } from './incidents.service';
 import {
@@ -89,7 +89,7 @@ export class IncidentsController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @UseInterceptors(FileInterceptor('file', buildIncidentPhotoMulterOptions()))
+  @UseInterceptors(FileInterceptor('file', buildImageMemoryMulterOptions()))
   uploadPhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file?: Express.Multer.File,
@@ -97,10 +97,7 @@ export class IncidentsController {
     if (!file) {
       throw new AppException('VALIDATION_ERROR', 'A "file" field is required');
     }
-    return this.incidents.setPhoto(
-      id,
-      `${INCIDENT_PHOTO_KIND}/${file.filename}`,
-    );
+    return this.incidents.savePhoto(id, file);
   }
 }
 

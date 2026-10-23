@@ -6,10 +6,13 @@ import {
   Prisma,
   Role,
 } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { HorsesService } from '../horses/horses.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FileStorageService } from '../files/file-storage.service';
+import { CloudinaryService } from '../files/cloudinary.service';
+import { INCIDENT_PHOTO_KIND, MIME_TO_EXT } from '../files/upload';
 import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import type { Paginated } from '../horses/horses.service';
@@ -49,13 +52,16 @@ export class IncidentsService {
     private readonly horses: HorsesService,
     private readonly notifications: NotificationsService,
     private readonly storage: FileStorageService,
+    private readonly cloudinary: CloudinaryService,
   ) {}
 
   private toView(incident: IncidentWithRelations): IncidentView {
     return {
       ...incident,
       photoUrl: incident.photoPath
-        ? `${API_PREFIX}/files/${incident.photoPath}`
+        ? incident.photoPath.startsWith('http')
+          ? incident.photoPath
+          : `${API_PREFIX}/files/${incident.photoPath}`
         : null,
     };
   }
@@ -214,7 +220,32 @@ export class IncidentsService {
     return this.toView(incident);
   }
 
-  /** UC-19 (Phase 10) — 1 photo/incident, overwrite, best-effort delete of the old file. */
+  /**
+   * UC-19 (Phase 10) — 1 photo/incident, overwrite. Uploads to Cloudinary
+   * when configured (survives a Render redeploy); falls back to local disk
+   * otherwise (local dev only — see CloudinaryService).
+   */
+  async savePhoto(
+    id: string,
+    file: Express.Multer.File,
+  ): Promise<IncidentView> {
+    const ext = MIME_TO_EXT[file.mimetype];
+    const publicId = `${id}-${randomBytes(4).toString('hex')}`;
+    let photoPath: string;
+    if (this.cloudinary.enabled) {
+      photoPath = await this.cloudinary.uploadBuffer(
+        file.buffer,
+        INCIDENT_PHOTO_KIND,
+        publicId,
+      );
+    } else {
+      const filename = `${publicId}.${ext}`;
+      this.storage.saveBuffer(INCIDENT_PHOTO_KIND, filename, file.buffer);
+      photoPath = `${INCIDENT_PHOTO_KIND}/${filename}`;
+    }
+    return this.setPhoto(id, photoPath);
+  }
+
   async setPhoto(id: string, photoPath: string): Promise<IncidentView> {
     const current = await this.prisma.incidentReport.findUnique({
       where: { id },
@@ -228,7 +259,11 @@ export class IncidentsService {
       include: INCIDENT_INCLUDE,
     });
     if (current.photoPath && current.photoPath !== photoPath) {
-      this.storage.removeQuietly(current.photoPath);
+      if (current.photoPath.startsWith('http')) {
+        void this.cloudinary.destroyByUrl(current.photoPath);
+      } else {
+        this.storage.removeQuietly(current.photoPath);
+      }
     }
     return this.toView(incident);
   }
