@@ -57,16 +57,18 @@ function useUnreadCount(): number {
 }
 
 const navRow = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-2.5 h-8 px-2.5 rounded-btn no-underline text-[14px] transition-colors ${isActive ? 'bg-[#e3e6eb] text-ink font-medium' : 'text-[#3f444a] hover:bg-[#e9ecf0] hover:text-ink'}`;
+  // Navy rail, the same ground as the login banner: the active row is a lighter navy
+  // with a brand-blue marker, idle rows are soft white.
+  `relative flex items-center gap-2.5 h-9 px-2.5 rounded-btn no-underline text-[14px] transition-colors ${isActive ? 'bg-navy-track text-white font-medium before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-[#5b9bd5] [&_svg]:text-[#8fb8e0]' : 'text-[#c3cbd6] hover:bg-white/[.06] hover:text-white'}`;
 
 function NavGroup({ title, items }: { title?: string; items: NavItem[] }) {
   if (items.length === 0) return null;
   return (
     <div className="flex flex-col gap-0.5">
-      {title && <div className="px-2.5 pt-5 pb-1.5 text-[12px] font-medium text-muted">{title}</div>}
+      {title && <div className="px-2.5 pt-5 pb-1.5 text-[12px] font-medium text-[#93a3b8]">{title}</div>}
       {items.map(({ to, label, icon }) => (
         <NavLink key={to} to={to} className={navRow}>
-          <Icon name={icon} className="w-4 h-4 text-muted" />{label}
+          <Icon name={icon} className="w-4 h-4 text-[#93a3b8]" />{label}
         </NavLink>
       ))}
     </div>
@@ -76,12 +78,12 @@ function NavGroup({ title, items }: { title?: string; items: NavItem[] }) {
 function Brand() {
   return (
     <Link to="/dashboard" className="flex items-center gap-2.5 no-underline">
-      <span className="w-8 h-8 rounded-full bg-white border border-line flex-none overflow-hidden flex items-center justify-center">
-        <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain scale-[1.25]" />
+      <span className="w-9 h-9 rounded-full bg-white flex-none overflow-hidden flex items-center justify-center">
+        <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain scale-[1.3]" />
       </span>
       <span className="min-w-0">
-        <span className="block text-[14px] font-semibold leading-[18px] text-ink">Racehorse Club</span>
-        <span className="block text-[12px] leading-4 text-muted">Huấn luyện &amp; quản lý</span>
+        <span className="block text-[14px] font-semibold leading-[18px] text-white">Racehorse Club</span>
+        <span className="block text-[12px] leading-4 text-[#b7c0cc]">Huấn luyện &amp; quản lý</span>
       </span>
     </Link>
   );
@@ -114,11 +116,11 @@ function NavContent({ unread }: { unread: number }) {
         <div className="flex flex-col gap-0.5">
           {NAV.filter(visible).map(({ to, label, icon }) => (
             <NavLink key={to} to={to} className={navRow}>
-              <Icon name={icon} className="w-4 h-4 text-muted" />{label}
+              <Icon name={icon} className="w-4 h-4 text-[#93a3b8]" />{label}
             </NavLink>
           ))}
           <NavLink to="/notifications" className={navRow}>
-            <Icon name="bell" className="w-4 h-4 text-muted" />
+            <Icon name="bell" className="w-4 h-4 text-[#93a3b8]" />
             <span className="flex-1">Thông báo</span>
             {unread > 0 && <span className="num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center" aria-label={`${unread} chưa đọc`}>{unread}</span>}
           </NavLink>
@@ -126,18 +128,18 @@ function NavContent({ unread }: { unread: number }) {
         <NavGroup title="Sức khỏe" items={HEALTH_NAV.filter(visible)} />
         <NavGroup title="Quản trị" items={ADMIN_NAV.filter(visible)} />
       </nav>
-      <div className="mt-3 pt-3 border-t border-line flex items-center gap-2.5 px-1">
-        <span className="w-8 h-8 rounded-full bg-navy text-white flex-none inline-flex items-center justify-center text-[12px] font-semibold">{initials(user?.name)}</span>
+      <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2.5 px-1">
+        <span className="w-8 h-8 rounded-full bg-[#1a4b8a] text-white flex-none inline-flex items-center justify-center text-[12px] font-semibold">{initials(user?.name)}</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-medium leading-[18px] truncate">{user?.name}</span>
-          <span className="block text-[12px] leading-4 text-muted truncate">{user?.role ? t(`role.${user.role}`) : ''}</span>
+          <span className="block text-[13.5px] font-medium leading-[18px] truncate text-white">{user?.name}</span>
+          <span className="block text-[12px] leading-4 text-[#b7c0cc] truncate">{user?.role ? t(`role.${user.role}`) : ''}</span>
         </span>
         <button type="button" onClick={() => void i18n.changeLanguage(i18n.language === 'vi' ? 'en' : 'vi')}
-          className="h-8 px-2 rounded-btn text-[12px] font-medium text-muted hover:bg-[#e9ecf0] hover:text-ink" aria-label="Đổi ngôn ngữ">
+          className="h-8 px-2 rounded-btn text-[12px] font-medium text-[#b7c0cc] hover:bg-white/[.08] hover:text-white" aria-label="Đổi ngôn ngữ">
           {i18n.language === 'vi' ? 'VI' : 'EN'}
         </button>
         <button type="button" onClick={() => void handleLogout()} aria-label={t('nav.logout')} title={t('nav.logout')}
-          className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-[#e9ecf0] hover:text-ink">
+          className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-[#b7c0cc] hover:bg-white/[.08] hover:text-white">
           <Icon name="logout" />
         </button>
       </div>
@@ -201,31 +203,31 @@ export function AppShell({ children }: { children: ReactNode }) {
     <ChromeContext.Provider value={ctxValue}>
       <div className="min-h-screen bg-page md:flex">
         {/* Desktop sidebar: on the page ground, one hairline from the canvas. */}
-        <aside className="hidden md:flex flex-none w-[244px] h-screen sticky top-0 border-r border-line px-3 pt-5 pb-3">
+        <aside className="hidden md:flex flex-none w-[244px] h-screen sticky top-0 bg-navy px-3 pt-5 pb-3">
           <div className="w-full"><NavContent unread={unread} /></div>
         </aside>
 
         {/* Phone: the sidebar folds into a top bar and a full-screen sheet. */}
-        <div className="md:hidden sticky top-0 z-30 h-[52px] bg-page/95 border-b border-line flex items-center gap-3 px-4">
-          <Link to="/dashboard" aria-label="Racehorse Club" className="w-8 h-8 rounded-full bg-white border border-line overflow-hidden flex items-center justify-center flex-none">
+        <div className="md:hidden sticky top-0 z-30 h-[52px] bg-navy text-white flex items-center gap-3 px-4">
+          <Link to="/dashboard" aria-label="Racehorse Club" className="w-8 h-8 rounded-full bg-white overflow-hidden flex items-center justify-center flex-none">
             <img src={HORSE_LOGO} alt="" className="w-full h-full object-contain scale-[1.25]" />
           </Link>
           <span className="flex-1 min-w-0 truncate text-[15px] font-semibold">{pageName || 'Racehorse Club'}</span>
           {unread > 0 && (
-            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-ink" aria-label={`Thông báo, ${unread} chưa đọc`}>
+            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={`Thông báo, ${unread} chưa đọc`}>
               <Icon name="bell" className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-bad" />
             </Link>
           )}
           <button type="button" onClick={() => setMenuOpen(true)} aria-label="Mở menu" aria-expanded={menuOpen}
-            className="w-10 h-10 inline-flex items-center justify-center rounded-btn text-ink hover:bg-cream">
+            className="w-10 h-10 inline-flex items-center justify-center rounded-btn text-white hover:bg-white/[.08]">
             <Icon name="menu" className="w-5 h-5" />
           </button>
         </div>
         {menuOpen && (
-          <div className="md:hidden fixed inset-0 z-40 bg-page animate-sheet flex flex-col px-3 pt-4 pb-4" role="dialog" aria-modal="true" aria-label="Điều hướng">
+          <div className="md:hidden fixed inset-0 z-40 bg-navy animate-sheet flex flex-col px-3 pt-4 pb-4" role="dialog" aria-modal="true" aria-label="Điều hướng">
             <button type="button" onClick={() => setMenuOpen(false)} aria-label="Đóng menu"
-              className="absolute top-3 right-3 w-10 h-10 inline-flex items-center justify-center rounded-btn text-ink hover:bg-cream">
+              className="absolute top-3 right-3 w-10 h-10 inline-flex items-center justify-center rounded-btn text-white hover:bg-white/[.08]">
               <Icon name="x" className="w-5 h-5" />
             </button>
             <NavContent unread={unread} />

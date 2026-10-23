@@ -142,7 +142,7 @@ export function HorseDetailPage() {
   const photo = getFileUrl(horse.photoUrl);
   const age = calculateAge(horse.birthDate);
   const facts = [horse.breed ?? 'Chưa rõ giống', genderText(horse.gender), age != null ? `${age} tuổi` : null].filter(Boolean).join(' · ');
-  const tabCls = (on: boolean) => `inline-flex items-center h-11 px-3 -mb-px border-b-2 whitespace-nowrap text-[14px] no-underline transition-colors ${on ? 'text-ink border-navy font-medium' : 'text-muted border-transparent hover:text-ink'}`;
+  const tabCls = (on: boolean) => `inline-flex items-center h-11 px-3 -mb-px border-b-2 whitespace-nowrap text-[14px] no-underline transition-colors ${on ? 'text-info border-info font-medium' : 'text-muted border-transparent hover:text-ink'}`;
 
   return (
     <>
