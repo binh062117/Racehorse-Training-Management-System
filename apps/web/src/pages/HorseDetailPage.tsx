@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
 import { SessionsTab } from './horse/SessionsTab';
+import { TrainingProgressTab } from './horse/TrainingProgressTab';
 import { HealthTab } from './horse/HealthTab';
 import { FeedingTab } from './horse/FeedingTab';
 import { PlansTab } from './horse/PlansTab';
@@ -16,7 +17,7 @@ import { PedigreeTab } from './horse/PedigreeTab';
 import { HorseRecordNav } from './horse/HorseRecordNav';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Badge, Btn, Card, Cloth, HeroStats, Icon, LockBadge, Silk,
+  Badge, Btn, Card, Cloth, HeroStats, Icon, ImageLightbox, LockBadge, Silk,
   careerTone, healthTone,
 } from '../ds/ui';
 
@@ -25,11 +26,12 @@ const TAB_ITEMS: [Tab, string][] = [
   ['pedigree', 'Phả hệ'],
   ['plans', 'Giáo án huấn luyện'],
   ['sessions', 'Buổi tập luyện'],
+  ['progress', 'Tiến độ huấn luyện'],
   ['health', 'Hồ sơ y tế'],
   ['feeding', 'Khẩu phần ăn'],
 ];
 
-type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'health' | 'feeding';
+type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'progress' | 'health' | 'feeding';
 
 function calculateAge(birthDate: string | null): string {
   if (!birthDate) return '—';
@@ -57,6 +59,7 @@ export function HorseDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
   const [pedigreeVersion, setPedigreeVersion] = useState(0);
 
   const rawTab = params.get('tab');
@@ -64,6 +67,7 @@ export function HorseDetailPage() {
     rawTab === 'pedigree' ||
     rawTab === 'plans' ||
     rawTab === 'sessions' ||
+    rawTab === 'progress' ||
     rawTab === 'health' ||
     rawTab === 'feeding'
       ? rawTab
@@ -143,7 +147,14 @@ export function HorseDetailPage() {
           <div className="flex-[2_1_520px] min-w-0 flex flex-col gap-4">
             <div className="flex gap-4 items-center">
               {photo ? (
-                <img src={photo} alt={horse.name} className="w-[50px] h-[50px] rounded-full object-cover border-2 border-white/20" />
+                <button
+                  type="button"
+                  onClick={() => setPhotoViewerOpen(true)}
+                  aria-label={`Xem ảnh lớn ${horse.name}`}
+                  className="w-[50px] h-[50px] rounded-full flex-none overflow-hidden border-2 border-white/20 cursor-zoom-in"
+                >
+                  <img src={photo} alt={horse.name} className="w-full h-full object-cover" />
+                </button>
               ) : (
                 <Cloth n={horse.saddleNumber ?? '—'} inv lg />
               )}
@@ -240,6 +251,9 @@ export function HorseDetailPage() {
       {visitedTabs.has('sessions') && (
         <div hidden={tab !== 'sessions'}><SessionsTab horseId={horse.id} isLocked={horse.locked} lockReason={horse.lockReason} /></div>
       )}
+      {visitedTabs.has('progress') && (
+        <div hidden={tab !== 'progress'}><TrainingProgressTab horseId={horse.id} /></div>
+      )}
       {visitedTabs.has('health') && (
         <div hidden={tab !== 'health'}><HealthTab horse={horse} /></div>
       )}
@@ -258,6 +272,7 @@ export function HorseDetailPage() {
       />
       <DeleteHorseModal horse={horse} isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} onDeleted={() => navigate('/horses')} />
       <PhotoUploadModal horse={horse} isOpen={photoOpen} onClose={() => setPhotoOpen(false)} onUploaded={loadHorse} />
+      {photo && <ImageLightbox src={photo} alt={horse.name} open={photoViewerOpen} onClose={() => setPhotoViewerOpen(false)} />}
     </>
   );
 }

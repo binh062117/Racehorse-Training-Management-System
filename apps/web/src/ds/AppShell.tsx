@@ -7,7 +7,7 @@ import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import type { Notification, Paginated, Role } from '../lib/types';
-import { Icon } from './ui';
+import { Icon, notificationIcon, notificationTone, tones } from './ui';
 
 interface NavItem {
   to: string;
@@ -87,8 +87,8 @@ function Notifications() {
   const load = useCallback(async () => {
     try {
       const [recentRes, unreadRes] = await Promise.all([
-        api.get<Paginated<Notification>>('/notifications', { params: { type: 'AI_RISK_ALERT', limit: 6 } }),
-        api.get<Paginated<Notification>>('/notifications', { params: { type: 'AI_RISK_ALERT', unread: true, limit: 1 } }),
+        api.get<Paginated<Notification>>('/notifications', { params: { limit: 6 } }),
+        api.get<Paginated<Notification>>('/notifications', { params: { unread: true, limit: 1 } }),
       ]);
       setItems(recentRes.data.data);
       setUnreadCount(unreadRes.data.meta.total);
@@ -129,14 +129,14 @@ function Notifications() {
       </button>
       {open && (
         <div className="absolute right-0 top-12 z-40 w-[360px] bg-white border border-line rounded-xl shadow-pop overflow-hidden">
-          <div className="flex items-center px-4 py-3.5 border-b border-line-soft"><span className="flex-1 font-semibold text-[15px]">Cảnh báo AI</span>
+          <div className="flex items-center px-4 py-3.5 border-b border-line-soft"><span className="flex-1 font-semibold text-[15px]">Thông báo</span>
             <Link to="/notifications" onClick={() => setOpen(false)} className="text-[11.5px] font-semibold text-info no-underline">Xem tất cả</Link></div>
           {items.length === 0 ? (
-            <div className="px-4 py-6 text-center text-muted text-[12.5px]">Chưa có cảnh báo nào.</div>
+            <div className="px-4 py-6 text-center text-muted text-[12.5px]">Chưa có thông báo nào.</div>
           ) : items.map((n) => (
             <button key={n.id} type="button" onClick={() => void markReadAndGo(n)}
               className={`w-full text-left flex gap-3 px-4 py-3 border-b border-line-soft ${!n.read ? 'bg-subtle' : 'bg-white'}`}>
-              <span className="w-8 h-8 rounded-btn flex items-center justify-center flex-none bg-bad-bg text-bad"><Icon name="alert" /></span>
+              <span className={`w-8 h-8 rounded-btn flex items-center justify-center flex-none ${tones[notificationTone[n.type] ?? 'neu']}`}><Icon name={notificationIcon[n.type] ?? 'bell'} /></span>
               <span className="flex-1 min-w-0"><span className="block font-semibold line-clamp-2">{n.message}</span><span className="cap num">{formatDateTime(n.createdAt)}</span></span>
               {!n.read && <span className="w-2 h-2 rounded-full bg-info mt-1.5 flex-none" aria-label="Chưa đọc" />}
             </button>

@@ -39,7 +39,7 @@ export function Icon({ name, className = 'w-4 h-4', label }: { name: string; cla
 
 /* ---------- badges ---------- */
 export type Tone = 'ok' | 'warn' | 'bad' | 'info' | 'neu' | 'lock';
-const tones: Record<Tone, string> = {
+export const tones: Record<Tone, string> = {
   ok: 'text-ok bg-ok-bg', warn: 'text-warn bg-warn-bg', bad: 'text-bad bg-bad-bg', info: 'text-info bg-info-bg',
   neu: 'text-neu bg-neu-bg border border-line', lock: 'text-bad bg-bad-bg border border-bad',
 };
@@ -48,6 +48,12 @@ export function Badge({ tone = 'neu', className = '', children }: { tone?: Tone;
 }
 export const healthTone: Record<string, Tone> = { FIT: 'ok', MONITORING: 'warn', QUARANTINED: 'bad', INJURED: 'bad' };
 export const careerTone: Record<string, Tone> = { ACTIVE: 'ok', RESTING: 'warn', RETIRED: 'neu' };
+export const notificationTone: Record<string, Tone> = {
+  TRAINING_LOCKED: 'bad', TRAINING_UNLOCKED: 'ok', INCIDENT_REPORTED: 'bad', FITNESS_WARNING: 'warn', AI_RISK_ALERT: 'bad',
+};
+export const notificationIcon: Record<string, string> = {
+  TRAINING_LOCKED: 'lock', TRAINING_UNLOCKED: 'unlock', INCIDENT_REPORTED: 'alert', FITNESS_WARNING: 'heart', AI_RISK_ALERT: 'sparkle',
+};
 export const fitColor = (v: number | null | undefined) => (v == null ? '#9ca3af' : v >= 80 ? '#3a6b4a' : v >= 60 ? '#8a6218' : '#8a2020');
 export function LockBadge({ children = 'Locked', className = '' }: { children?: ReactNode; className?: string }) {
   return <Badge tone="lock" className={className}><Icon name="lock" className="w-3.5 h-3.5" />{children}</Badge>;
@@ -304,6 +310,25 @@ export function ModalHead({ icon, tone = 'info', title, sub, onClose, id }: { ic
 }
 export const ModalBody = ({ children }: { children: ReactNode }) => <div className="px-6 pb-5 flex flex-col gap-4">{children}</div>;
 export const ModalFoot = ({ children }: { children: ReactNode }) => <div className="flex flex-wrap justify-end items-center gap-2 px-6 py-4 border-t border-line-soft bg-subtle rounded-b-xl">{children}</div>;
+
+/** Full-screen click-to-view for a thumbnail image (e.g. a horse's photo). */
+export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: string; open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-navy/80" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <button type="button" onClick={onClose} aria-label="Đóng" className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20">
+        <Icon name="x" className="w-5 h-5" />
+      </button>
+      <img src={src} alt={alt} className="max-w-full max-h-full rounded-card object-contain" />
+    </div>
+  );
+}
 
 /* ---------- small charts ---------- */
 export function Ring({ value, size = 60, stroke = 5, color, track = '#eceae4', text, textColor = '#1a1f2e', label }: { value: number; size?: number; stroke?: number; color: string; track?: string; text?: ReactNode; textColor?: string; label?: string }) {

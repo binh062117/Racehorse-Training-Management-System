@@ -479,7 +479,7 @@
     "ACCOUNT_DISABLED": "Tài khoản đã bị khoá",
     "FORBIDDEN": "Bạn không có quyền thực hiện",
     "NOT_FOUND": "Không tìm thấy",
-    "CONFLICT": "Email này đã được đăng ký",
+    "CONFLICT": "Dữ liệu bị xung đột với dữ liệu đã có",
     "TOKEN_EXPIRED": "Đã hết hạn, vui lòng thử lại",
     "TOKEN_INVALID": "Không hợp lệ hoặc đã hết hạn",
     "INTERNAL": "Lỗi hệ thống"
