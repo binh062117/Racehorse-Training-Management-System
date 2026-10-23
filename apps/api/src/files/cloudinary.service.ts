@@ -24,17 +24,19 @@ export class CloudinaryService {
     }
   }
 
+  /** `resourceType: 'raw'` for non-image files (e.g. PDF health attachments). */
   uploadBuffer(
     buffer: Buffer,
     folder: string,
     publicId: string,
+    resourceType: 'image' | 'raw' = 'image',
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           folder,
           public_id: publicId,
-          resource_type: 'image',
+          resource_type: resourceType,
           overwrite: true,
         },
         (err, result) => {
@@ -53,12 +55,19 @@ export class CloudinaryService {
     });
   }
 
-  /** Best-effort delete; `url` is a secure_url previously returned by uploadBuffer(). */
+  /**
+   * Best-effort delete; `url` is a secure_url previously returned by
+   * uploadBuffer(). The resource type isn't persisted separately — recover
+   * it from the URL shape (`/image/upload/` vs `/raw/upload/`) instead.
+   */
   async destroyByUrl(url: string): Promise<void> {
     const publicId = this.publicIdFromUrl(url);
     if (!publicId) return;
+    const resourceType = url.includes('/raw/upload/') ? 'raw' : 'image';
     try {
-      await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+      await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType,
+      });
     } catch (err) {
       this.logger.warn(
         `could not delete ${publicId}: ${(err as Error).message}`,

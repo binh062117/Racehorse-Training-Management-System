@@ -27,7 +27,7 @@ import {
   LockHorseDto,
   UpdateHorseDto,
 } from './dto/horses.dto';
-import { buildHorsePhotoMemoryMulterOptions } from '../files/upload';
+import { buildImageMemoryMulterOptions } from '../files/upload';
 
 @ApiTags('horses')
 @ApiBearerAuth()
@@ -101,9 +101,7 @@ export class HorsesController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @UseInterceptors(
-    FileInterceptor('file', buildHorsePhotoMemoryMulterOptions()),
-  )
+  @UseInterceptors(FileInterceptor('file', buildImageMemoryMulterOptions()))
   uploadPhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file?: Express.Multer.File,

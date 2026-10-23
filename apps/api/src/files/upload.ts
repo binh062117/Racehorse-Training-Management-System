@@ -73,11 +73,34 @@ export function buildAttachmentMulterOptions(): MulterModuleOptions {
 }
 
 /**
- * Multer options for the horse-photo route, kept in memory (not written to
- * disk) so the buffer can go straight to Cloudinary when configured. Built
- * from `process.env` for the same reason as buildAttachmentMulterOptions().
+ * Multer options for image-upload routes (horse photos, incident photos),
+ * kept in memory (not written to disk) so the buffer can go straight to
+ * Cloudinary when configured. Built from `process.env` for the same reason
+ * as buildAttachmentMulterOptions().
  */
-export function buildHorsePhotoMemoryMulterOptions(): MulterModuleOptions {
+/** Memory-storage counterpart of buildAttachmentMulterOptions() — see buildImageMemoryMulterOptions(). */
+export function buildAttachmentMemoryMulterOptions(): MulterModuleOptions {
+  const maxMb = Number(process.env.UPLOAD_MAX_MB) || 5;
+  return {
+    limits: { fileSize: maxMb * 1024 * 1024, files: 1 },
+    fileFilter: (_req, file, cb) => {
+      if (!ATTACHMENT_MIME_TO_EXT[file.mimetype]) {
+        cb(
+          new AppException(
+            'VALIDATION_ERROR',
+            'Only JPEG, PNG, WebP or PDF files are allowed',
+          ),
+          false,
+        );
+        return;
+      }
+      cb(null, true);
+    },
+    storage: memoryStorage(),
+  };
+}
+
+export function buildImageMemoryMulterOptions(): MulterModuleOptions {
   const maxMb = Number(process.env.UPLOAD_MAX_MB) || 5;
   return {
     limits: { fileSize: maxMb * 1024 * 1024, files: 1 },

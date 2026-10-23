@@ -6,11 +6,13 @@ import {
   type FormEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../lib/api';
+import { api, getFileUrl } from '../../lib/api';
 import type { HealthRecord, Horse, Paginated } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { CreateHealthRecordModal } from '../../components/health/CreateHealthRecordModal';
+import { TreatmentPlansSection } from '../../components/health/TreatmentPlansSection';
+import { InjuryLocationsSection } from '../../components/health/InjuryLocationsSection';
 import { AiInsightCard } from '../../components/horse/AiInsightCard';
 import { formatDate } from '../../lib/format';
 import { Badge, Btn, Card, Field, Icon, Textarea, healthTone } from '../../ds/ui';
@@ -142,17 +144,9 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
     }
   };
 
-  const download = async () => {
-    if (!record.attachmentPath) return;
-    setErr(null);
-    try {
-      const res = await api.get(`/files/${record.attachmentPath}`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data as Blob);
-      window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (e2) {
-      setErr(e2);
-    }
+  const download = () => {
+    const url = getFileUrl(record.attachmentUrl);
+    if (url) window.open(url, '_blank', 'noopener');
   };
 
   return (
@@ -164,7 +158,7 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
             <span className="cap ml-2.5">Bác sĩ: {record.vet.name}</span>
           </div>
           <div className="flex gap-1.5">
-            {record.attachmentPath && <Btn sm onClick={() => void download()}>{t('health.openAttachment')}</Btn>}
+            {record.attachmentPath && <Btn sm onClick={download}>{t('health.openAttachment')}</Btn>}
             {isVet && !editing && <Btn sm onClick={() => setEditing(true)}>{t('common.update')}</Btn>}
           </div>
         </div>
@@ -199,6 +193,9 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
           </form>
         )}
         <ErrorText err={err} />
+
+        <TreatmentPlansSection healthRecordId={record.id} isVet={isVet} />
+        <InjuryLocationsSection basePath={`/health-records/${record.id}`} isVet={isVet} />
       </Card>
     </li>
   );

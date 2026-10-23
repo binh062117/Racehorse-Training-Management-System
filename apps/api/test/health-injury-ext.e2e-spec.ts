@@ -5,6 +5,18 @@ import { AppModule } from './../src/app.module';
 import { AllExceptionsFilter } from './../src/common/filters/all-exceptions.filter';
 import { PrismaService } from './../src/prisma/prisma.service';
 
+// The incident-photo tests below exercise the local-disk fallback path and
+// its per-owner access control (CloudinaryService.enabled === false bypasses
+// that check entirely, by design — see horses.service.ts#toView for the
+// same trade-off on horse photos). Force the fallback here regardless of
+// what a developer's local .env has set. Set to '' rather than deleted:
+// ConfigModule's dotenv load only fills in keys that are *absent* from
+// process.env, so a deleted key would just get repopulated from .env when
+// AppModule compiles below.
+process.env.CLOUDINARY_CLOUD_NAME = '';
+process.env.CLOUDINARY_API_KEY = '';
+process.env.CLOUDINARY_API_SECRET = '';
+
 /**
  * Phase 10 — Health & Injury extensions (Sprint 3 remainder). Covers UC-14
  * (healthStatus filter), UC-15 extension (healthStatus write), UC-16
