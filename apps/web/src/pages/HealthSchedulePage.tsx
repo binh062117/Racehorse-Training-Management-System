@@ -16,7 +16,7 @@ export function HealthSchedulePage() {
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [careType, setCareType] = useState<'ALL' | 'VACCINATION' | 'DEWORMING'>('ALL');
 
-  usePageChrome({ crumbs: ['Sức khỏe', t('healthSchedule.title')] });
+  usePageChrome({ crumbs: [t('nav.healthSection', 'Sức khỏe'), t('healthSchedule.title')] });
 
   const vaccinationParams = {
     limit: 100,
@@ -34,12 +34,15 @@ export function HealthSchedulePage() {
   const overdue = list.filter((r) => daysUntil(r.nextDueDate) != null && daysUntil(r.nextDueDate)! < 0).length;
   const dueSoon = list.filter((r) => { const d = daysUntil(r.nextDueDate); return d != null && d >= 0 && d <= 14; }).length;
   const sub = records === null
-    ? 'Đang tải lịch…'
+    ? t('healthSchedule.subLoading', 'Đang tải lịch…')
     : overdue > 0
-      ? `${overdue} lịch đã quá hạn${dueSoon ? `, ${dueSoon} lịch đến hạn trong 14 ngày tới` : ''}.`
+      ? t('healthSchedule.subOverdue', {
+          overdue,
+          dueSoon: dueSoon ? t('healthSchedule.andDueSoon', { count: dueSoon }) : '',
+        })
       : dueSoon > 0
-        ? `${dueSoon} lịch đến hạn trong 14 ngày tới, không có lịch quá hạn.`
-        : 'Không có lịch nào quá hạn hay sắp đến hạn.';
+        ? t('healthSchedule.subDueSoon', { dueSoon })
+        : t('healthSchedule.subAllGood', 'Không có lịch nào quá hạn hay sắp đến hạn.');
   const th = 'h-10 px-4 text-[12px] font-medium text-muted border-b border-line';
 
   return (

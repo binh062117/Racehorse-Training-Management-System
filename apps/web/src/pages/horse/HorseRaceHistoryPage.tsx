@@ -89,11 +89,11 @@ export function HorseRaceHistoryPage() {
   return (
     <>
       <PageHeader
-        crumbs={[['Ngựa đua', '/horses'], [horse.name, `/horses/${id}`]]}
+        crumbs={[[t('horsesPage.title', 'Ngựa đua'), '/horses'], [horse.name, `/horses/${id}`]]}
         title={t('horseFlow.performanceTitle')}
         sub={entries.length === 0
-          ? `${horse.name} chưa có kết quả thi đấu nào.`
-          : `${horse.name} đã chạy ${entries.length} giải · ${wins} lần thắng · ${podiums} lần vào top 3.`}
+          ? t('horseFlow.noRaceResultsForHorse', { horse: horse.name })
+          : t('horseFlow.raceResultsSummary', { horse: horse.name, count: entries.length, wins, podiums })}
       />
       <HorseRecordNav horseId={id} />
 

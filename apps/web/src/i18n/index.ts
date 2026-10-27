@@ -21,9 +21,23 @@ void i18n.use(initReactI18next).init({
     en: { translation: en },
   },
   lng: initialLang(),
-  fallbackLng: 'en',
+  fallbackLng: 'vi',
   interpolation: { escapeValue: false },
 });
+
+i18n.on('languageChanged', (lng) => {
+  const norm: 'vi' | 'en' = lng && lng.toLowerCase().startsWith('en') ? 'en' : 'vi';
+  try {
+    localStorage.setItem(STORAGE_KEY, norm);
+  } catch {
+    /* ignore */
+  }
+});
+
+export function getLanguage(): 'vi' | 'en' {
+  const current = i18n.resolvedLanguage || i18n.language || initialLang();
+  return current.toLowerCase().startsWith('en') ? 'en' : 'vi';
+}
 
 export function setLanguage(lang: 'vi' | 'en'): void {
   try {

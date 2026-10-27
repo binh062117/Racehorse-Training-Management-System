@@ -19,7 +19,8 @@ import { Btn, Card, EmptyState, Field, Icon, Textarea } from '../../ds/ui';
 
 /* ========== Main component ========== */
 export function HealthTab({ horse }: { horse: Horse }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
   const { user } = useAuth();
   const isVet = user?.role === 'VET';
   const canUseAi = user?.role === 'VET' || user?.role === 'MANAGER';
@@ -47,23 +48,33 @@ export function HealthTab({ horse }: { horse: Horse }) {
     <div className="flex flex-col gap-5">
       <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h2 className="text-[15px] font-semibold">Hồ sơ khám bệnh</h2>
+          <h2 className="text-[15px] font-semibold">{t('healthRecordsPage.title', 'Hồ sơ khám bệnh')}</h2>
           <p className="text-[13px] text-muted mt-0.5">
-            {loading ? 'Đang tải…' : records.length === 0 ? 'Chưa có lần khám nào.' : `${records.length} lần khám · gần nhất ${formatDate(records[0].examDate)}`}
+            {loading
+              ? (isVi ? 'Đang tải…' : 'Loading…')
+              : records.length === 0
+                ? (isVi ? 'Chưa có lần khám nào.' : 'No health records yet.')
+                : (isVi
+                    ? `${records.length} lần khám · gần nhất ${formatDate(records[0].examDate)}`
+                    : `${records.length} records · latest ${formatDate(records[0].examDate)}`)}
           </p>
         </div>
-        {isVet && <Btn v="p" onClick={() => setModalOpen(true)}><Icon name="plus" />Ghi nhận hồ sơ khám</Btn>}
+        {isVet && (
+          <Btn v="p" onClick={() => setModalOpen(true)}>
+            <Icon name="plus" />{t('healthRecordsPage.newRecord', 'Ghi nhận hồ sơ khám')}
+          </Btn>
+        )}
       </div>
 
       {canUseAi && <AiInsightCard horseId={horse.id} />}
 
       {loading ? (
-        <p className="text-muted">Đang tải hồ sơ…</p>
+        <p className="text-muted">{t('healthRecordsPage.loading', 'Đang tải hồ sơ…')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
-        <EmptyState action={isVet ? <Btn sm v="p" onClick={() => setModalOpen(true)}>Tạo hồ sơ khám đầu tiên</Btn> : undefined}>
-          {t('health.empty')}
+        <EmptyState action={isVet ? <Btn sm v="p" onClick={() => setModalOpen(true)}>{t('healthRecordsPage.newRecord', 'Tạo hồ sơ khám đầu tiên')}</Btn> : undefined}>
+          {t('health.empty', 'Chưa có hồ sơ y tế nào.')}
         </EmptyState>
       ) : (
         <ul className="list-none p-0 flex flex-col gap-3">
@@ -134,7 +145,7 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
         <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
           <div className="flex items-baseline gap-2.5">
             <strong className="num text-[15px]">{formatDate(record.examDate)}</strong>
-            <span className="text-[13px] text-muted">Bác sĩ {record.vet.name}</span>
+            <span className="text-[13px] text-muted">{t('healthRecordsPage.colVet', 'Bác sĩ')} {record.vet.name}</span>
           </div>
           <div className="flex gap-1.5">
             {record.attachmentPath && <Btn sm onClick={download}>{t('health.openAttachment')}</Btn>}
@@ -142,11 +153,13 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
           </div>
         </div>
 
+        {/* Doctor-entered diagnosis is kept as-is */}
         <div className="mb-2">
           <span className="lbl">{t('health.diagnosis')}</span>
           <p className="mt-1 leading-relaxed">{record.diagnosis}</p>
         </div>
 
+        {/* Doctor-entered treatment is kept as-is */}
         {record.treatment && (
           <div className="mb-2">
             <span className="lbl">{t('health.treatment')}</span>
@@ -156,7 +169,7 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
 
         {isVet && (
           <form onSubmit={upload} className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-line-soft">
-            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" aria-label="Chọn file đính kèm" className="flex-1 min-w-0" />
+            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" aria-label={t('health.uploadAttachment')} className="flex-1 min-w-0" />
             <Btn sm type="submit" disabled={busy}>{t('health.uploadAttachment')}</Btn>
           </form>
         )}

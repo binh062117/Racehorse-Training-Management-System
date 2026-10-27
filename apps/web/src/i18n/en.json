@@ -1,6 +1,7 @@
 {
   "app": {
-    "title": "Racehorse Training & Management"
+    "title": "Racehorse Training & Management",
+    "subtitle": "Training & Management"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -29,7 +30,9 @@
     "roleLabel": "Role",
     "noRole": "No role assigned",
     "logout": "Log out",
-    "logoutConfirm": "Are you sure you want to log out?"
+    "logoutConfirm": "Are you sure you want to log out?",
+    "healthSection": "Health",
+    "adminSection": "Administration"
   },
   "dashboard": {
     "title": "System Overview Dashboard",
@@ -67,7 +70,14 @@
     "noUpcoming": "No upcoming training sessions.",
     "scheduled": "Scheduled",
     "healthTitle": "Health watch",
-    "noHealthAlerts": "No horses need health follow-up."
+    "noHealthAlerts": "No horses need health follow-up.",
+    "readyToday": "Ready to train today",
+    "vetMonitoring": "Needs veterinary monitoring",
+    "reviewNow": "Review now",
+    "boardTitle": "Today's Stable Board",
+    "viewAllHorses": "View all {{count}} horses",
+    "moreHorses": "{{count}} more horses",
+    "waitingApproval": "Your account is pending manager role approval."
   },
   "notificationsPage": {
     "title": "Notifications",
@@ -241,7 +251,10 @@
     "currentOwner": "CURRENT OWNER",
     "current": "Current",
     "transferHistoryUnavailable": "No transfer history available",
-    "transferHistoryExplanation": "The system currently stores only the horse's current owner; the API does not record ownership transfers or their dates. This view does not present inferred history."
+    "transferHistoryExplanation": "The system currently stores only the horse's current owner; the API does not record ownership transfers or their dates. This view does not present inferred history.",
+    "currentOwnerSub": "{{horse}} is currently owned by {{owner}}.",
+    "noRaceResultsForHorse": "{{horse}} has no race results yet.",
+    "raceResultsSummary": "{{horse}} entered {{count}} races · {{wins}} wins · {{podiums}} podiums."
   },
   "tab": {
     "pedigree": "Pedigree",
@@ -333,7 +346,12 @@
     "noDueDate": "No date set",
     "emptyUpcoming": "No vaccinations are due in the next 30 days.",
     "emptyAll": "No vaccination records yet.",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "subOverdue": "{{overdue}} care item(s) overdue{{dueSoon}}.",
+    "subDueSoon": "{{dueSoon}} item(s) due within 14 days, none overdue.",
+    "subAllGood": "No overdue or upcoming care items.",
+    "subLoading": "Loading schedule…",
+    "andDueSoon": ", {{count}} item(s) due within 14 days"
   },
   "incidents": {
     "eyebrow": "HEALTH & SAFETY",
@@ -394,7 +412,10 @@
     "photoAlt": "Incident photo for {{horse}}",
     "openPhoto": "Open photo",
     "updating": "Updating...",
-    "moveTo": "Move to {{status}}"
+    "moveTo": "Move to {{status}}",
+    "subUnresolved": "{{count}} high-severity incident(s) unresolved · {{open}} pending, {{inProgress}} in progress.",
+    "subAllResolved": "No open high-severity incidents · {{resolved}} of {{total}} incidents resolved.",
+    "highSeverityHint": "High severity will automatically lock horse training until resolved."
   },
   "races": {
     "eyebrow": "RACE CALENDAR",
@@ -450,7 +471,10 @@
     "time": "Finish time",
     "resultPending": "Result pending",
     "selectRace": "Select a race",
-    "selectRaceDescription": "Race details, entries, and results will appear here."
+    "selectRaceDescription": "Race details, entries, and results will appear here.",
+    "subUpcoming": "Next race: {{name}}, {{date}}{{venue}} · {{count}} upcoming race(s).",
+    "subNoUpcoming": "No upcoming races · {{count}} past race(s).",
+    "atVenue": " at {{venue}}"
   },
   "user": {
     "role": "Role",
@@ -469,7 +493,15 @@
       "DISABLED": "Disabled"
     },
     "empty": "No users yet.",
-    "loading": "Loading users…"
+    "loading": "Loading users…",
+    "kpiTotal": "Total Accounts",
+    "kpiPending": "Pending Approval",
+    "kpiActive": "Active",
+    "kpiDisabled": "Disabled",
+    "you": "(you)",
+    "unassigned": "Unassigned",
+    "subPending": "{{count}} accounts pending approval — select a role and approve.",
+    "subActive": "No accounts pending approval · {{count}} active."
   },
   "error": {
     "VALIDATION_ERROR": "Invalid data",
@@ -483,5 +515,132 @@
     "TOKEN_EXPIRED": "Expired, please try again",
     "TOKEN_INVALID": "Invalid or expired",
     "INTERNAL": "System error"
+  },
+  "horsesPage": {
+    "title": "Racehorses",
+    "myHorses": "My Horses",
+    "searchPlaceholder": "Search by horse name",
+    "addHorse": "Add Horse",
+    "kpiTotal": "Total horses",
+    "kpiActive": "Racing",
+    "kpiAvgFitness": "Average fitness",
+    "kpiLocked": "Training locked",
+    "evaluatedCount": "{{count}} of {{total}} horses evaluated",
+    "all": "All",
+    "filterLocked": "Locked",
+    "filterInjured": "Injured / Quarantined",
+    "filterMonitoring": "Needs monitoring",
+    "cards": "Cards",
+    "table": "Table",
+    "thHorse": "Horse",
+    "thOwner": "Owner",
+    "thBreed": "Breed",
+    "thFitness": "Fitness",
+    "thRacing": "Racing",
+    "thHealth": "Health",
+    "thLock": "Lock",
+    "thActions": "Actions",
+    "emptyNone": "No horses registered yet.",
+    "emptyFilter": "No horses match the current filter.",
+    "clearFilters": "Clear filters",
+    "loading": "Loading horses…",
+    "countSummary": "{{count}} horses",
+    "countLocked": "{{count}} training locked",
+    "countOwned": "owned by you",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderUnknown": "Unknown gender",
+    "age": "{{age}} yrs",
+    "ageUnknown": "Unknown age",
+    "lockBannerTitle": "Training locked",
+    "lockBannerDesc": "Trainers cannot schedule new sessions until a veterinarian unlocks this horse.",
+    "lockReasonPrefix": "Incident: ",
+    "noLockReason": "No specific reason provided"
+  },
+  "plansPage": {
+    "title": "Training Plans",
+    "searchPlaceholder": "Search by goal, horse name",
+    "newPlan": "New Training Plan",
+    "all": "All",
+    "active": "In Progress",
+    "completed": "Completed",
+    "colGoal": "Goal",
+    "colHorse": "Horse",
+    "colTime": "Timeline",
+    "colProgress": "Progress",
+    "colTrainer": "Lead Trainer",
+    "empty": "No training plans yet.",
+    "emptyFilter": "No training plans match the filter.",
+    "openEnded": "Open-ended",
+    "loading": "Loading training plans…"
+  },
+  "healthRecordsPage": {
+    "title": "Health Records",
+    "breadcrumbSection": "Health",
+    "searchPlaceholder": "Search by diagnosis, horse name",
+    "newRecord": "New Health Record",
+    "all": "All",
+    "colHorse": "Horse",
+    "colDate": "Exam Date",
+    "colVet": "Veterinarian",
+    "colDiagnosis": "Diagnosis",
+    "colTreatment": "Treatment Plan",
+    "colAttachment": "Attachment",
+    "empty": "No health records found.",
+    "emptyFilter": "No health records match the filter.",
+    "loading": "Loading health records…",
+    "noAttachment": "None",
+    "openAttachment": "Open attachment"
+  },
+  "horseDetail": {
+    "tabs": {
+      "profile": "Profile",
+      "pedigree": "Pedigree",
+      "plans": "Training Plans",
+      "sessions": "Sessions",
+      "progress": "Training Progress",
+      "health": "Health Records",
+      "feeding": "Feeding & Diet"
+    },
+    "edit": "Edit",
+    "uploadPhoto": "Upload Photo",
+    "delete": "Delete Horse",
+    "details": "Detailed Information",
+    "code": "Record ID",
+    "breed": "Breed",
+    "gender": "Gender",
+    "birthDate": "Birth Date",
+    "owner": "Owner",
+    "status": "Status",
+    "fitness": "Fitness Score",
+    "racingHistory": "Racing History",
+    "racesStarted": "Races entered",
+    "firstPlace": "Wins (1st)",
+    "backToList": "← Horse directory",
+    "lockedWarning": "Training locked"
+  },
+  "readiness": {
+    "locked": "Locked",
+    "blocked": "Unable to train",
+    "retired": "Retired",
+    "resting": "Resting",
+    "light": "Light work",
+    "ready": "Ready",
+    "monitoringReason": "Under veterinary monitoring"
+  },
+  "feeding": {
+    "title": "Feeding & Diet",
+    "groomHelp": "Record feed types and amounts for AI nutrition analysis.",
+    "historyHelp": "Feeding history for this horse.",
+    "recordBtn": "Record Meal",
+    "closeBtn": "Close",
+    "empty": "No feeding records found.",
+    "thDate": "Date",
+    "thFeedType": "Feed Type",
+    "thQuantity": "Quantity",
+    "thNotes": "Notes",
+    "thRecordedBy": "Recorded By",
+    "saveBtn": "Save Record",
+    "saving": "Saving..."
   }
 }

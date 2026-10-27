@@ -1,6 +1,7 @@
 {
   "app": {
-    "title": "Quản lý Huấn luyện Ngựa đua"
+    "title": "Quản lý Huấn luyện Ngựa đua",
+    "subtitle": "Huấn luyện & quản lý"
   },
   "nav": {
     "dashboard": "Tổng quan",
@@ -29,7 +30,9 @@
     "roleLabel": "Vai trò",
     "noRole": "Chưa phân vai trò",
     "logout": "Đăng xuất",
-    "logoutConfirm": "Bạn chắc chắn muốn đăng xuất?"
+    "logoutConfirm": "Bạn chắc chắn muốn đăng xuất?",
+    "healthSection": "Sức khỏe",
+    "adminSection": "Quản trị"
   },
   "dashboard": {
     "title": "Tổng quan Hệ thống",
@@ -67,7 +70,14 @@
     "noUpcoming": "Chưa có buổi tập sắp tới.",
     "scheduled": "Đã lên lịch",
     "healthTitle": "Theo dõi sức khỏe",
-    "noHealthAlerts": "Chưa có hồ sơ cần theo dõi."
+    "noHealthAlerts": "Chưa có hồ sơ cần theo dõi.",
+    "readyToday": "Sẵn sàng tập hôm nay",
+    "vetMonitoring": "Cần thú y theo dõi",
+    "reviewNow": "Duyệt ngay",
+    "boardTitle": "Bảng chuồng hôm nay",
+    "viewAllHorses": "Xem tất cả {{count}} ngựa",
+    "moreHorses": "Còn {{count}} ngựa khác",
+    "waitingApproval": "Tài khoản đang chờ quản lý câu lạc bộ duyệt vai trò."
   },
   "notificationsPage": {
     "title": "Thông báo",
@@ -241,7 +251,10 @@
     "currentOwner": "CHỦ SỞ HỮU HIỆN TẠI",
     "current": "Hiện tại",
     "transferHistoryUnavailable": "Chưa có dữ liệu chuyển nhượng",
-    "transferHistoryExplanation": "Hệ thống hiện chỉ lưu chủ sở hữu hiện tại; API chưa ghi lại các lần đổi chủ hoặc thời điểm chuyển giao. Vì vậy màn hình này không hiển thị lịch sử suy đoán."
+    "transferHistoryExplanation": "Hệ thống hiện chỉ lưu chủ sở hữu hiện tại; API chưa ghi lại các lần đổi chủ hoặc thời điểm chuyển giao. Vì vậy màn hình này không hiển thị lịch sử suy đoán.",
+    "currentOwnerSub": "{{horse}} hiện thuộc quyền sở hữu của {{owner}}.",
+    "noRaceResultsForHorse": "{{horse}} chưa có kết quả thi đấu nào.",
+    "raceResultsSummary": "{{horse}} đã chạy {{count}} giải · {{wins}} lần thắng · {{podiums}} lần vào top 3."
   },
   "tab": {
     "pedigree": "Phả hệ",
@@ -333,7 +346,12 @@
     "noDueDate": "Chưa có ngày",
     "emptyUpcoming": "Không có lịch tiêm phòng nào đến hạn trong 30 ngày tới.",
     "emptyAll": "Chưa có lịch tiêm phòng nào.",
-    "saving": "Đang lưu..."
+    "saving": "Đang lưu...",
+    "subOverdue": "{{overdue}} lịch đã quá hạn{{dueSoon}}.",
+    "subDueSoon": "{{dueSoon}} lịch đến hạn trong 14 ngày tới, không có lịch quá hạn.",
+    "subAllGood": "Không có lịch nào quá hạn hay sắp đến hạn.",
+    "subLoading": "Đang tải lịch…",
+    "andDueSoon": ", {{count}} lịch đến hạn trong 14 ngày tới"
   },
   "incidents": {
     "eyebrow": "Y TẾ & AN TOÀN",
@@ -394,7 +412,10 @@
     "photoAlt": "Ảnh sự cố của ngựa {{horse}}",
     "openPhoto": "Mở ảnh",
     "updating": "Đang cập nhật...",
-    "moveTo": "Chuyển sang {{status}}"
+    "moveTo": "Chuyển sang {{status}}",
+    "subUnresolved": "{{count}} sự cố mức nặng chưa xử lý xong · {{open}} đang chờ, {{inProgress}} đang xử lý.",
+    "subAllResolved": "Không có sự cố mức nặng nào đang mở · {{resolved}} trong {{total}} sự cố đã xử lý.",
+    "highSeverityHint": "Mức nặng sẽ tự khóa tập ngựa cho đến khi sự cố được xử lý xong."
   },
   "races": {
     "eyebrow": "LỊCH THI ĐẤU",
@@ -450,7 +471,10 @@
     "time": "Thành tích",
     "resultPending": "Chưa có kết quả",
     "selectRace": "Chọn một giải đua",
-    "selectRaceDescription": "Thông tin giải, danh sách ghi danh và kết quả sẽ hiển thị tại đây."
+    "selectRaceDescription": "Thông tin giải, danh sách ghi danh và kết quả sẽ hiển thị tại đây.",
+    "subUpcoming": "Giải gần nhất: {{name}}, ngày {{date}}{{venue}} · {{count}} giải sắp diễn ra.",
+    "subNoUpcoming": "Không có giải nào sắp diễn ra · {{count}} giải đã diễn ra.",
+    "atVenue": " tại {{venue}}"
   },
   "user": {
     "role": "Vai trò",
@@ -469,7 +493,15 @@
       "DISABLED": "Đã khóa"
     },
     "empty": "Chưa có người dùng nào.",
-    "loading": "Đang tải danh sách người dùng…"
+    "loading": "Đang tải danh sách người dùng…",
+    "kpiTotal": "Tổng tài khoản",
+    "kpiPending": "Chờ duyệt",
+    "kpiActive": "Đang hoạt động",
+    "kpiDisabled": "Đã khóa",
+    "you": "(bạn)",
+    "unassigned": "Chưa gán",
+    "subPending": "{{count}} tài khoản đang chờ duyệt — chọn vai trò rồi bấm duyệt.",
+    "subActive": "Không có tài khoản nào chờ duyệt · {{count}} đang hoạt động."
   },
   "error": {
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",
@@ -483,5 +515,132 @@
     "TOKEN_EXPIRED": "Đã hết hạn, vui lòng thử lại",
     "TOKEN_INVALID": "Không hợp lệ hoặc đã hết hạn",
     "INTERNAL": "Lỗi hệ thống"
+  },
+  "horsesPage": {
+    "title": "Ngựa đua",
+    "myHorses": "Ngựa của tôi",
+    "searchPlaceholder": "Tìm theo tên ngựa",
+    "addHorse": "Thêm ngựa",
+    "kpiTotal": "Tổng số ngựa",
+    "kpiActive": "Đang thi đấu",
+    "kpiAvgFitness": "Thể lực trung bình",
+    "kpiLocked": "Đang khóa tập",
+    "evaluatedCount": "{{count}} trong {{total}} ngựa đã đánh giá",
+    "all": "Tất cả",
+    "filterLocked": "Khóa tập",
+    "filterInjured": "Chấn thương / cách ly",
+    "filterMonitoring": "Cần theo dõi",
+    "cards": "Thẻ",
+    "table": "Bảng",
+    "thHorse": "Ngựa",
+    "thOwner": "Chủ sở hữu",
+    "thBreed": "Giống",
+    "thFitness": "Thể lực",
+    "thRacing": "Thi đấu",
+    "thHealth": "Sức khỏe",
+    "thLock": "Khóa tập",
+    "thActions": "Thao tác",
+    "emptyNone": "Chưa có hồ sơ ngựa nào.",
+    "emptyFilter": "Không có ngựa nào khớp với bộ lọc hiện tại.",
+    "clearFilters": "Xóa bộ lọc",
+    "loading": "Đang tải danh sách ngựa…",
+    "countSummary": "{{count}} ngựa",
+    "countLocked": "{{count}} đang khóa tập",
+    "countOwned": "thuộc sở hữu của bạn",
+    "genderMale": "Đực",
+    "genderFemale": "Cái",
+    "genderUnknown": "Chưa rõ giới tính",
+    "age": "{{age}} tuổi",
+    "ageUnknown": "Chưa rõ tuổi",
+    "lockBannerTitle": "Đang bị khóa tập luyện",
+    "lockBannerDesc": "Huấn luyện viên không thể tạo buổi tập mới cho tới khi bác sĩ thú y mở khóa.",
+    "lockReasonPrefix": "Sự cố: ",
+    "noLockReason": "Chưa có lý do cụ thể"
+  },
+  "plansPage": {
+    "title": "Giáo án huấn luyện",
+    "searchPlaceholder": "Tìm theo mục tiêu, tên ngựa",
+    "newPlan": "Tạo giáo án",
+    "all": "Tất cả",
+    "active": "Đang thực hiện",
+    "completed": "Đã hoàn thành",
+    "colGoal": "Mục tiêu",
+    "colHorse": "Ngựa",
+    "colTime": "Thời gian",
+    "colProgress": "Tiến độ",
+    "colTrainer": "HLV phụ trách",
+    "empty": "Chưa có giáo án huấn luyện nào.",
+    "emptyFilter": "Không có giáo án nào khớp với bộ lọc.",
+    "openEnded": "Không thời hạn",
+    "loading": "Đang tải danh sách giáo án…"
+  },
+  "healthRecordsPage": {
+    "title": "Hồ sơ khám bệnh",
+    "breadcrumbSection": "Sức khỏe",
+    "searchPlaceholder": "Tìm theo chẩn đoán, tên ngựa",
+    "newRecord": "Ghi nhận khám bệnh",
+    "all": "Tất cả",
+    "colHorse": "Ngựa",
+    "colDate": "Ngày khám",
+    "colVet": "Bác sĩ",
+    "colDiagnosis": "Chẩn đoán",
+    "colTreatment": "Phác đồ điều trị",
+    "colAttachment": "Đính kèm",
+    "empty": "Chưa có hồ sơ khám bệnh nào.",
+    "emptyFilter": "Không có hồ sơ nào khớp với bộ lọc.",
+    "loading": "Đang tải hồ sơ khám bệnh…",
+    "noAttachment": "Không có",
+    "openAttachment": "Mở tệp đính kèm"
+  },
+  "horseDetail": {
+    "tabs": {
+      "profile": "Hồ sơ chi tiết",
+      "pedigree": "Phả hệ",
+      "plans": "Giáo án huấn luyện",
+      "sessions": "Buổi tập luyện",
+      "progress": "Tiến độ huấn luyện",
+      "health": "Hồ sơ y tế",
+      "feeding": "Khẩu phần ăn"
+    },
+    "edit": "Chỉnh sửa",
+    "uploadPhoto": "Tải ảnh lên",
+    "delete": "Xóa ngựa",
+    "details": "Thông tin chi tiết",
+    "code": "Mã hồ sơ",
+    "breed": "Giống",
+    "gender": "Giới tính",
+    "birthDate": "Ngày sinh",
+    "owner": "Chủ sở hữu",
+    "status": "Trạng thái",
+    "fitness": "Điểm thể lực",
+    "racingHistory": "Lịch sử thi đấu",
+    "racesStarted": "Số trận tham gia",
+    "firstPlace": "Về nhất",
+    "backToList": "← Danh sách ngựa",
+    "lockedWarning": "Đang bị khóa tập luyện"
+  },
+  "readiness": {
+    "locked": "Khóa tập",
+    "blocked": "Không tập được",
+    "retired": "Giải nghệ",
+    "resting": "Nghỉ dưỡng",
+    "light": "Tập nhẹ",
+    "ready": "Sẵn sàng",
+    "monitoringReason": "Đang được thú y theo dõi"
+  },
+  "feeding": {
+    "title": "Khẩu phần ăn",
+    "groomHelp": "Ghi lại loại thức ăn và khối lượng mỗi lần cho ăn, phục vụ phân tích dinh dưỡng của AI.",
+    "historyHelp": "Lịch sử khẩu phần ăn của ngựa.",
+    "recordBtn": "Ghi nhận khẩu phần",
+    "closeBtn": "Đóng",
+    "empty": "Chưa có bản ghi khẩu phần ăn nào.",
+    "thDate": "Ngày",
+    "thFeedType": "Loại thức ăn",
+    "thQuantity": "Khối lượng",
+    "thNotes": "Ghi chú",
+    "thRecordedBy": "Người ghi",
+    "saveBtn": "Lưu khẩu phần",
+    "saving": "Đang lưu..."
   }
 }
