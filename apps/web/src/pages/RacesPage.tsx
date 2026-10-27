@@ -117,8 +117,13 @@ export function RacesPage() {
   const sub = loading && races.length === 0
     ? t('races.loading')
     : nextRace
-      ? `Giải gần nhất: ${nextRace.name}, ngày ${formatDate(nextRace.date)}${nextRace.venue ? ` tại ${nextRace.venue}` : ''} · ${summary.upcoming} giải sắp diễn ra.`
-      : `Không có giải nào sắp diễn ra · ${summary.past} giải đã diễn ra.`;
+      ? t('races.subUpcoming', {
+          name: nextRace.name,
+          date: formatDate(nextRace.date),
+          venue: nextRace.venue ? t('races.atVenue', { venue: nextRace.venue }) : '',
+          count: summary.upcoming,
+        })
+      : t('races.subNoUpcoming', { count: summary.past });
   const countFor = (value: RaceFilter) => (value === 'ALL' ? races.length : value === 'UPCOMING' ? summary.upcoming : summary.past);
 
   return (

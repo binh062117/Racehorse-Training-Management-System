@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 
 /* ---------- icons (stroke, 24px grid) ---------- */
 const P: Record<string, string[]> = {
@@ -53,10 +55,12 @@ export const careerTone: Record<string, Tone> = { ACTIVE: 'ok', RESTING: 'neu', 
 export const healthLabel: Record<string, string> = { FIT: 'Khỏe mạnh', MONITORING: 'Cần theo dõi', QUARANTINED: 'Cách ly', INJURED: 'Chấn thương' };
 export const careerLabel: Record<string, string> = { ACTIVE: 'Đang thi đấu', RESTING: 'Nghỉ dưỡng', RETIRED: 'Giải nghệ' };
 export function HealthBadge({ status }: { status: string }) {
-  return <Badge tone={healthTone[status] ?? 'neu'}>{healthLabel[status] ?? status}</Badge>;
+  const { t } = useTranslation();
+  return <Badge tone={healthTone[status] ?? 'neu'}>{t(`horseStatusBadge.${status}`, healthLabel[status] ?? status)}</Badge>;
 }
 export function CareerBadge({ status }: { status: string }) {
-  return <Badge tone={careerTone[status] ?? 'neu'}>{careerLabel[status] ?? status}</Badge>;
+  const { t } = useTranslation();
+  return <Badge tone={careerTone[status] ?? 'neu'}>{t(`horseStatusBadge.${status}`, careerLabel[status] ?? status)}</Badge>;
 }
 export const notificationTone: Record<string, Tone> = {
   TRAINING_LOCKED: 'bad', TRAINING_UNLOCKED: 'ok', INCIDENT_REPORTED: 'bad', FITNESS_WARNING: 'warn', AI_RISK_ALERT: 'bad',
@@ -66,13 +70,19 @@ export const notificationIcon: Record<string, string> = {
 };
 /** Fitness scale: ≥80 good, 60–79 watch, <60 low. Grey when not assessed. */
 export const fitColor = (v: number | null | undefined) => (v == null ? '#9ca3af' : v >= 80 ? '#247b50' : v >= 60 ? '#b45309' : '#c4242a');
-export function LockBadge({ children = 'Khóa tập', className = '' }: { children?: ReactNode; className?: string }) {
-  return <Badge tone="lock" className={className}><Icon name="lock" className="w-3 h-3" />{children}</Badge>;
+export function LockBadge({ children, className = '' }: { children?: ReactNode; className?: string }) {
+  const { t } = useTranslation();
+  const label = children ?? t('horsesPage.filterLocked', 'Khóa tập');
+  return <Badge tone="lock" className={className}><Icon name="lock" className="w-3 h-3" />{label}</Badge>;
 }
 /** Lock reasons are written by the backend as "Incident: …" — show them in the UI's language. */
 export function lockReasonText(reason: string | null | undefined): string {
-  if (!reason) return 'Chưa có lý do cụ thể';
-  return reason.replace(/^Incident:\s*/i, 'Sự cố: ');
+  const isEn = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('en');
+  if (!reason) return isEn ? 'No specific reason provided' : 'Chưa có lý do cụ thể';
+  if (isEn) {
+    return reason.replace(/^(Sự cố|Incident):\s*/i, 'Incident: ');
+  }
+  return reason.replace(/^(Sự cố|Incident):\s*/i, 'Sự cố: ');
 }
 
 /* ---------- buttons ---------- */

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import type { HealthRecord, HealthStatus, Horse, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
@@ -10,6 +11,7 @@ import { usePageChrome } from '../ds/AppShell';
 import { Btn, Card, CardHeader, Chip, ChipCount, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip, LockBadge, PageHeader } from '../ds/ui';
 
 export function HealthRecordsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const isVet = user?.role === 'VET';
@@ -26,7 +28,7 @@ export function HealthRecordsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<HealthStatus | 'ALL'>('ALL');
 
-  usePageChrome({ crumbs: ['Sức khỏe', 'Hồ sơ khám bệnh'] });
+  usePageChrome({ crumbs: [t('nav.healthSection', 'Sức khỏe'), t('healthRecordsPage.title', 'Hồ sơ khám bệnh')] });
 
   const loadHorses = useCallback(async () => {
     try {
@@ -88,41 +90,40 @@ export function HealthRecordsPage() {
     setModalOpen(true);
   };
 
-  // A new horses array re-runs the records effect, so reloading horses refreshes both lists.
   const handleCreated = () => { void loadHorses(); };
 
-  const lockedNote = lockedCount ? ` · ${lockedCount} đang khóa tập` : '';
+  const lockedNote = lockedCount ? ` · ${t('horsesPage.countLocked', { count: lockedCount })}` : '';
   const sub = loading
-    ? 'Đang tải dữ liệu sức khỏe…'
+    ? t('healthRecordsPage.loading', 'Đang tải dữ liệu sức khỏe…')
     : horses.length === 0
-      ? 'Chưa có ngựa nào trong hệ thống.'
+      ? t('horsesPage.emptyNone', 'Chưa có ngựa nào trong hệ thống.')
       : sick + watch === 0
-        ? `Cả ${horses.length} ngựa đều khỏe mạnh${lockedNote}.`
-        : `${sick + watch} trên ${horses.length} ngựa cần bác sĩ theo dõi${lockedNote}.`;
+        ? `${t('horsesPage.countSummary', { count: horses.length })} (${t('horseStatusBadge.FIT', 'Khỏe mạnh')})${lockedNote}.`
+        : `${sick + watch} / ${horses.length} ${t('horseStatusBadge.MONITORING', 'cần theo dõi')}${lockedNote}.`;
 
   const filters: [HealthStatus | 'ALL', string, number][] = [
-    ['ALL', 'Tất cả', horses.length],
-    ['FIT', 'Khỏe mạnh', fit],
-    ['MONITORING', 'Cần theo dõi', watch],
-    ['INJURED', 'Chấn thương', healthCounts.INJURED ?? 0],
-    ['QUARANTINED', 'Cách ly', healthCounts.QUARANTINED ?? 0],
+    ['ALL', t('healthRecordsPage.all', 'Tất cả'), horses.length],
+    ['FIT', t('horseStatusBadge.FIT', 'Khỏe mạnh'), fit],
+    ['MONITORING', t('horseStatusBadge.MONITORING', 'Cần theo dõi'), watch],
+    ['INJURED', t('horseStatusBadge.INJURED', 'Chấn thương'), healthCounts.INJURED ?? 0],
+    ['QUARANTINED', t('horseStatusBadge.QUARANTINED', 'Cách ly'), healthCounts.QUARANTINED ?? 0],
   ];
   const th = 'h-10 px-4 text-[12px] font-medium text-muted border-b border-line';
 
   return (
     <>
       <PageHeader
-        title="Hồ sơ khám bệnh"
+        title={t('healthRecordsPage.title', 'Hồ sơ khám bệnh')}
         sub={sub}
-        search={{ placeholder: 'Tìm theo tên ngựa', value: search, onChange: setSearch }}
+        search={{ placeholder: t('horsesPage.searchPlaceholder', 'Tìm theo tên ngựa'), value: search, onChange: setSearch }}
       />
 
       <KpiStrip items={[
-        { label: 'Tổng đàn', value: horses.length },
-        { label: 'Khỏe mạnh', value: fit, tone: fit > 0 ? 'ok' : undefined },
-        { label: 'Cần theo dõi', value: watch, tone: watch > 0 ? 'warn' : undefined },
-        { label: 'Chấn thương / cách ly', value: sick, tone: sick > 0 ? 'bad' : undefined, lead: sick > 0 },
-        { label: 'Đang khóa tập', value: lockedCount, tone: lockedCount > 0 ? 'bad' : undefined },
+        { label: t('horsesPage.kpiTotal', 'Tổng đàn'), value: horses.length },
+        { label: t('horseStatusBadge.FIT', 'Khỏe mạnh'), value: fit, tone: fit > 0 ? 'ok' : undefined },
+        { label: t('horseStatusBadge.MONITORING', 'Cần theo dõi'), value: watch, tone: watch > 0 ? 'warn' : undefined },
+        { label: t('horsesPage.filterInjured', 'Chấn thương / cách ly'), value: sick, tone: sick > 0 ? 'bad' : undefined, lead: sick > 0 },
+        { label: t('horsesPage.kpiLocked', 'Đang khóa tập'), value: lockedCount, tone: lockedCount > 0 ? 'bad' : undefined },
       ]} />
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -134,25 +135,31 @@ export function HealthRecordsPage() {
       <ErrorText err={err} />
 
       {loading ? (
-        <p className="text-muted">Đang tải dữ liệu…</p>
+        <p className="text-muted">{t('healthRecordsPage.loading', 'Đang tải dữ liệu…')}</p>
       ) : (
         <div className="grid gap-5 items-start xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
           <Card className="min-w-0">
-            <CardHeader title="Tình trạng từng ngựa"><span className="num text-[13px] text-muted">{filteredHorses.length} ngựa</span></CardHeader>
+            <CardHeader title={t('horsesPage.thHealth', 'Tình trạng từng ngựa')}>
+              <span className="num text-[13px] text-muted">{t('horsesPage.countSummary', { count: filteredHorses.length })}</span>
+            </CardHeader>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[600px] border-collapse">
                 <thead>
                   <tr className="text-left">
-                    <th className={`${th} pl-5`}>Ngựa</th>
-                    <th className={th}>Giống</th>
-                    <th className={th}>Sức khỏe</th>
-                    <th className={`${th} ${isVet ? '' : 'pr-5'}`}>Khóa tập</th>
-                    {isVet && <th className={`${th} pr-5`} aria-label="Thao tác" />}
+                    <th className={`${th} pl-5`}>{t('healthRecordsPage.colHorse', 'Ngựa')}</th>
+                    <th className={th}>{t('horsesPage.thBreed', 'Giống')}</th>
+                    <th className={th}>{t('horsesPage.thHealth', 'Sức khỏe')}</th>
+                    <th className={`${th} ${isVet ? '' : 'pr-5'}`}>{t('horsesPage.thLock', 'Khóa tập')}</th>
+                    {isVet && <th className={`${th} pr-5`} aria-label={t('horsesPage.thActions', 'Thao tác')} />}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredHorses.length === 0 ? (
-                    <tr><td colSpan={isVet ? 5 : 4} className="px-5 py-6 text-center text-muted">Không có ngựa nào khớp với bộ lọc.</td></tr>
+                    <tr>
+                      <td colSpan={isVet ? 5 : 4} className="px-5 py-6 text-center text-muted">
+                        {t('healthRecordsPage.emptyFilter', 'Không có ngựa nào khớp với bộ lọc.')}
+                      </td>
+                    </tr>
                   ) : filteredHorses.map((h) => (
                     <tr key={h.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
                       <td className="pl-5 pr-4 py-2.5">
@@ -160,10 +167,18 @@ export function HealthRecordsPage() {
                           <HorseAvatar src={h.photoUrl} name={h.name} size={28} />{h.name}
                         </button>
                       </td>
-                      <td className="px-4 py-2.5">{h.breed ?? <span className="text-muted">Chưa rõ</span>}</td>
+                      <td className="px-4 py-2.5">{h.breed ?? <span className="text-muted">—</span>}</td>
                       <td className="px-4 py-2.5"><HealthBadge status={h.healthStatus} /></td>
-                      <td className={`px-4 py-2.5 ${isVet ? '' : 'pr-5'}`}>{h.locked ? <LockBadge /> : <span className="text-muted">Không</span>}</td>
-                      {isVet && <td className="pl-4 pr-5 py-2.5 text-right"><Btn sm onClick={() => openModalForHorse(h)}><Icon name="plus" className="w-3.5 h-3.5" />Ghi khám</Btn></td>}
+                      <td className={`px-4 py-2.5 ${isVet ? '' : 'pr-5'}`}>
+                        {h.locked ? <LockBadge /> : <span className="text-muted">—</span>}
+                      </td>
+                      {isVet && (
+                        <td className="pl-4 pr-5 py-2.5 text-right">
+                          <Btn sm onClick={() => openModalForHorse(h)}>
+                            <Icon name="plus" className="w-3.5 h-3.5" />{t('healthRecordsPage.newRecord', 'Ghi khám')}
+                          </Btn>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -172,9 +187,11 @@ export function HealthRecordsPage() {
           </Card>
 
           <Card className="min-w-0">
-            <CardHeader title="Lần khám gần đây"><span className="num text-[13px] text-muted">{records.length}</span></CardHeader>
+            <CardHeader title={t('healthRecordsPage.title', 'Lần khám gần đây')}>
+              <span className="num text-[13px] text-muted">{records.length}</span>
+            </CardHeader>
             {records.length === 0 ? (
-              <div className="p-4"><EmptyState>Chưa có hồ sơ khám nào trong hệ thống.</EmptyState></div>
+              <div className="p-4"><EmptyState>{t('healthRecordsPage.empty', 'Chưa có hồ sơ khám nào trong hệ thống.')}</EmptyState></div>
             ) : (
               <ul className="list-none p-0 m-0">
                 {records.slice(0, 20).map((r) => (
@@ -184,8 +201,9 @@ export function HealthRecordsPage() {
                         <span className="font-medium truncate">{r.horse.name}</span>
                         <span className="num text-[12.5px] text-muted flex-none">{formatDate(r.examDate)}</span>
                       </div>
+                      {/* Doctor-entered diagnosis is kept as-is */}
                       <p className="text-[13px] text-muted mt-0.5 line-clamp-2">{r.diagnosis}</p>
-                      <p className="text-[12px] text-muted mt-1">Bác sĩ {r.vet.name}</p>
+                      <p className="text-[12px] text-muted mt-1">{t('healthRecordsPage.colVet', 'Bác sĩ')} {r.vet.name}</p>
                     </button>
                   </li>
                 ))}

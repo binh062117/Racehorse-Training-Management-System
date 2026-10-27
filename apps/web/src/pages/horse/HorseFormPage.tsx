@@ -139,7 +139,7 @@ export function HorseFormPage() {
   return (
     <div className="flex flex-col gap-5 max-w-3xl">
       <PageHeader
-        crumbs={[['Ngựa đua', '/horses'], ...(id && form.name ? [[form.name, `/horses/${id}`] as [string, string]] : [])]}
+        crumbs={[[t('horsesPage.title', 'Ngựa đua'), '/horses'], ...(id && form.name ? [[form.name, `/horses/${id}`] as [string, string]] : [])]}
         title={id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')}
         sub={t('horseFlow.formDescription')}
       />
