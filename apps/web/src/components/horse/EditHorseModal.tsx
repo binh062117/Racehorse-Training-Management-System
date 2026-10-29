@@ -24,6 +24,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
   const [damId, setDamId] = useState('');
   const [fitnessScore, setFitnessScore] = useState<string>('');
   const [saddleNumber, setSaddleNumber] = useState<string>('');
+  const [stallNumber, setStallNumber] = useState<string>('');
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -40,6 +41,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
     setDamId(horse.damId ?? '');
     setFitnessScore(horse.fitnessScore != null ? String(horse.fitnessScore) : '');
     setSaddleNumber(horse.saddleNumber != null ? String(horse.saddleNumber) : '');
+    setStallNumber(horse.stallNumber ?? '');
 
     // Fetch owners
     api
@@ -81,6 +83,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
         damId: damId ? damId : null,
         fitnessScore: fitnessScore !== '' ? Number(fitnessScore) : null,
         saddleNumber: saddleNumber !== '' ? Number(saddleNumber) : null,
+        stallNumber: stallNumber.trim() ? stallNumber.trim() : null,
       };
 
       await api.patch(`/horses/${horse.id}`, payload);
@@ -140,9 +143,14 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
             </Field>
           </div>
 
-          <Field label="Số áo đua (tùy chọn)" hint="Số hiển thị trên yếm số (saddle cloth)">
-            <Input type="number" min={0} max={999} placeholder="vd: 7" value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
-          </Field>
+          <div className="grid grid-cols-2 gap-3.5">
+            <Field label="Số áo đua (tùy chọn)" hint="Số trên yếm số (saddle cloth)">
+              <Input type="number" min={0} max={999} placeholder="vd: 7" value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
+            </Field>
+            <Field label="Ô chuồng trại (Stall)" hint="Khu & số ô chuồng">
+              <Input placeholder="vd: A-01, B-03" value={stallNumber} onChange={(e) => setStallNumber(e.target.value)} maxLength={50} />
+            </Field>
+          </div>
 
           <div className="p-3 rounded-card border border-line bg-subtle">
             <div className="lbl text-navy mb-2">Phả hệ (Pedigree)</div>

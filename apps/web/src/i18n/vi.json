@@ -32,7 +32,8 @@
     "logout": "Đăng xuất",
     "logoutConfirm": "Bạn chắc chắn muốn đăng xuất?",
     "healthSection": "Sức khỏe",
-    "adminSection": "Quản trị"
+    "adminSection": "Quản trị",
+    "stalls": "Sơ đồ chuồng trại"
   },
   "dashboard": {
     "title": "Tổng quan Hệ thống",
@@ -657,5 +658,33 @@
     "healthQuarantined": "Cách ly y tế, cấm hoàn toàn tập luyện",
     "lockTitle": "Khóa tập (Training Lock)",
     "lockDesc": "Bác sĩ thú y đã ban hành lệnh khóa tập. Không thể tạo giáo án hay buổi tập cho đến khi được mở khóa."
+  },
+  "pagination": {
+    "showingRange": "Hiển thị {{start}} - {{end}} trong tổng số {{total}}",
+    "pageOf": "Trang {{page}} / {{totalPages}}",
+    "perPage": "Mỗi trang:",
+    "prev": "Trước",
+    "next": "Sau"
+  },
+  "stallsPage": {
+    "title": "Sơ đồ chuồng trại",
+    "subtitle": "Theo dõi phân bổ vị trí từng ngựa tại các ô chuồng và chuồng còn trống.",
+    "kpiTotalStalls": "Tổng số ô chuồng",
+    "kpiOccupied": "Đang nuôi nhốt",
+    "kpiAvailable": "Ô chuồng trống",
+    "kpiLocked": "Ngựa đang khóa tập",
+    "allSections": "Tất cả các khu",
+    "sectionA": "Khu A — Chuồng đua chính",
+    "sectionB": "Khu B — Phục hồi & huấn luyện",
+    "sectionC": "Khu C — Cách ly & tân binh",
+    "filterOccupied": "Đang có ngựa",
+    "filterVacant": "Ô còn trống",
+    "stallAvailable": "Ô chuồng trống",
+    "availableHint": "Sẵn sàng tiếp nhận ngựa",
+    "assignHorse": "Xếp chuồng",
+    "unassignedTitle": "Ngựa chưa được phân ô chuồng",
+    "unassignedDesc": "Các ngựa trong câu lạc bộ chưa có thông tin vị trí chuồng cụ thể.",
+    "assignModalTitle": "Phân ô chuồng cho ngựa",
+    "stallInputLabel": "Nhập mã ô chuồng"
   }
 }

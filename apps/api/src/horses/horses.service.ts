@@ -149,6 +149,7 @@ export class HorsesService {
         breed: dto.breed?.trim() ?? null,
         birthDate: this.parseBirthDate(dto.birthDate) ?? null,
         saddleNumber: dto.saddleNumber ?? null,
+        stallNumber: dto.stallNumber?.trim() || null,
         ...(dto.status ? { status: dto.status } : {}),
       },
       include: { owner: { select: OWNER_SELECT } },
@@ -228,6 +229,7 @@ export class HorsesService {
         : { disconnect: true };
     if (dto.fitnessScore !== undefined) data.fitnessScore = dto.fitnessScore;
     if (dto.saddleNumber !== undefined) data.saddleNumber = dto.saddleNumber;
+    if (dto.stallNumber !== undefined) data.stallNumber = dto.stallNumber?.trim() || null;
 
     const horse = await this.prisma.horse.update({
       where: { id },
@@ -237,23 +239,39 @@ export class HorsesService {
     return this.toView(horse);
   }
 
-  /** Training Lock (Phase 7) — VET-only, checked by HorseOwnershipGuard on the route. */
-  async lock(id: string, dto: LockHorseDto): Promise<HorseView> {
+  /** Training Lock (Phase 7) — VET/MANAGER, checked by HorseOwnershipGuard on the route. */
+  async lock(id: string, dto: LockHorseDto, currentUser?: AuthUser): Promise<HorseView> {
     const existing = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
       select: { id: true, name: true, ownerId: true, locked: true },
     });
     if (!existing) throw new AppException('NOT_FOUND', 'Horse not found');
 
+    if (dto.locked && (!dto.reason || !dto.reason.trim())) {
+      throw new AppException('VALIDATION_ERROR', 'Vui lòng nhập lý do khóa tập luyện.');
+    }
+
     const horse = await this.prisma.horse.update({
       where: { id },
       data: {
         locked: dto.locked,
-        // Unlocking always clears the reason — no lock-history table in this phase.
         lockReason: dto.locked ? (dto.reason?.trim() ?? null) : null,
       },
       include: { owner: { select: OWNER_SELECT } },
     });
+
+    try {
+      await this.prisma.lockHistory.create({
+        data: {
+          horseId: id,
+          action: dto.locked ? 'LOCK' : 'UNLOCK',
+          reason: dto.reason?.trim() || (dto.locked ? 'Khóa tập luyện' : 'Mở khóa tập luyện'),
+          lockedById: currentUser?.id ?? null,
+        },
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to create LockHistory: ${err}`);
+    }
 
     // Notify (Phase 8) — only when the value actually changed, so repeat
     // calls with the same `locked` don't spam. Shared by the manual VET
@@ -551,6 +569,43 @@ export class HorsesService {
         : null;
     return { id, name, fitnessScore, sire, dam };
   }
+
+  async getLockHistory(horseId: string) {
+    return this.prisma.lockHistory.findMany({
+      where: { horseId },
+      include: {
+        lockedBy: { select: { id: true, name: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
+  async getStallMap() {
+    const horses = await this.prisma.horse.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        stallNumber: true,
+        saddleNumber: true,
+        photoPath: true,
+        status: true,
+        healthStatus: true,
+        locked: true,
+        lockReason: true,
+        fitnessScore: true,
+        breed: true,
+        owner: { select: { id: true, name: true } },
+      },
+      orderBy: [{ stallNumber: 'asc' }, { name: 'asc' }],
+    });
+    return horses.map((h) => ({
+      ...h,
+      photoUrl: h.photoPath ? `${API_PREFIX}/horses/${h.id}/photo` : null,
+    }));
+  }
+
 }
 
 export interface PedigreeNode {

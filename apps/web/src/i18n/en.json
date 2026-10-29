@@ -32,7 +32,8 @@
     "logout": "Log out",
     "logoutConfirm": "Are you sure you want to log out?",
     "healthSection": "Health",
-    "adminSection": "Administration"
+    "adminSection": "Administration",
+    "stalls": "Stable map"
   },
   "dashboard": {
     "title": "System Overview Dashboard",
@@ -657,5 +658,33 @@
     "healthQuarantined": "Medical quarantine, no training activities",
     "lockTitle": "Training lock",
     "lockDesc": "A veterinarian has locked training. No new training plans or sessions can be created until unlocked."
+  },
+  "pagination": {
+    "showingRange": "Showing {{start}} - {{end}} of {{total}}",
+    "pageOf": "Page {{page}} of {{totalPages}}",
+    "perPage": "Per page:",
+    "prev": "Prev",
+    "next": "Next"
+  },
+  "stallsPage": {
+    "title": "Stable & Stall Map",
+    "subtitle": "Track stall distribution, horse locations, and available stalls across barns.",
+    "kpiTotalStalls": "Total stalls",
+    "kpiOccupied": "Occupied",
+    "kpiAvailable": "Available stalls",
+    "kpiLocked": "Horses with locked training",
+    "allSections": "All barns",
+    "sectionA": "Barn A — Main racing barn",
+    "sectionB": "Barn B — Training & recovery",
+    "sectionC": "Barn C — Quarantine & foals",
+    "filterOccupied": "Occupied only",
+    "filterVacant": "Vacant only",
+    "stallAvailable": "Vacant stall",
+    "availableHint": "Ready for horse assignment",
+    "assignHorse": "Assign stall",
+    "unassignedTitle": "Horses without an assigned stall",
+    "unassignedDesc": "Club horses that do not currently have a designated stall location.",
+    "assignModalTitle": "Assign horse to stall",
+    "stallInputLabel": "Enter stall code"
   }
 }

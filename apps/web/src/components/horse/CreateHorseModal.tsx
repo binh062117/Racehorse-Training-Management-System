@@ -19,6 +19,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
   const [ownerId, setOwnerId] = useState('');
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
   const [saddleNumber, setSaddleNumber] = useState('');
+  const [stallNumber, setStallNumber] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [err, setErr] = useState<unknown>(null);
@@ -48,6 +49,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
         ...(breed.trim() ? { breed: breed.trim() } : {}),
         ...(birthDate ? { birthDate: new Date(birthDate).toISOString() } : {}),
         ...(saddleNumber ? { saddleNumber: Number(saddleNumber) } : {}),
+        ...(stallNumber.trim() ? { stallNumber: stallNumber.trim() } : {}),
         status,
       });
 
@@ -64,6 +66,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
       setOwnerId('');
       setStatus('ACTIVE');
       setSaddleNumber('');
+    setStallNumber('');
       setPhoto(null);
       setPreview(null);
       onCreated();

@@ -34,6 +34,7 @@ export interface Horse {
   healthStatus: HealthStatus;
   fitnessScore: number | null;
   saddleNumber: number | null;
+  stallNumber: string | null;
   sireId: string | null;
   damId: string | null;
   locked: boolean;
@@ -223,4 +224,18 @@ export interface OtpRequiredResponse {
 
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
+}
+
+export interface LockHistoryItem {
+  id: string;
+  horseId: string;
+  action: 'LOCK' | 'UNLOCK';
+  reason: string;
+  lockedById: string | null;
+  lockedBy?: {
+    id: string;
+    name: string;
+    role: Role | null;
+  } | null;
+  createdAt: string;
 }

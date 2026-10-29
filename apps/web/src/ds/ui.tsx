@@ -410,3 +410,127 @@ export function Ring({ value, size = 52, stroke = 4, color, track = '#eff0f3', t
     </svg>
   );
 }
+
+/* ---------- pagination ---------- */
+export interface PaginationProps {
+  page: number;
+  totalPages: number;
+  totalItems?: number;
+  pageSize?: number;
+  pageSizeOptions?: number[];
+  onPageChange: (newPage: number) => void;
+  onPageSizeChange?: (newPageSize: number) => void;
+  className?: string;
+}
+
+export function Pagination({
+  page,
+  totalPages,
+  totalItems,
+  pageSize,
+  pageSizeOptions = [12, 24, 48],
+  onPageChange,
+  onPageSizeChange,
+  className = '',
+}: PaginationProps) {
+  const { t } = useTranslation();
+  if (totalPages <= 1 && (!totalItems || totalItems <= (pageSize ?? 20))) {
+    return null;
+  }
+
+  const pages: (number | 'ellipsis')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push('ellipsis');
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('ellipsis');
+    pages.push(totalPages);
+  }
+
+  const startItem = pageSize ? (page - 1) * pageSize + 1 : undefined;
+  const endItem = pageSize && totalItems ? Math.min(page * pageSize, totalItems) : undefined;
+
+  return (
+    <div className={`flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-line text-[13px] ${className}`}>
+      <div className="text-muted">
+        {totalItems != null && startItem != null && endItem != null ? (
+          <span>
+            {t('pagination.showingRange', 'Hiển thị {{start}} - {{end}} trong tổng số {{total}}', {
+              start: startItem,
+              end: endItem,
+              total: totalItems,
+            })}
+          </span>
+        ) : (
+          <span>{t('pagination.pageOf', 'Trang {{page}} / {{totalPages}}', { page, totalPages })}</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5 ml-auto">
+        {onPageSizeChange && pageSize && (
+          <div className="flex items-center gap-1.5 mr-2">
+            <span className="text-muted text-[12px]">{t('pagination.perPage', 'Mỗi trang:')}</span>
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              className="h-8 px-2 rounded-btn border border-line bg-white text-[12px] text-ink focus:outline-none focus:border-info"
+            >
+              {pageSizeOptions.map((sz) => (
+                <option key={sz} value={sz}>
+                  {sz}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          className="h-8 px-2.5 rounded-btn border border-line bg-white text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-subtle transition-colors inline-flex items-center justify-center gap-1"
+          aria-label={t('pagination.prev', 'Trang trước')}
+        >
+          <Icon name="chevLeft" className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{t('pagination.prev', 'Trước')}</span>
+        </button>
+
+        <div className="flex items-center gap-1">
+          {pages.map((p, idx) =>
+            p === 'ellipsis' ? (
+              <span key={`el-${idx}`} className="px-1.5 text-muted">…</span>
+            ) : (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onPageChange(p)}
+                className={`min-w-8 h-8 px-2 rounded-btn text-[12.5px] font-medium transition-colors ${
+                  p === page
+                    ? 'bg-info text-white shadow-xs'
+                    : 'border border-line bg-white text-ink hover:bg-subtle'
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          className="h-8 px-2.5 rounded-btn border border-line bg-white text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-subtle transition-colors inline-flex items-center justify-center gap-1"
+          aria-label={t('pagination.next', 'Trang sau')}
+        >
+          <span className="hidden sm:inline">{t('pagination.next', 'Sau')}</span>
+          <Icon name="chevRight" className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}

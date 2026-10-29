@@ -45,6 +45,11 @@ export class CreateHorseDto {
   @Min(0)
   @Max(999)
   saddleNumber?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  stallNumber?: string;
 }
 
 export class UpdateHorseDto {
@@ -96,6 +101,11 @@ export class UpdateHorseDto {
   @Min(0)
   @Max(999)
   saddleNumber?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  stallNumber?: string | null;
 }
 
 // Phase 7 — Training Lock. Separate route (PATCH :id/lock, VET-only) from
@@ -139,6 +149,6 @@ export class ListHorsesQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(500)
   limit = 20;
 }

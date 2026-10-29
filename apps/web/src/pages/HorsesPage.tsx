@@ -12,7 +12,7 @@ import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
 import { usePageChrome } from '../ds/AppShell';
 import {
   Btn, Card, CareerBadge, Chip, ChipCount, Cloth, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip,
-  LockBadge, PageHeader, Ring, Seg, fitColor, lockReasonText,
+  LockBadge, PageHeader, Pagination, Ring, Seg, fitColor, lockReasonText,
 } from '../ds/ui';
 
 
@@ -146,6 +146,8 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [view, setView] = useState<'cards' | 'table'>('cards');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 200);
@@ -157,7 +159,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const [deletingHorse, setDeletingHorse] = useState<Horse | null>(null);
 
   const queryParams = {
-    limit: 100,
+    limit: 500,
     ...(personal && isOwner && user?.id ? { ownerId: user.id } : {}),
   };
   const cacheKey = `horses:${JSON.stringify(queryParams)}`;
@@ -177,6 +179,9 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 
   const rows = [...bySearch].filter(filters.find((f) => f[0] === filter)![2])
     .sort((a, b) => (b.fitnessScore ?? -1) - (a.fitnessScore ?? -1));
+
+  const totalPages = Math.ceil(rows.length / pageSize) || 1;
+  const paginatedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
   const locked = all.filter((h) => h.locked).length;
   const active = all.filter((h) => h.status === 'ACTIVE').length;
@@ -204,7 +209,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
       <PageHeader
         title={title}
         sub={sub}
-        search={{ placeholder: t('horsesPage.searchPlaceholder', 'Tìm theo tên ngựa'), value: search, onChange: setSearch }}
+        search={{ placeholder: t('horsesPage.searchPlaceholder', 'Tìm theo tên ngựa'), value: search, onChange: (val) => { setSearch(val); setPage(1); } }}
         actions={isManager ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('horsesPage.addHorse', 'Thêm ngựa')}</Btn> : undefined}
       />
 
@@ -217,7 +222,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 
       <div className="flex flex-wrap gap-2 items-center">
         {filters.map(([k, l, fn]) => (
-          <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{l} <ChipCount n={bySearch.filter(fn).length} /></Chip>
+          <Chip key={k} on={filter === k} onClick={() => { setFilter(k); setPage(1); }}>{l} <ChipCount n={bySearch.filter(fn).length} /></Chip>
         ))}
         <div className="ml-auto flex items-center gap-2">
           <BadgeLegendPopover />
@@ -234,8 +239,9 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
           {all.length === 0 ? t('horsesPage.emptyNone', 'Chưa có hồ sơ ngựa nào.') : t('horsesPage.emptyFilter', 'Không có ngựa nào khớp với bộ lọc hiện tại.')}
         </EmptyState>
       ) : view === 'cards' ? (
+        <>
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(290px, 100%), 1fr))' }}>
-          {rows.map((h) => (
+          {paginatedRows.map((h) => (
             <HorseCard
               key={h.id}
               h={h}
@@ -247,6 +253,16 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
             />
           ))}
         </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={rows.length}
+          pageSize={pageSize}
+          pageSizeOptions={[12, 24, 48]}
+          onPageChange={setPage}
+          onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+        />
+        </>
       ) : (
         <Card>
           <div className="overflow-x-auto">
@@ -300,6 +316,17 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="px-5 pb-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={rows.length}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              onPageChange={setPage}
+              onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+            />
           </div>
         </Card>
       )}

@@ -46,10 +46,21 @@ export class HorsesController {
     return this.horses.list(q, user);
   }
 
+  @Get('stalls/map')
+  getStallMap() {
+    return this.horses.getStallMap();
+  }
+
   @Get(':id')
   @UseGuards(HorseOwnershipGuard)
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.horses.get(id);
+  }
+
+  @Get(':id/lock-history')
+  @UseGuards(HorseOwnershipGuard)
+  getLockHistory(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horses.getLockHistory(id);
   }
 
   @Get(':id/pedigree')
@@ -85,10 +96,14 @@ export class HorsesController {
   }
 
   @Patch(':id/lock')
-  @Roles(Role.VET)
+  @Roles(Role.VET, Role.MANAGER)
   @UseGuards(HorseOwnershipGuard)
-  lock(@Param('id', ParseUUIDPipe) id: string, @Body() dto: LockHorseDto) {
-    return this.horses.lock(id, dto);
+  lock(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: LockHorseDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.lock(id, dto, user);
   }
 
   @Post(':id/photo')

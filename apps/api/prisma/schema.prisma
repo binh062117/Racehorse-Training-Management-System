@@ -111,6 +111,7 @@ model User {
   refreshTokens     RefreshToken[]
   authTokens        AuthToken[]
   otpCodes          OtpCode[]
+  lockHistories     LockHistory[]
 
   @@index([status])
 }
@@ -168,7 +169,8 @@ model Horse {
   damId        String?
   dam          Horse?      @relation("HorsePedigree_Dam", fields: [damId], references: [id])
   fitnessScore Int? // 0..100, nullable — chưa đánh giá
-  saddleNumber Int? // Số áo đua (saddle cloth) — hiển thị trên UI, không bắt buộc duy nhất
+  saddleNumber Int?
+  stallNumber  String? // Ô chuồng: ví dụ "A-01", "B-03" // Số áo đua (saddle cloth) — hiển thị trên UI, không bắt buộc duy nhất
   locked       Boolean      @default(false) // Training Lock — VET ban hành
   lockReason   String? // chỉ có ý nghĩa khi locked=true
   healthStatus HealthStatus @default(FIT) // Phase 10 — độc lập với `status` (career)
@@ -183,6 +185,7 @@ model Horse {
   incidents      IncidentReport[]
   vaccinations   Vaccination[]
   feedingRecords FeedingRecord[]
+  lockHistories  LockHistory[]
   siredFoals     Horse[]           @relation("HorsePedigree_Sire")
   damFoals       Horse[]           @relation("HorsePedigree_Dam")
 
@@ -394,4 +397,17 @@ model FeedingRecord {
   createdAt    DateTime @default(now())
 
   @@index([horseId, date])
+}
+
+model LockHistory {
+  id         String   @id @default(uuid())
+  horseId    String
+  horse      Horse    @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  action     String   // "LOCK" | "UNLOCK"
+  reason     String
+  lockedById String?
+  lockedBy   User?    @relation(fields: [lockedById], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([horseId, createdAt])
 }
