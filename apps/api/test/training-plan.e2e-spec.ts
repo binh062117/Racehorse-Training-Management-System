@@ -277,7 +277,10 @@ describe('Training plans & lock (e2e)', () => {
     const res = await api()
       .post(`/api/v1/horses/${horseBId}/sessions`)
       .set(auth('trainer'))
-      .send({ scheduledAt: new Date().toISOString(), type: 'gallop' });
+      .send({
+        scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
+        type: 'gallop',
+      });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(res.body.error.message).toContain('locked');
@@ -287,7 +290,10 @@ describe('Training plans & lock (e2e)', () => {
     const res = await api()
       .post(`/api/v1/horses/${horseAId}/sessions`)
       .set(auth('trainer'))
-      .send({ scheduledAt: new Date().toISOString(), type: 'gallop' });
+      .send({
+        scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
+        type: 'gallop',
+      });
     expect(res.status).toBe(201);
   });
 
@@ -297,8 +303,10 @@ describe('Training plans & lock (e2e)', () => {
       .set(auth('trainer'))
       .send({
         // +2h — Phase 9's EX-01 would otherwise conflict with the session
-        // the previous test just created for horseA at "now".
-        scheduledAt: new Date(Date.now() + 2 * 3_600_000).toISOString(),
+        // the previous test just created for horseA tomorrow.
+        scheduledAt: new Date(
+          Date.now() + 86_400_000 + 2 * 3_600_000,
+        ).toISOString(),
         type: 'sprint',
         planId,
       });
@@ -310,7 +318,11 @@ describe('Training plans & lock (e2e)', () => {
     const res = await api()
       .post(`/api/v1/horses/${horseBId}/sessions`)
       .set(auth('trainer'))
-      .send({ scheduledAt: new Date().toISOString(), type: 'trot', planId });
+      .send({
+        scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
+        type: 'trot',
+        planId,
+      });
     // horseB is still locked at this point — either rule can fire first, but
     // both are VALIDATION_ERROR, so unlock first to isolate the planId check.
     expect(res.status).toBe(400);
@@ -330,7 +342,10 @@ describe('Training plans & lock (e2e)', () => {
     const res = await api()
       .post(`/api/v1/horses/${horseBId}/sessions`)
       .set(auth('trainer'))
-      .send({ scheduledAt: new Date().toISOString(), type: 'trot' });
+      .send({
+        scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
+        type: 'trot',
+      });
     expect(res.status).toBe(201);
   });
 
@@ -338,7 +353,11 @@ describe('Training plans & lock (e2e)', () => {
     const res = await api()
       .post(`/api/v1/horses/${horseBId}/sessions`)
       .set(auth('trainer'))
-      .send({ scheduledAt: new Date().toISOString(), type: 'trot', planId });
+      .send({
+        scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
+        type: 'trot',
+        planId,
+      });
     expect(res.status).toBe(400);
   });
 });

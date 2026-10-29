@@ -66,6 +66,7 @@ enum SessionStatus {
   PLANNED
   DONE
   CANCELLED
+  MISSED
 }
 
 enum IncidentSeverity {
@@ -103,6 +104,7 @@ model User {
 
   horses            Horse[]           @relation("HorseOwner")
   trainerSessions   TrainingSession[] @relation("SessionTrainer")
+  groomSessions     TrainingSession[] @relation("SessionGroom")
   trainingPlans     TrainingPlan[]    @relation("PlanTrainer")
   vetRecords        HealthRecord[]
   reportedIncidents IncidentReport[]  @relation("IncidentReporter")
@@ -199,6 +201,8 @@ model TrainingSession {
   horse        Horse         @relation(fields: [horseId], references: [id])
   trainerId    String
   trainer      User          @relation("SessionTrainer", fields: [trainerId], references: [id])
+  groomId      String?
+  groom        User?         @relation("SessionGroom", fields: [groomId], references: [id], onDelete: SetNull)
   planId       String?
   plan         TrainingPlan? @relation(fields: [planId], references: [id])
   scheduledAt  DateTime
@@ -213,6 +217,8 @@ model TrainingSession {
   @@index([horseId, scheduledAt])
   @@index([status])
   @@index([planId])
+  @@index([groomId])
+  @@index([status, scheduledAt])
 }
 
 model TrainingPlan {

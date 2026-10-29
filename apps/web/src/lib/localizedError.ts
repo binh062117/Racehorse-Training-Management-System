@@ -3,6 +3,11 @@ import i18n from '../i18n';
 import { apiErrorCode, apiErrorMessage } from './api';
 
 const DETAIL_KEYS: Record<string, string> = {
+  'Session time cannot be in the past': 'pastTime',
+  'Session time must fall within the training plan dates': 'planDates',
+  'Assigned groom must be an active GROOM': 'invalidGroom',
+  'MISSED is assigned automatically': 'automaticMissed',
+  'Only a planned session can be edited': 'plannedOnly',
   'planId must reference a training plan for this horse': 'planHorse',
   'resultMetric and resultValue are required to mark a session DONE': 'resultRequired',
   'endDate cannot be before startDate': 'trainingDateOrder',
@@ -37,7 +42,7 @@ export function localizedError(err: unknown): string {
     });
     const locked = /^Horse training is locked(?:: (.*))?$/.exec(message);
     if (locked) return i18n.t('session.locked') + (locked[1] ? ': ' + locked[1] : '');
-    const terminal = /^Session is already (DONE|CANCELLED)$/.exec(message);
+    const terminal = /^Session is already (DONE|CANCELLED|MISSED)$/.exec(message);
     if (terminal) return i18n.t('errorDetails.sessionTerminal', { status: i18n.t(`session.displayStatus.${terminal[1]}`) });
     if (message.includes('đã giải nghệ (RETIRED)')) return i18n.t('errorDetails.retiredHorse');
     if (message.includes('trạng thái cách ly (QUARANTINED)')) return i18n.t('errorDetails.quarantinedHorse');

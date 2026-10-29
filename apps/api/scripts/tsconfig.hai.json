@@ -1,0 +1,6 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "noEmit": true, "resolveJsonModule": true, "rootDir": "../../.." },
+  "include": ["seed-hai-demo.ts", "hai-demo-data.ts", "cleanup-e2e-notifications.ts"],
+  "exclude": ["../node_modules"]
+}

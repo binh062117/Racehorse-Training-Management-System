@@ -1,13 +1,13 @@
+import { Pagination } from '../../components/Pagination';
+import { usePagedResource } from '../../lib/usePagedResource';
 import {
-  useCallback,
-  useEffect,
   useRef,
   useState,
   type FormEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, getFileUrl } from '../../lib/api';
-import type { HealthRecord, Horse, Paginated } from '../../lib/types';
+import type { HealthRecord, Horse } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { CreateHealthRecordModal } from '../../components/health/CreateHealthRecordModal';
@@ -19,30 +19,14 @@ import { Btn, Card, EmptyState, Field, FileInput, HealthBadge, LockBadge, Icon, 
 
 /* ========== Main component ========== */
 export function HealthTab({ horse, onHorseChanged }: { horse: Horse; onHorseChanged: () => Promise<void> }) {
-  const { t, i18n } = useTranslation();
-  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isVet = user?.role === 'VET';
   const canUseAi = user?.role === 'VET' || user?.role === 'MANAGER';
 
-  const [records, setRecords] = useState<HealthRecord[]>([]);
-  const [err, setErr] = useState<unknown>(null);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await api.get<Paginated<HealthRecord>>(`/horses/${horse.id}/health-records`, { params: { limit: 100 } });
-      setRecords(res.data.data);
-      setErr(null);
-    } catch (e) {
-      setErr(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [horse.id]);
-
-  useEffect(() => { void load(); }, [load]);
+  const { data: records, total, loading, error: err, refresh: load } = usePagedResource<HealthRecord>('/horses/' + horse.id + '/health-records', page);
 
   return (
     <div className="flex flex-col gap-5">
@@ -50,13 +34,7 @@ export function HealthTab({ horse, onHorseChanged }: { horse: Horse; onHorseChan
         <div>
           <h2 className="text-[15px] font-semibold">{t('healthRecordsPage.title', 'Hồ sơ khám bệnh')}</h2>
           <p className="text-[13px] text-muted mt-0.5">
-            {loading
-              ? (isVi ? 'Đang tải…' : 'Loading…')
-              : records.length === 0
-                ? (isVi ? 'Chưa có lần khám nào.' : 'No health records yet.')
-                : (isVi
-                    ? `${records.length} lần khám · gần nhất ${formatDate(records[0].examDate)}`
-                    : `${records.length} records · latest ${formatDate(records[0].examDate)}`)}
+            {loading ? t('ui.loading') : t('hai.recordCount', { count: total })}
           </p>
         </div>
         {isVet && (
@@ -87,7 +65,8 @@ export function HealthTab({ horse, onHorseChanged }: { horse: Horse; onHorseChan
         </ul>
       )}
 
-      <CreateHealthRecordModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onCreated={() => { void load(); void onHorseChanged(); }} horseId={horse.id} horseName={horse.name} />
+      <Pagination page={page} total={total} onPage={setPage} disabled={loading} />
+      <CreateHealthRecordModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onCreated={() => { setPage(1); load(); void onHorseChanged(); }} horseId={horse.id} horseName={horse.name} />
     </div>
   );
 }

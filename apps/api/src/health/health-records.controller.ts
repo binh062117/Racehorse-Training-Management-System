@@ -66,6 +66,16 @@ export class HorseHealthRecordsController {
 export class HealthRecordsController {
   constructor(private readonly health: HealthRecordsService) {}
 
+  @Get()
+  list(@Query() q: ListHealthRecordsQueryDto, @CurrentUser() user: AuthUser) {
+    return this.health.listAll(q, user);
+  }
+
+  @Get('horse-summary')
+  summary(@CurrentUser() user: AuthUser) {
+    return this.health.horseSummary(user);
+  }
+
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     return this.health.get(id, user);

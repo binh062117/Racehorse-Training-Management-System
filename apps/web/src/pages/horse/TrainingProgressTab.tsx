@@ -70,6 +70,7 @@ function ProgressContent({ horseId }: { horseId: string }) {
   const done = sessions.filter((s) => s.status === 'DONE').length;
   const cancelled = sessions.filter((s) => s.status === 'CANCELLED').length;
   const planned = sessions.filter((s) => s.status === 'PLANNED').length;
+  const missed = sessions.filter((s) => s.status === 'MISSED').length;
   const decided = done + cancelled;
   const completionRate = decided > 0 ? Math.round((done / decided) * 100) : null;
 
@@ -104,6 +105,7 @@ function ProgressContent({ horseId }: { horseId: string }) {
     <div className="flex flex-col gap-5">
       {total > 0 && (
         <KpiStrip items={[
+          { label: t('session.displayStatus.MISSED'), value: missed, tone: 'warn' },
           {
             label: isVi ? 'Tổng số buổi tập' : 'Total Sessions',
             value: total,

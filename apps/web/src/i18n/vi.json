@@ -1,4 +1,39 @@
 {
+  "hai": {
+    "noGrooms": "Chưa có Groom đang hoạt động. Có thể để trống phân công.",
+    "pagination": "Phân trang",
+    "page": "Trang {{page}} / {{pages}} · {{total}} bản ghi",
+    "previous": "Trước",
+    "next": "Sau",
+    "assignedGroom": "Groom phụ trách",
+    "unassigned": "Chưa phân công",
+    "unavailableGroom": "Groom đã phân công (không còn khả dụng)",
+    "pastTime": "Không thể lên lịch buổi tập trong quá khứ",
+    "planDates": "Thời gian buổi tập phải nằm trong khoảng ngày của giáo án",
+    "invalidGroom": "Groom phụ trách phải có vai trò GROOM và đang hoạt động",
+    "automaticMissed": "Trạng thái Bỏ lỡ được hệ thống tự động cập nhật",
+    "plannedOnly": "Chỉ có thể sửa buổi tập đang lên lịch",
+    "injuryLocations": "Vị trí chấn thương",
+    "noInjuries": "Chưa ghi nhận vị trí chấn thương nào.",
+    "addInjury": "Thêm vị trí chấn thương",
+    "selectRegion": "Chọn vị trí trên sơ đồ ngựa.",
+    "selectedRegion": "Đã chọn: {{region}}",
+    "side": "Bên",
+    "clubProgress": "Tiến độ huấn luyện toàn CLB",
+    "completionRule": "Tỷ lệ hoàn thành = Hoàn thành / (Hoàn thành + Đã hủy). Buổi bỏ lỡ được thống kê riêng. Tuần tính theo giờ Việt Nam.",
+    "totalSessions": "Tổng số buổi tập",
+    "completion": "Tỷ lệ hoàn thành",
+    "noSessions": "Chưa có buổi tập để thống kê.",
+    "weekly": "Buổi tập hoàn thành theo tuần",
+    "weeklyDistribution": "Phân bố trạng thái theo tuần",
+    "week": "Tuần bắt đầu",
+    "typePlaceholder": "Ví dụ: chạy nước rút, chạy sức bền",
+    "rescheduleHint": "Dời giờ và giữ buổi tập ở trạng thái đã lên lịch.",
+    "locked": "Đang khóa tập — chưa thể lên lịch buổi mới.",
+    "recordCount": "{{count}} lần khám",
+    "metric": "Chỉ số",
+    "noResult": "Chưa có kết quả"
+  },
   "app": {
     "title": "Quản lý Huấn luyện Ngựa đua",
     "subtitle": "Huấn luyện & quản lý"
@@ -311,7 +346,8 @@
     "displayStatus": {
       "PLANNED": "Đã lên lịch",
       "DONE": "Hoàn thành",
-      "CANCELLED": "Đã hủy"
+      "CANCELLED": "Đã hủy",
+      "MISSED": "Bỏ lỡ"
     }
   },
   "health": {
@@ -894,7 +930,7 @@
     "emailRegistered": "Email này đã được đăng ký.",
     "planHorse": "Giáo án phải thuộc về ngựa này.",
     "resultRequired": "Cần nhập chỉ số và giá trị kết quả để hoàn thành buổi tập.",
-    "plannedOnly": "Chỉ có thể sửa buổi tập đang được lên lịch.",
+    "plannedOnly": "Chỉ có thể sửa buổi tập đang lên lịch",
     "noFields": "Chưa có nội dung cần cập nhật.",
     "groomFields": "Nhân viên chăm sóc chỉ được cập nhật trạng thái và kết quả.",
     "dateOrder": "Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.",
@@ -909,7 +945,11 @@
     "sessionTerminal": "Buổi tập này đã ở trạng thái {{status}}.",
     "retiredHorse": "Không thể tạo giáo án mới cho ngựa đã giải nghệ.",
     "quarantinedHorse": "Cần chờ bác sĩ thú y gỡ cách ly trước khi tạo giáo án.",
-    "sessionClash": "Ngựa đã có buổi tập \"{{type}}\" lúc {{time}} — hai buổi tập phải cách nhau ít nhất {{minutes}} phút."
+    "sessionClash": "Ngựa đã có buổi tập \"{{type}}\" lúc {{time}} — hai buổi tập phải cách nhau ít nhất {{minutes}} phút.",
+    "pastTime": "Không thể lên lịch buổi tập trong quá khứ",
+    "planDates": "Thời gian buổi tập phải nằm trong khoảng ngày của giáo án",
+    "invalidGroom": "Groom phụ trách phải có vai trò GROOM và đang hoạt động",
+    "automaticMissed": "Trạng thái Bỏ lỡ được hệ thống tự động cập nhật"
   },
   "fileInput": {
     "choose": "Chọn tệp",

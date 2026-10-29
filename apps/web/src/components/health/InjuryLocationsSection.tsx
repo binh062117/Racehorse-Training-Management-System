@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import { ErrorText } from '../ErrorText';
 import { formatDate } from '../../lib/format';
 import { Btn, Field, Icon, Textarea } from '../../ds/ui';
-import { BODY_ZONES, HorseMap } from '../../ds/charts';
+import { BODY_ZONES, HorseMap, bodyZoneLabel } from '../../ds/charts';
 
 interface InjuryLocation {
   id: string;
@@ -21,6 +22,7 @@ interface Props {
 
 /** Collapsible "injury locations" block for a health record or incident (UC-16). */
 export function InjuryLocationsSection({ basePath, isVet }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [items, setItems] = useState<InjuryLocation[]>([]);
@@ -52,30 +54,30 @@ export function InjuryLocationsSection({ basePath, isVet }: Props) {
     <div className="mt-3.5 pt-3.5 border-t border-line-soft">
       <button type="button" onClick={toggle} className="flex items-center gap-1.5 text-[13px] font-semibold text-info">
         <Icon name={open ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />
-        Vị trí chấn thương {items.length > 0 ? `(${items.length})` : ''}
+        {t('hai.injuryLocations')} {items.length > 0 ? `(${items.length})` : ''}
       </button>
 
       {open && (
         <div className="mt-3 flex flex-col gap-3">
-          {loading && <p className="cap" role="status">Đang tải…</p>}
+          {loading && <p className="cap" role="status">{t('ui.loading')}</p>}
           <ErrorText err={err} />
 
           {!loading && loaded && items.length === 0 && !formOpen && (
-            <p className="cap">Chưa ghi nhận vị trí chấn thương nào.</p>
+            <p className="cap">{t('hai.noInjuries')}</p>
           )}
 
           {items.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {items.map((item) => {
-                const zone = BODY_ZONES.find((z) => z.name === item.bodyRegion);
+                const zone = BODY_ZONES.find((z) => z.key === item.bodyRegion || z.name === item.bodyRegion);
                 return (
                   <div key={item.id} className="rounded-btn border border-line p-3">
                     {zone && (
                       <div className="max-w-[220px]">
-                        <HorseMap zone={zone.key} side={item.side === 'R' ? 'R' : 'L'} readOnly label={item.bodyRegion} />
+                        <HorseMap zone={zone.key} side={item.side === 'R' ? 'R' : 'L'} readOnly label={bodyZoneLabel(zone)} />
                       </div>
                     )}
-                    <p className="font-semibold text-[13px] mt-2">{item.bodyRegion}{item.side ? ` · ${item.side === 'R' ? 'Phải' : 'Trái'}` : ''}</p>
+                    <p className="font-semibold text-[13px] mt-2">{zone ? bodyZoneLabel(zone) : item.bodyRegion}{item.side ? ` · ${item.side === 'R' ? t('ui.right') : item.side === 'L' ? t('ui.left') : item.side}` : ''}</p>
                     {item.notes && <p className="cap mt-1">{item.notes}</p>}
                     <p className="cap mt-1">{formatDate(item.createdAt)}</p>
                   </div>
@@ -92,7 +94,7 @@ export function InjuryLocationsSection({ basePath, isVet }: Props) {
                 onCreated={() => { setFormOpen(false); void load(); }}
               />
             ) : (
-              <Btn sm onClick={() => setFormOpen(true)}><Icon name="plus" className="w-3.5 h-3.5" />Thêm vị trí chấn thương</Btn>
+              <Btn sm onClick={() => setFormOpen(true)}><Icon name="plus" className="w-3.5 h-3.5" />{t('hai.addInjury')}</Btn>
             )
           )}
         </div>
@@ -102,6 +104,7 @@ export function InjuryLocationsSection({ basePath, isVet }: Props) {
 }
 
 function CreateInjuryLocationForm({ basePath, onCancel, onCreated }: { basePath: string; onCancel: () => void; onCreated: () => void }) {
+  const { t } = useTranslation();
   const [zoneKey, setZoneKey] = useState<string | null>(null);
   const [side, setSide] = useState<'L' | 'R'>('L');
   const [notes, setNotes] = useState('');
@@ -112,15 +115,16 @@ function CreateInjuryLocationForm({ basePath, onCancel, onCreated }: { basePath:
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setErr(null);
     if (!zone) {
-      setErr(new Error('Vui lòng chọn vị trí trên sơ đồ.'));
+      setErr(new Error(t('hai.selectRegion')));
       return;
     }
     setBusy(true);
     try {
       await api.post(`${basePath}/injury-locations`, {
-        bodyRegion: zone.name,
+        bodyRegion: zone.key,
         side,
         ...(notes.trim() ? { notes: notes.trim() } : {}),
       });
@@ -136,24 +140,24 @@ function CreateInjuryLocationForm({ basePath, onCancel, onCreated }: { basePath:
     <form onSubmit={submit} className="rounded-btn border border-line bg-subtle p-3.5 flex flex-col gap-3">
       <div className="flex gap-3 items-start flex-wrap">
         <div className="w-full max-w-[280px]">
-          <HorseMap zone={zoneKey} side={side} onZone={setZoneKey} label={zone?.name} />
+          <HorseMap zone={zoneKey} side={side} onZone={busy ? undefined : setZoneKey} readOnly={busy} label={zone ? bodyZoneLabel(zone) : undefined} />
         </div>
         <div className="flex flex-col gap-2">
-          <span className="lbl">Bên</span>
+          <span className="lbl">{t('hai.side')}</span>
           <div className="flex gap-1.5">
-            <Btn sm v={side === 'L' ? 'p' : 's'} type="button" onClick={() => setSide('L')}>Trái</Btn>
-            <Btn sm v={side === 'R' ? 'p' : 's'} type="button" onClick={() => setSide('R')}>Phải</Btn>
+            <Btn sm disabled={busy} aria-pressed={side === 'L'} v={side === 'L' ? 'p' : 's'} type="button" onClick={() => setSide('L')}>{t('ui.left')}</Btn>
+            <Btn sm disabled={busy} aria-pressed={side === 'R'} v={side === 'R' ? 'p' : 's'} type="button" onClick={() => setSide('R')}>{t('ui.right')}</Btn>
           </div>
-          {zone && <p className="cap mt-1">Đã chọn: {zone.name}</p>}
+          <p className="cap mt-1" aria-live="polite">{zone ? t('hai.selectedRegion', { region: bodyZoneLabel(zone) }) : t('hai.selectRegion')}</p>
         </div>
       </div>
-      <Field label="Ghi chú (tùy chọn)">
+      <Field label={t('session.notes')}>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={2000} />
       </Field>
       <ErrorText err={err} />
       <div className="flex gap-2">
-        <Btn v="p" sm type="submit" disabled={busy || !zone}>Lưu vị trí</Btn>
-        <Btn sm onClick={onCancel} disabled={busy}>Hủy</Btn>
+        <Btn v="p" sm type="submit" disabled={busy || !zone}>{t('common.save')}</Btn>
+        <Btn sm onClick={onCancel} disabled={busy}>{t('common.cancel')}</Btn>
       </div>
     </form>
   );

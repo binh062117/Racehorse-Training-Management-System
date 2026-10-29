@@ -1,4 +1,39 @@
 {
+  "hai": {
+    "noGrooms": "No active grooms available. Assignment can remain empty.",
+    "pagination": "Pagination",
+    "page": "Page {{page}} of {{pages}} · {{total}} records",
+    "previous": "Previous",
+    "next": "Next",
+    "assignedGroom": "Assigned groom",
+    "unassigned": "Unassigned",
+    "unavailableGroom": "Previously assigned groom (unavailable)",
+    "pastTime": "Session time cannot be in the past",
+    "planDates": "Session time must fall within the training plan dates",
+    "invalidGroom": "Assigned groom must be an active GROOM",
+    "automaticMissed": "MISSED is assigned automatically",
+    "plannedOnly": "Only a planned session can be edited",
+    "injuryLocations": "Injury locations",
+    "noInjuries": "No injury locations recorded.",
+    "addInjury": "Add injury location",
+    "selectRegion": "Select a location on the horse diagram.",
+    "selectedRegion": "Selected: {{region}}",
+    "side": "Side",
+    "clubProgress": "Club training progress",
+    "completionRule": "Completion = Done / (Done + Cancelled). Missed sessions are counted separately. Weeks use Vietnam time.",
+    "totalSessions": "Total sessions",
+    "completion": "Completion",
+    "noSessions": "No training sessions to display.",
+    "weekly": "Completed sessions by week",
+    "weeklyDistribution": "Weekly status distribution",
+    "week": "Week beginning",
+    "typePlaceholder": "For example: sprint, endurance",
+    "rescheduleHint": "Reschedule while keeping the session planned.",
+    "locked": "Training is locked; new sessions cannot be scheduled.",
+    "recordCount": "{{count}} examinations",
+    "metric": "Metric",
+    "noResult": "No result"
+  },
   "app": {
     "title": "Racehorse Training & Management",
     "subtitle": "Training & Management"
@@ -311,7 +346,8 @@
     "displayStatus": {
       "PLANNED": "Scheduled",
       "DONE": "Completed",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "MISSED": "Missed"
     }
   },
   "health": {
@@ -909,7 +945,11 @@
     "sessionTerminal": "This session is already {{status}}.",
     "retiredHorse": "New training plans cannot be created for a retired horse.",
     "quarantinedHorse": "Wait for veterinary clearance before creating a plan for a quarantined horse.",
-    "sessionClash": "This horse already has a \"{{type}}\" session at {{time}} — sessions must be at least {{minutes}} minutes apart."
+    "sessionClash": "This horse already has a \"{{type}}\" session at {{time}} — sessions must be at least {{minutes}} minutes apart.",
+    "pastTime": "Session time cannot be in the past",
+    "planDates": "Session time must fall within the training plan dates",
+    "invalidGroom": "Assigned groom must be an active GROOM",
+    "automaticMissed": "MISSED is assigned automatically"
   },
   "fileInput": {
     "choose": "Choose file",

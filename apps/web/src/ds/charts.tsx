@@ -1,7 +1,9 @@
+import injuryRegions from '../../../../shared/injury-regions.json';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import { useState } from 'react';
 import { Tip } from './ui';
+import './hai.css';
 
 const FONT = 'Inter, sans-serif';
 
@@ -13,16 +15,15 @@ export interface BodyZone {
 }
 
 // Body-map zones on the 420×270 horse silhouette (near side, facing left).
-// bodyRegion/side on InjuryLocation are free-text — these keys are the
-// Vietnamese labels we standardize on when writing new injury records.
-export const BODY_ZONES: BodyZone[] = (
-  [
-    ['head', 'Đầu', 70, 82], ['neck', 'Cổ', 120, 90], ['sh', 'Vai', 150, 124], ['back', 'Lưng', 222, 104],
-    ['hip', 'Hông / mông', 300, 120], ['belly', 'Bụng / ngực', 205, 152], ['fu', 'Cẳng trước', 134, 178],
-    ['ft', 'Gân chân trước', 136, 212], ['fh', 'Móng trước', 132, 243], ['hock', 'Khớp cổ chân sau', 304, 196],
-    ['ht', 'Gân chân sau', 298, 222], ['hh', 'Móng sau', 295, 243],
-  ] as [string, string, number, number][]
-).map(([key, name, x, y]) => ({ key, name, x, y }));
+// New records store zone.key. zone.name is retained for matching legacy records.
+export const BODY_ZONES: BodyZone[] = injuryRegions;
+
+export function bodyZoneLabel(z: BodyZone): string {
+  const zoneKeys: Record<string, string> = { head: 'bodyHead', neck: 'bodyNeck', sh: 'bodyShoulder', back: 'bodyBack', hip: 'bodyHip', belly: 'bodyBelly', fu: 'bodyForeleg', ft: 'bodyFrontTendon', fh: 'bodyFrontHoof', hock: 'bodyHock', ht: 'bodyHindTendon', hh: 'bodyHindHoof' };
+  // Preserve canonical names used by injury data; translate only their display.
+  return BODY_ZONES.some((base) => base.key === z.key && base.name === z.name)
+    ? i18n.t(`ui.${zoneKeys[z.key]}`) : z.name;
+}
 
 /** Line chart with crosshair + tooltip on hover. Single series → no legend needed. */
 export function LineChart({
@@ -96,13 +97,9 @@ export function HorseMap({
 }) {
   useTranslation();
   const zn = zones.find((z) => z.key === zone);
-  const zoneKeys: Record<string, string> = { head: 'bodyHead', neck: 'bodyNeck', sh: 'bodyShoulder', back: 'bodyBack', hip: 'bodyHip', belly: 'bodyBelly', fu: 'bodyForeleg', ft: 'bodyFrontTendon', fh: 'bodyFrontHoof', hock: 'bodyHock', ht: 'bodyHindTendon', hh: 'bodyHindHoof' };
-  // Preserve canonical names used by injury data; translate only their display.
-  const zoneName = (z: BodyZone) => BODY_ZONES.some((base) => base.key === z.key && base.name === z.name)
-    ? i18n.t(`ui.${zoneKeys[z.key]}`) : z.name;
   return (
-    <svg viewBox="0 0 420 270" className="w-full h-auto block bg-[#fbfaf7] rounded-card" role="img"
-      aria-label={i18n.t('ui.horseMap', { side: i18n.t(side === 'L' ? 'ui.left' : 'ui.right'), location: zn ? i18n.t('ui.location') + ' ' + zoneName(zn) : '' })}>
+    <svg viewBox="0 0 420 270" className="hai-body-map w-full h-auto block rounded-card" role={readOnly ? 'img' : 'group'}
+      aria-label={i18n.t('ui.horseMap', { side: i18n.t(side === 'L' ? 'ui.left' : 'ui.right'), location: zn ? i18n.t('ui.location') + ' ' + bodyZoneLabel(zn) : '' })}>
       <g transform={side === 'R' ? 'translate(420 0) scale(-1 1)' : undefined}>
         <path d={HORSE_FAR} fill="#d9dde3" />
         <path d={HORSE_TAIL} fill="#9aa5b3" />
@@ -112,17 +109,20 @@ export function HorseMap({
           const on = z.key === zone;
           if (readOnly && !on) return null;
           return (
-            <g key={z.key} onClick={readOnly ? undefined : () => onZone?.(z.key)} style={{ cursor: readOnly ? 'default' : 'pointer' }}>
+            <g key={z.key} role={readOnly ? undefined : 'button'} tabIndex={readOnly ? undefined : 0}
+              aria-label={bodyZoneLabel(z)} aria-pressed={readOnly ? undefined : on}
+              onKeyDown={readOnly ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onZone?.(z.key); } }}
+              onClick={readOnly ? undefined : () => onZone?.(z.key)} style={{ cursor: readOnly ? 'default' : 'pointer' }}>
               <circle cx={z.x} cy={z.y} r="16" fill="transparent" />
-              {on && <circle cx={z.x} cy={z.y} r="9" fill="none" stroke="#8a2020" strokeWidth="2"><animate attributeName="r" from="9" to="22" dur="1.6s" repeatCount="indefinite" /><animate attributeName="opacity" from=".6" to="0" dur="1.6s" repeatCount="indefinite" /></circle>}
-              <circle cx={z.x} cy={z.y} r={on ? 9 : 5} fill={on ? '#8a2020' : '#fff'} stroke={on ? '#fff' : '#8a2020'} strokeWidth={on ? 2.5 : 2} opacity={on ? 1 : 0.75}>
-                <title>{zoneName(z)}</title>
+              {on && <circle cx={z.x} cy={z.y} r="9" fill="none" stroke="var(--hai-action)" strokeWidth="2"><animate attributeName="r" from="9" to="22" dur="1.6s" repeatCount="indefinite" /><animate attributeName="opacity" from=".6" to="0" dur="1.6s" repeatCount="indefinite" /></circle>}
+              <circle cx={z.x} cy={z.y} r={on ? 9 : 5} fill={on ? 'var(--hai-action)' : 'var(--hai-card)'} stroke={on ? 'var(--hai-card)' : 'var(--hai-action)'} strokeWidth={on ? 2.5 : 2} opacity={on ? 1 : 0.75}>
+                <title>{bodyZoneLabel(z)}</title>
               </circle>
             </g>
           );
         })}
       </g>
-      {label && zn && <text x={side === 'R' ? 420 - zn.x - 24 : zn.x + 24} y={zn.y + 14} textAnchor={side === 'R' ? 'end' : 'start'} fontFamily={FONT} fontSize="15" fontWeight="700" fill="#8a2020">{label}</text>}
+      {label && zn && <text pointerEvents="none" x={side === 'R' ? 420 - zn.x - 24 : zn.x + 24} y={zn.y + 14} textAnchor={side === 'R' ? 'end' : 'start'} fontFamily={FONT} fontSize="15" fontWeight="700" fill="var(--hai-action)">{label}</text>}
     </svg>
   );
 }

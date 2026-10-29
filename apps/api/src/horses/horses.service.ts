@@ -175,7 +175,7 @@ export class HorsesService {
       this.prisma.horse.findMany({
         where,
         include: { owner: { select: OWNER_SELECT } },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),

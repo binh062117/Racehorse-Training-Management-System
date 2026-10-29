@@ -92,14 +92,14 @@ describe('Training sessions (e2e)', () => {
 
   it('rejects a session without type (400)', async () => {
     const res = await createSession('trainer', {
-      scheduledAt: new Date().toISOString(),
+      scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
     });
     expect(res.status).toBe(400);
   });
 
   it('GROOM cannot create a session (403)', async () => {
     const res = await createSession('groom', {
-      scheduledAt: new Date().toISOString(),
+      scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
       type: 'x',
     });
     expect(res.status).toBe(403);
@@ -107,7 +107,7 @@ describe('Training sessions (e2e)', () => {
 
   it('OWNER cannot create a session (403)', async () => {
     const res = await createSession('owner1', {
-      scheduledAt: new Date().toISOString(),
+      scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
       type: 'x',
     });
     expect(res.status).toBe(403);
@@ -117,7 +117,10 @@ describe('Training sessions (e2e)', () => {
     const res = await api()
       .post('/api/v1/horses/00000000-0000-0000-0000-000000000000/sessions')
       .set(auth('trainer'))
-      .send({ scheduledAt: new Date().toISOString(), type: 'x' });
+      .send({
+        scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
+        type: 'x',
+      });
     expect(res.status).toBe(404);
   });
 
@@ -185,7 +188,7 @@ describe('Training sessions (e2e)', () => {
 
   it('GROOM cannot edit non-result fields (403)', async () => {
     const s = await createSession('trainer', {
-      scheduledAt: new Date().toISOString(),
+      scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
       type: 'walk',
     });
     sessionIds.push(s.body.id);
@@ -209,7 +212,9 @@ describe('Training sessions (e2e)', () => {
       // +2h — Phase 9's EX-01 rejects a 2nd PLANNED session within 60' of
       // another for the same horse; the 'walk' session above is still
       // PLANNED at this point.
-      scheduledAt: new Date(Date.now() + 2 * 3_600_000).toISOString(),
+      scheduledAt: new Date(
+        Date.now() + 86_400_000 + 2 * 3_600_000,
+      ).toISOString(),
       type: 'rest-check',
     });
     sessionIds.push(s.body.id);

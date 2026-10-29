@@ -27,6 +27,25 @@ import {
 
 @ApiTags('training')
 @ApiBearerAuth()
+@Controller('training')
+export class TrainingOverviewController {
+  constructor(private readonly training: TrainingService) {}
+
+  @Get('progress/overview')
+  @Roles(Role.MANAGER, Role.TRAINER)
+  overview(@CurrentUser() user: AuthUser) {
+    return this.training.overview(user);
+  }
+
+  @Get('grooms')
+  @Roles(Role.TRAINER)
+  grooms(@Query() q: ListTrainingPlansQueryDto) {
+    return this.training.listGrooms(q);
+  }
+}
+
+@ApiTags('training')
+@ApiBearerAuth()
 @Controller('horses/:id/sessions')
 @UseGuards(HorseOwnershipGuard)
 export class HorseSessionsController {

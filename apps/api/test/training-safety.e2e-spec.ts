@@ -88,7 +88,9 @@ describe('Training safety rules (e2e)', () => {
     await app.close();
   });
 
-  const baseTime = new Date('2026-11-01T08:00:00.000Z');
+  // Fixed time of day, relative future date: safe after the no-past rule.
+  const baseTime = new Date(Date.now() + 7 * 86_400_000);
+  baseTime.setUTCHours(8, 0, 0, 0);
 
   const createSession = (horseId: string, isoTime: string, type = 'gallop') =>
     api()

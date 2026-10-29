@@ -144,7 +144,7 @@ export class HealthRecordsService {
       this.prisma.healthRecord.findMany({
         where,
         include: RECORD_INCLUDE,
-        orderBy: { examDate: 'desc' },
+        orderBy: [{ examDate: 'desc' }, { id: 'desc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),
@@ -153,6 +153,66 @@ export class HealthRecordsService {
     return {
       data: data.map((r) => this.toView(r)),
       meta: { page: q.page, limit: q.limit, total },
+    };
+  }
+
+  async listAll(
+    q: ListHealthRecordsQueryDto,
+    user: AuthUser,
+  ): Promise<Paginated<HealthRecordView>> {
+    const where: Prisma.HealthRecordWhereInput = {
+      horse: {
+        deletedAt: null,
+        ...(user.role === Role.OWNER ? { ownerId: user.id } : {}),
+        ...(q.healthStatus ? { healthStatus: q.healthStatus } : {}),
+        ...(q.q ? { name: { contains: q.q.trim(), mode: 'insensitive' } } : {}),
+      },
+      ...(q.from || q.to
+        ? {
+            examDate: {
+              ...(q.from ? { gte: new Date(q.from) } : {}),
+              ...(q.to ? { lte: new Date(q.to) } : {}),
+            },
+          }
+        : {}),
+    };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.healthRecord.findMany({
+        where,
+        include: RECORD_INCLUDE,
+        orderBy: [{ examDate: 'desc' }, { id: 'desc' }],
+        skip: (q.page - 1) * q.limit,
+        take: q.limit,
+      }),
+      this.prisma.healthRecord.count({ where }),
+    ]);
+    return {
+      data: data.map((r) => this.toView(r)),
+      meta: { page: q.page, limit: q.limit, total },
+    };
+  }
+
+  async horseSummary(user: AuthUser) {
+    const where = {
+      deletedAt: null,
+      ...(user.role === Role.OWNER ? { ownerId: user.id } : {}),
+    };
+    const groupsQuery = this.prisma.horse.groupBy({
+      by: ['healthStatus'],
+      orderBy: { healthStatus: 'asc' },
+      where,
+      _count: { _all: true },
+    });
+    const [groups, locked] = await this.prisma.$transaction([
+      groupsQuery,
+      this.prisma.horse.count({ where: { ...where, locked: true } }),
+    ]);
+    const counts = { FIT: 0, MONITORING: 0, INJURED: 0, QUARANTINED: 0 };
+    for (const group of groups) counts[group.healthStatus] = group._count._all;
+    return {
+      counts,
+      locked,
+      total: Object.values(counts).reduce((a, b) => a + b, 0),
     };
   }
 

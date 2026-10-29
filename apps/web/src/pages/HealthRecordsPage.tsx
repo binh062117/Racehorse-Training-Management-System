@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import i18n from '../i18n';
-import { useCallback, useEffect, useState } from 'react';
+import { Pagination } from '../components/Pagination';
+import { usePagedResource } from '../lib/usePagedResource';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import type { HealthRecord, HealthStatus, Horse, Paginated } from '../lib/types';
+import type { HealthRecord, HealthStatus, Horse } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { CreateHealthRecordModal } from '../components/health/CreateHealthRecordModal';
@@ -17,89 +18,35 @@ export function HealthRecordsPage() {
   const navigate = useNavigate();
   const isVet = user?.role === 'VET';
 
-  const [horses, setHorses] = useState<Horse[]>([]);
-  const [records, setRecords] = useState<HealthRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [horsesLoading, setHorsesLoading] = useState(true);
-  const [err, setErr] = useState<unknown>(null);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedHorseId, setSelectedHorseId] = useState('');
   const [selectedHorseName, setSelectedHorseName] = useState('');
-
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<HealthStatus | 'ALL'>('ALL');
-
-  usePageChrome({ crumbs: [t('nav.healthSection', 'Sức khỏe'), t('healthRecordsPage.title', 'Hồ sơ khám bệnh')] });
-
-  const loadHorses = useCallback(async () => {
-    setHorsesLoading(true);
-    try {
-      const res = await api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } });
-      setHorses(res.data.data ?? []);
-      setErr(null);
-    } catch (e) {
-      setErr(e);
-    } finally {
-      setHorsesLoading(false);
-    }
-  }, []);
-
-  const loadRecords = useCallback(async (horseList: Horse[]) => {
-    try {
-      const allRecords: HealthRecord[] = [];
-      const promises = horseList.slice(0, 50).map(async (h) => {
-        try {
-          const res = await api.get<Paginated<HealthRecord>>(`/horses/${h.id}/health-records`, { params: { limit: 5 } });
-          return res.data.data;
-        } catch {
-          return [];
-        }
-      });
-      const results = await Promise.all(promises);
-      for (const r of results) allRecords.push(...r);
-      allRecords.sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime());
-      setRecords(allRecords);
-      setErr(null);
-    } catch (e) {
-      setErr(e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void loadHorses(); }, [loadHorses]);
+  const [horsePage, setHorsePage] = useState(1);
+  const [recordPage, setRecordPage] = useState(1);
+  const params = { ...(search ? { q: search } : {}), ...(statusFilter === 'ALL' ? {} : { healthStatus: statusFilter }) };
+  const horseResult = usePagedResource<Horse>('/horses', horsePage, params);
+  const recordResult = usePagedResource<HealthRecord>('/health-records', recordPage, params);
+  const horses = horseResult.data, records = recordResult.data;
+  const [summary, setSummary] = useState<{ counts: Record<HealthStatus, number>; locked: number; total: number } | null>(null);
+  const [summaryErr, setSummaryErr] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    if (horses.length > 0) void loadRecords(horses);
-    else setLoading(false);
-  }, [horses, loadRecords]);
-
-  const healthCounts = horses.reduce((acc, h) => {
-    acc[h.healthStatus] = (acc[h.healthStatus] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const lockedCount = horses.filter((h) => h.locked).length;
-  const fit = healthCounts.FIT ?? 0;
-  const watch = healthCounts.MONITORING ?? 0;
-  const sick = (healthCounts.INJURED ?? 0) + (healthCounts.QUARANTINED ?? 0);
-
-  const [healthResult, setHealthResult] = useState<{ status: HealthStatus; source: Horse[]; rows: Horse[]; err: unknown } | null>(null);
-  useEffect(() => {
-    if (statusFilter === 'ALL') return;
-    let active = true;
-    api.get<Paginated<Horse>>('/horses', { params: { limit: 100, healthStatus: statusFilter } })
-      .then((r) => { if (active) setHealthResult({ status: statusFilter, source: horses, rows: r.data.data, err: null }); })
-      .catch((err: unknown) => { if (active) setHealthResult({ status: statusFilter, source: horses, rows: [], err }); });
-    return () => { active = false; };
-  }, [statusFilter, horses]);
-  const healthCurrent = healthResult?.status === statusFilter && healthResult?.source === horses;
-  const healthLoading = statusFilter !== 'ALL' && !healthCurrent;
-  const healthHorses = statusFilter === 'ALL' ? horses : healthCurrent ? healthResult!.rows : [];
-  const filteredHorses = healthHorses.filter((h) => {
-    if (statusFilter !== 'ALL' && h.healthStatus !== statusFilter) return false;
-    if (search && !h.name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+    const controller = new AbortController();
+    api.get<NonNullable<typeof summary>>('/health-records/horse-summary', { signal: controller.signal })
+      .then((r) => { if (!controller.signal.aborted) { setSummary(r.data); setSummaryErr(null); } })
+      .catch((e: unknown) => { if (!controller.signal.aborted) setSummaryErr(e); });
+    return () => controller.abort();
+  }, [attempt]);
+  const loadHorses = () => { horseResult.refresh(); recordResult.refresh(); setAttempt((n) => n + 1); };
+  const loading = horseResult.loading || recordResult.loading || (!summary && !summaryErr);
+  const err = horseResult.error || recordResult.error || summaryErr;
+  const filteredHorses = horses;
+  const healthCounts = summary?.counts ?? { FIT: 0, MONITORING: 0, INJURED: 0, QUARANTINED: 0 };
+  const lockedCount = summary?.locked ?? 0, horseTotal = summary?.total ?? 0;
+  const fit = healthCounts.FIT, watch = healthCounts.MONITORING, sick = healthCounts.INJURED + healthCounts.QUARANTINED;
+  usePageChrome({ crumbs: [t('nav.healthSection'), t('healthRecordsPage.title')] });
 
   const openModalForHorse = (horse: Horse) => {
     setSelectedHorseId(horse.id);
@@ -112,14 +59,14 @@ export function HealthRecordsPage() {
   const lockedNote = lockedCount ? ` · ${t('horsesPage.countLocked', { count: lockedCount })}` : '';
   const sub = loading
     ? t('healthRecordsPage.loading', 'Đang tải dữ liệu sức khỏe…')
-    : horses.length === 0
+    : horseTotal === 0
       ? t('horsesPage.emptyNone', 'Chưa có ngựa nào trong hệ thống.')
       : sick + watch === 0
-        ? `${t('horsesPage.countSummary', { count: horses.length })} (${t('horseStatusBadge.FIT', 'Khỏe mạnh')})${lockedNote}.`
-        : `${sick + watch} / ${horses.length} ${t('horseStatusBadge.MONITORING', 'cần theo dõi')}${lockedNote}.`;
+        ? `${t('horsesPage.countSummary', { count: horseTotal })} (${t('horseStatusBadge.FIT', 'Khỏe mạnh')})${lockedNote}.`
+        : `${sick + watch} / ${horseTotal} ${t('horseStatusBadge.MONITORING', 'cần theo dõi')}${lockedNote}.`;
 
   const filters: [HealthStatus | 'ALL', string, number][] = [
-    ['ALL', t('healthRecordsPage.all', 'Tất cả'), horses.length],
+    ['ALL', t('healthRecordsPage.all', 'Tất cả'), horseTotal],
     ['FIT', t('horseStatusBadge.FIT', 'Khỏe mạnh'), fit],
     ['MONITORING', t('horseStatusBadge.MONITORING', 'Cần theo dõi'), watch],
     ['INJURED', t('horseStatusBadge.INJURED', 'Chấn thương'), healthCounts.INJURED ?? 0],
@@ -132,11 +79,11 @@ export function HealthRecordsPage() {
       <PageHeader
         title={t('healthRecordsPage.title', 'Hồ sơ khám bệnh')}
         sub={sub}
-        search={{ placeholder: t('horsesPage.searchPlaceholder', 'Tìm theo tên ngựa'), value: search, onChange: setSearch }}
+        search={{ placeholder: t('horsesPage.searchPlaceholder', 'Tìm theo tên ngựa'), value: search, onChange: (value) => { setSearch(value); setHorsePage(1); setRecordPage(1); } }}
       />
 
       <KpiStrip items={[
-        { label: t('horsesPage.kpiTotal', 'Tổng đàn'), value: horses.length },
+        { label: t('horsesPage.kpiTotal', 'Tổng đàn'), value: horseTotal },
         { label: t('horseStatusBadge.FIT', 'Khỏe mạnh'), value: fit, tone: fit > 0 ? 'ok' : undefined },
         { label: t('horseStatusBadge.MONITORING', 'Cần theo dõi'), value: watch, tone: watch > 0 ? 'warn' : undefined },
         { label: t('horsesPage.filterInjured', 'Chấn thương / cách ly'), value: sick, tone: sick > 0 ? 'bad' : undefined, lead: sick > 0 },
@@ -145,17 +92,16 @@ export function HealthRecordsPage() {
 
       <div className="flex flex-wrap gap-2 items-center">
         {filters.map(([k, label, n]) => (
-          <Chip key={k} on={statusFilter === k} onClick={() => setStatusFilter(k)}>{label} <ChipCount n={n} /></Chip>
+          <Chip key={k} on={statusFilter === k} onClick={() => { setStatusFilter(k); setHorsePage(1); setRecordPage(1); }}>{label} <ChipCount n={n} /></Chip>
         ))}
       </div>
 
-      <p className="cap">{i18n.t(statusFilter === 'ALL' ? 'healthView.subset' : 'healthView.filterLimit')}</p>
-      <ErrorText err={err || (healthCurrent ? healthResult?.err : null)} />
-      {!!(err || (healthCurrent && healthResult?.err)) && <Btn onClick={() => void loadHorses()}>{i18n.t('healthView.retry')}</Btn>}
+      <ErrorText err={err} />
+      {!!err && <Btn onClick={loadHorses}>{t('healthView.retry')}</Btn>}
 
-      {loading || horsesLoading || healthLoading ? (
-        <p className="text-muted">{t('healthRecordsPage.loading', 'Đang tải dữ liệu…')}</p>
-      ) : (
+      {loading ? (
+        <p className="text-muted">{t('healthRecordsPage.loading')}</p>
+      ) : err ? null : (
         <div className="grid gap-5 items-start xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
           <Card className="min-w-0">
             <CardHeader title={t('horsesPage.thHealth', 'Tình trạng từng ngựa')}>
@@ -203,17 +149,18 @@ export function HealthRecordsPage() {
                 </tbody>
               </table>
             </div>
+            <Pagination page={horsePage} total={horseResult.total} onPage={setHorsePage} />
           </Card>
 
           <Card className="min-w-0">
             <CardHeader title={t('healthRecordsPage.title', 'Lần khám gần đây')}>
-              <span className="num text-[13px] text-muted">{records.length}</span>
+              <span className="num text-[13px] text-muted">{recordResult.total}</span>
             </CardHeader>
             {records.length === 0 ? (
               <div className="p-4"><EmptyState>{t('healthRecordsPage.empty', 'Chưa có hồ sơ khám nào trong hệ thống.')}</EmptyState></div>
             ) : (
               <ul className="list-none p-0 m-0">
-                {records.slice(0, 20).map((r) => (
+                {records.map((r) => (
                   <li key={r.id} className="border-b border-line-soft last:border-0">
                     <button type="button" onClick={() => navigate(`/horses/${r.horseId}?tab=health`)} className="w-full text-left px-5 py-3 hover:bg-subtle">
                       <div className="flex items-baseline justify-between gap-3">
@@ -228,6 +175,7 @@ export function HealthRecordsPage() {
                 ))}
               </ul>
             )}
+            <Pagination page={recordPage} total={recordResult.total} onPage={setRecordPage} />
           </Card>
         </div>
       )}

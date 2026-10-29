@@ -18,6 +18,7 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { to: '/training/progress', labelKey: 'hai.clubProgress', defaultLabel: 'Club training progress', icon: 'plans', roles: ['MANAGER', 'TRAINER'] },
   { to: '/dashboard', labelKey: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: 'dashboard' },
   { to: '/horses', labelKey: 'nav.horses', defaultLabel: 'Ngựa đua', icon: 'horse' },
   { to: '/plans', labelKey: 'nav.plansTrainer', defaultLabel: 'Giáo án huấn luyện', icon: 'plans' },

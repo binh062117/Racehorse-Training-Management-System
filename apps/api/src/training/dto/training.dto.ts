@@ -15,6 +15,10 @@ import {
 import { SessionStatus } from '@prisma/client';
 
 export class CreateSessionDto {
+  @IsOptional()
+  @IsUUID()
+  groomId?: string | null;
+
   @IsISO8601()
   scheduledAt!: string;
 
@@ -35,6 +39,14 @@ export class CreateSessionDto {
 }
 
 export class UpdateSessionDto {
+  @IsOptional()
+  @IsUUID()
+  groomId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  planId?: string | null;
+
   @IsOptional()
   @IsISO8601()
   scheduledAt?: string;
