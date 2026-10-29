@@ -12,11 +12,15 @@ interface CreateHorseModalProps {
 
 export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModalProps) {
   const [owners, setOwners] = useState<User[]>([]);
+  const [trainers, setTrainers] = useState<User[]>([]);
+  const [grooms, setGrooms] = useState<User[]>([]);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<HorseGender | ''>('MALE');
   const [breed, setBreed] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [ownerId, setOwnerId] = useState('');
+  const [trainerId, setTrainerId] = useState('');
+  const [groomId, setGroomId] = useState('');
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
   const [saddleNumber, setSaddleNumber] = useState('');
   const [stallNumber, setStallNumber] = useState('');
@@ -32,6 +36,16 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
       .get<Paginated<User>>('/users', { params: { role: 'OWNER', limit: 100 } })
       .then((r) => setOwners(r.data.data))
       .catch(() => setOwners([]));
+
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'TRAINER', limit: 100 } })
+      .then((r) => setTrainers(r.data.data))
+      .catch(() => setTrainers([]));
+
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'GROOM', limit: 100 } })
+      .then((r) => setGrooms(r.data.data))
+      .catch(() => setGrooms([]));
   }, [isOpen]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -50,6 +64,8 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
         ...(birthDate ? { birthDate: new Date(birthDate).toISOString() } : {}),
         ...(saddleNumber ? { saddleNumber: Number(saddleNumber) } : {}),
         ...(stallNumber.trim() ? { stallNumber: stallNumber.trim() } : {}),
+        ...(trainerId ? { trainerId } : {}),
+        ...(groomId ? { groomId } : {}),
         status,
       });
 
@@ -64,9 +80,11 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
       setBreed('');
       setBirthDate('');
       setOwnerId('');
+      setTrainerId('');
+      setGroomId('');
       setStatus('ACTIVE');
       setSaddleNumber('');
-    setStallNumber('');
+      setStallNumber('');
       setPhoto(null);
       setPreview(null);
       onCreated();
@@ -107,6 +125,24 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
 
             <Field label="Số áo đua (tùy chọn)" hint="Số hiển thị trên yếm số (saddle cloth)">
               <Input type="number" min={0} max={999} placeholder="vd: 7" value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
+            </Field>
+
+            <Field label="Ô chuồng trại (tùy chọn)" hint="Khu & số ô chuồng (vd: A-01)">
+              <Input placeholder="vd: A-01, B-03" value={stallNumber} onChange={(e) => setStallNumber(e.target.value)} maxLength={50} />
+            </Field>
+
+            <Field label="Huấn luyện viên phụ trách (tùy chọn)">
+              <select className={selectCls} value={trainerId} onChange={(e) => setTrainerId(e.target.value)}>
+                <option value="">— Chưa phân công —</option>
+                {trainers.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.email})</option>)}
+              </select>
+            </Field>
+
+            <Field label="Nhân viên chăm sóc (Groom, tùy chọn)">
+              <select className={selectCls} value={groomId} onChange={(e) => setGroomId(e.target.value)}>
+                <option value="">— Chưa phân công —</option>
+                {grooms.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.email})</option>)}
+              </select>
             </Field>
 
             <Field label="Giống loài">

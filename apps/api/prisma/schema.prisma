@@ -102,6 +102,9 @@ model User {
   deletedAt       DateTime?
 
   horses            Horse[]           @relation("HorseOwner")
+  trainedHorses     Horse[]           @relation("HorseTrainer")
+  groomedHorses     Horse[]           @relation("HorseGroom")
+  fitnessAssessments FitnessAssessment[]
   trainerSessions   TrainingSession[] @relation("SessionTrainer")
   trainingPlans     TrainingPlan[]    @relation("PlanTrainer")
   vetRecords        HealthRecord[]
@@ -170,7 +173,11 @@ model Horse {
   dam          Horse?      @relation("HorsePedigree_Dam", fields: [damId], references: [id])
   fitnessScore Int? // 0..100, nullable — chưa đánh giá
   saddleNumber Int?
-  stallNumber  String? // Ô chuồng: ví dụ "A-01", "B-03" // Số áo đua (saddle cloth) — hiển thị trên UI, không bắt buộc duy nhất
+  stallNumber  String? // Ô chuồng: ví dụ "A-01", "B-03"
+  trainerId    String?
+  trainer      User?             @relation("HorseTrainer", fields: [trainerId], references: [id], onDelete: SetNull)
+  groomId      String?
+  groom        User?             @relation("HorseGroom", fields: [groomId], references: [id], onDelete: SetNull) // Số áo đua (saddle cloth) — hiển thị trên UI, không bắt buộc duy nhất
   locked       Boolean      @default(false) // Training Lock — VET ban hành
   lockReason   String? // chỉ có ý nghĩa khi locked=true
   healthStatus HealthStatus @default(FIT) // Phase 10 — độc lập với `status` (career)
@@ -186,6 +193,7 @@ model Horse {
   vaccinations   Vaccination[]
   feedingRecords FeedingRecord[]
   lockHistories  LockHistory[]
+  fitnessAssessments FitnessAssessment[]
   siredFoals     Horse[]           @relation("HorsePedigree_Sire")
   damFoals       Horse[]           @relation("HorsePedigree_Dam")
 
@@ -410,4 +418,23 @@ model LockHistory {
   createdAt  DateTime @default(now())
 
   @@index([horseId, createdAt])
+}
+
+model FitnessAssessment {
+  id             String   @id @default(uuid())
+  horseId        String
+  horse          Horse    @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  assessedById   String
+  assessedBy     User     @relation(fields: [assessedById], references: [id], onDelete: Cascade)
+  speedScore     Int      // 0..20: Tốc độ bứt phá
+  staminaScore   Int      // 0..20: Sức bền cự ly
+  conditionScore Int      // 0..20: Cơ gân & khớp
+  recoveryScore  Int      // 0..20: Khả năng phục hồi
+  moraleScore    Int      // 0..20: Tinh thần thi đấu
+  totalScore     Int      // 0..100: Tổng điểm tự động tính từ 5 tiêu chí
+  notes          String?  // Nhận xét chi tiết của Vet / HLV
+  createdAt      DateTime @default(now())
+
+  @@index([horseId, createdAt])
+  @@index([assessedById])
 }

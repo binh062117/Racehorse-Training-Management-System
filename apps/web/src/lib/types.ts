@@ -35,6 +35,10 @@ export interface Horse {
   fitnessScore: number | null;
   saddleNumber: number | null;
   stallNumber: string | null;
+  trainerId?: string | null;
+  trainer?: UserRef | null;
+  groomId?: string | null;
+  groom?: UserRef | null;
   sireId: string | null;
   damId: string | null;
   locked: boolean;
@@ -237,5 +241,24 @@ export interface LockHistoryItem {
     name: string;
     role: Role | null;
   } | null;
+  createdAt: string;
+}
+
+export interface FitnessAssessmentItem {
+  id: string;
+  horseId: string;
+  assessedById: string;
+  assessedBy?: {
+    id: string;
+    name: string;
+    role: Role | null;
+  } | null;
+  speedScore: number;
+  staminaScore: number;
+  conditionScore: number;
+  recoveryScore: number;
+  moraleScore: number;
+  totalScore: number;
+  notes: string | null;
   createdAt: string;
 }

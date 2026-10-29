@@ -130,7 +130,8 @@
     "create": "Create",
     "cancel": "Cancel",
     "save": "Save",
-    "update": "Update"
+    "update": "Update",
+    "unassigned": "Unassigned"
   },
   "role": {
     "MANAGER": "Club Manager",
@@ -150,7 +151,11 @@
     "owner": "Owner",
     "status": "Status",
     "empty": "No horses yet.",
-    "new": "New horse"
+    "new": "New horse",
+    "stall": "Stall",
+    "noStall": "No stall assigned",
+    "assignedTrainer": "Assigned Trainer",
+    "assignedGroom": "Assigned Groom"
   },
   "horseStatusBadge": {
     "ACTIVE": "● Active",

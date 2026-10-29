@@ -26,6 +26,7 @@ import {
   ListHorsesQueryDto,
   LockHorseDto,
   UpdateHorseDto,
+  CreateFitnessAssessmentDto,
 } from './dto/horses.dto';
 import { buildImageMemoryMulterOptions } from '../files/upload';
 
@@ -55,6 +56,24 @@ export class HorsesController {
   @UseGuards(HorseOwnershipGuard)
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.horses.get(id);
+  }
+
+
+  @Post(':id/fitness-assessment')
+  @Roles(Role.VET, Role.TRAINER, Role.MANAGER)
+  @UseGuards(HorseOwnershipGuard)
+  assessFitness(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateFitnessAssessmentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.assessFitness(id, dto, user);
+  }
+
+  @Get(':id/fitness-assessments')
+  @UseGuards(HorseOwnershipGuard)
+  getFitnessAssessments(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horses.getFitnessAssessments(id);
   }
 
   @Get(':id/lock-history')

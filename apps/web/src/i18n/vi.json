@@ -130,7 +130,8 @@
     "create": "Tạo",
     "cancel": "Huỷ",
     "save": "Lưu",
-    "update": "Cập nhật"
+    "update": "Cập nhật",
+    "unassigned": "Chưa phân công"
   },
   "role": {
     "MANAGER": "Quản lý CLB",
@@ -150,7 +151,11 @@
     "owner": "Chủ ngựa",
     "status": "Trạng thái",
     "empty": "Chưa có ngựa nào.",
-    "new": "Thêm ngựa"
+    "new": "Thêm ngựa",
+    "stall": "Ô chuồng trại",
+    "noStall": "Chưa phân chuồng",
+    "assignedTrainer": "Huấn luyện viên phụ trách",
+    "assignedGroom": "Nhân viên chăm sóc (Groom)"
   },
   "horseStatusBadge": {
     "ACTIVE": "● Hoạt động",

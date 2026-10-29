@@ -13,12 +13,16 @@ interface EditHorseModalProps {
 
 export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseModalProps) {
   const [owners, setOwners] = useState<User[]>([]);
+  const [trainers, setTrainers] = useState<User[]>([]);
+  const [grooms, setGrooms] = useState<User[]>([]);
   const [allHorses, setAllHorses] = useState<Horse[]>([]);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<HorseGender | ''>('');
   const [breed, setBreed] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [ownerId, setOwnerId] = useState('');
+  const [trainerId, setTrainerId] = useState('');
+  const [groomId, setGroomId] = useState('');
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
   const [sireId, setSireId] = useState('');
   const [damId, setDamId] = useState('');
@@ -36,6 +40,8 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
     setBreed(horse.breed ?? '');
     setBirthDate(horse.birthDate ? horse.birthDate.slice(0, 10) : '');
     setOwnerId(horse.ownerId);
+    setTrainerId(horse.trainerId ?? '');
+    setGroomId(horse.groomId ?? '');
     setStatus(horse.status);
     setSireId(horse.sireId ?? '');
     setDamId(horse.damId ?? '');
@@ -48,6 +54,18 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
       .get<Paginated<User>>('/users', { params: { role: 'OWNER', limit: 100 } })
       .then((r) => setOwners(r.data.data))
       .catch(() => setOwners([]));
+
+    // Fetch trainers
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'TRAINER', limit: 100 } })
+      .then((r) => setTrainers(r.data.data))
+      .catch(() => setTrainers([]));
+
+    // Fetch grooms
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'GROOM', limit: 100 } })
+      .then((r) => setGrooms(r.data.data))
+      .catch(() => setGrooms([]));
 
     // Fetch horses for pedigree selection (exclude self)
     api
@@ -84,6 +102,8 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
         fitnessScore: fitnessScore !== '' ? Number(fitnessScore) : null,
         saddleNumber: saddleNumber !== '' ? Number(saddleNumber) : null,
         stallNumber: stallNumber.trim() ? stallNumber.trim() : null,
+        trainerId: trainerId ? trainerId : null,
+        groomId: groomId ? groomId : null,
       };
 
       await api.patch(`/horses/${horse.id}`, payload);
@@ -149,6 +169,21 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
             </Field>
             <Field label="Ô chuồng trại (Stall)" hint="Khu & số ô chuồng">
               <Input placeholder="vd: A-01, B-03" value={stallNumber} onChange={(e) => setStallNumber(e.target.value)} maxLength={50} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3.5">
+            <Field label="Huấn luyện viên phụ trách">
+              <select className={selectCls} value={trainerId} onChange={(e) => setTrainerId(e.target.value)}>
+                <option value="">— Chưa phân công —</option>
+                {trainers.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.email})</option>)}
+              </select>
+            </Field>
+            <Field label="Nhân viên chăm sóc (Groom)">
+              <select className={selectCls} value={groomId} onChange={(e) => setGroomId(e.target.value)}>
+                <option value="">— Chưa phân công —</option>
+                {grooms.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.email})</option>)}
+              </select>
             </Field>
           </div>
 
