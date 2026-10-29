@@ -7,16 +7,16 @@ import {
   type FormEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../lib/api';
+import { api, getFileUrl } from '../../lib/api';
 import type { HealthRecord, Horse, Paginated } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { CreateHealthRecordModal } from '../../components/health/CreateHealthRecordModal';
-import { HealthStatusBadge } from '../../components/health/HealthStatusBadge';
 import { TreatmentPlansSection } from '../../components/health/TreatmentPlansSection';
+import { InjuryLocationsSection } from '../../components/health/InjuryLocationsSection';
 import { AiInsightCard } from '../../components/horse/AiInsightCard';
 import { formatDate } from '../../lib/format';
-import { FileInput, Badge, Btn, Card, Field, Icon, Textarea } from '../../ds/ui';
+import { Btn, Card, EmptyState, Field, FileInput, HealthBadge, LockBadge, Icon, Textarea } from '../../ds/ui';
 
 /* ========== Main component ========== */
 export function HealthTab({ horse, onHorseChanged }: { horse: Horse; onHorseChanged: () => Promise<void> }) {
@@ -49,44 +49,28 @@ export function HealthTab({ horse, onHorseChanged }: { horse: Horse; onHorseChan
       <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
           <h2 className="text-[15px] font-semibold">{i18n.t("nav.healthRecords")}</h2>
-          <p className="cap mt-0.5">
-            {isVet ? i18n.t("ui.recordExaminationFindingsAndDiagnosesAndUpdateHealthStatus") : i18n.t("ui.examinationAndDiagnosisHistoryForThisHorse")}
+          <p className="text-[13px] text-muted mt-0.5">
+            {loading ? t('treatmentPlans.loading') : records.length === 0 ? t('health.empty') : t('mergeUi.examSummary', { count: records.length, date: formatDate(records[0].examDate) })}
           </p>
         </div>
         {isVet && <Btn v="p" onClick={() => setModalOpen(true)}><Icon name="plus" />{i18n.t("ui.recordExamination")}</Btn>}
       </div>
 
       {canUseAi && <AiInsightCard horseId={horse.id} />}
-
-      <Card className="flex flex-wrap gap-6 items-center px-5 py-3.5">
-        <div>
-          <span className="cap">{t('healthView.currentStatus')}</span>
-          <div className="mt-1">
-            <HealthStatusBadge status={horse.healthStatus} />
-            {horse.locked && <Badge tone="bad" className="ml-1.5">{t('horseStatusBadge.locked')}</Badge>}
-          </div>
-        </div>
-        <div className="border-l border-line pl-6">
-          <span className="cap">{i18n.t("ui.examinations")}</span>
-          <div className="font-bold text-xl mt-0.5">{loading ? '...' : records.length}</div>
-        </div>
-        {records.length > 0 && (
-          <div className="border-l border-line pl-6">
-            <span className="cap">{i18n.t("ui.latestExamination")}</span>
-            <div className="font-semibold mt-0.5">{formatDate(records[0].examDate)}</div>
-          </div>
-        )}
+      <Card className="px-5 py-3.5 flex flex-wrap items-center gap-3">
+        <span className="text-muted">{t('healthView.currentStatus')}</span>
+        <HealthBadge status={horse.healthStatus} />
+        {horse.locked && <LockBadge />}
       </Card>
 
       {loading ? (
-        <p className="cap">{i18n.t("horseFlow.loading")}</p>
+        <p className="text-muted">{t('healthView.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <p className="cap">{t('health.empty')}</p>
-          {isVet && <Btn v="p" className="mt-3" onClick={() => setModalOpen(true)}>{i18n.t("ui.createTheFirstExamination")}</Btn>}
-        </Card>
+        <EmptyState action={isVet ? <Btn sm v="p" onClick={() => setModalOpen(true)}>{i18n.t("ui.createTheFirstExamination")}</Btn> : undefined}>
+          {t('health.empty')}
+        </EmptyState>
       ) : (
         <ul className="list-none p-0 flex flex-col gap-3">
           {records.map((r) => <RecordItem key={r.id} record={r} isVet={isVet} onChanged={load} />)}
@@ -148,29 +132,21 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
     }
   };
 
-  const download = async () => {
-    if (!record.attachmentPath) return;
-    setErr(null);
-    try {
-      const res = await api.get(`/files/${record.attachmentPath}`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data as Blob);
-      window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (e2) {
-      setErr(e2);
-    }
+  const download = () => {
+    const url = getFileUrl(record.attachmentUrl);
+    if (url) window.open(url, '_blank', 'noopener');
   };
 
   return (
     <li>
       <Card className="p-5">
-        <div className="flex justify-between items-center mb-2.5">
-          <div>
-            <strong className="text-[15px]">{formatDate(record.examDate)}</strong>
-            <span className="cap ml-2.5">{i18n.t("ui.vet2")}{' '}{record.vet.name}</span>
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
+          <div className="flex items-baseline gap-2.5">
+            <strong className="num text-[15px]">{formatDate(record.examDate)}</strong>
+            <span className="text-[13px] text-muted">{t('role.VET')}: {record.vet.name}</span>
           </div>
           <div className="flex gap-1.5">
-            {record.attachmentPath && <Btn sm onClick={() => void download()}>{t('health.openAttachment')}</Btn>}
+            {record.attachmentPath && <Btn sm onClick={download}>{t('health.openAttachment')}</Btn>}
             {isVet && !editing && <Btn sm onClick={() => setEditing(true)}>{t('common.update')}</Btn>}
           </div>
         </div>
@@ -188,8 +164,8 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
         )}
 
         {isVet && (
-          <form onSubmit={upload} className="flex flex-wrap gap-2 mt-2.5">
-            <FileInput ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="flex-1 text-[12.5px]" />
+          <form onSubmit={upload} className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-line-soft">
+            <FileInput ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="flex-1 min-w-0" />
             <Btn sm type="submit" disabled={busy}>{t('health.uploadAttachment')}</Btn>
           </form>
         )}
@@ -197,7 +173,7 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
         {editing && (
           <form onSubmit={save} className="flex flex-col gap-3 mt-3.5">
             <Field label={t('health.diagnosis')}><Textarea value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} rows={2} /></Field>
-            <Field label={t('health.treatment')}><Textarea value={treatment} onChange={(e) => setTreatment(e.target.value)} rows={2} /></Field>
+            <Field label={t('treatmentPlans.examinationNotes')}><Textarea value={treatment} onChange={(e) => setTreatment(e.target.value)} rows={2} /></Field>
             <div className="flex gap-2">
               <Btn v="p" sm type="submit" disabled={busy}>{t('common.save')}</Btn>
               <Btn sm onClick={() => setEditing(false)} disabled={busy}>{t('common.cancel')}</Btn>
@@ -205,7 +181,9 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
           </form>
         )}
         <ErrorText err={err} />
-        <TreatmentPlansSection recordId={record.id} />
+
+        <TreatmentPlansSection healthRecordId={record.id} isVet={isVet} />
+        <InjuryLocationsSection basePath={`/health-records/${record.id}`} isVet={isVet} />
       </Card>
     </li>
   );

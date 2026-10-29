@@ -1,6 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { useState, type FormEvent } from 'react';
-import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { HealthRecord, HealthStatus } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -14,15 +14,15 @@ interface Props {
   horseName: string;
 }
 
-const HEALTH_STATUS_OPTIONS: () => { value: HealthStatus; label: string; desc: string }[] = () => ([
-  { value: 'FIT', label: i18n.t("horseStatusBadge.FIT"), desc: i18n.t("ui.currentHealthStatusFit") },
-  { value: 'MONITORING', label: i18n.t("horseStatusBadge.MONITORING"), desc: i18n.t("ui.signsRequiringFurtherMonitoring") },
-  { value: 'INJURED', label: i18n.t("horseStatusBadge.INJURED"), desc: i18n.t("ui.theHorseIsInjuredAndMayNeedRestrictedActivity") },
-  { value: 'QUARANTINED', label: i18n.t("horseStatusBadge.QUARANTINED"), desc: i18n.t("ui.theHorseIsInMedicalQuarantine") },
-]);
+const HEALTH_STATUS_OPTIONS = (): { value: HealthStatus; label: string; desc: string }[] => [
+  { value: 'FIT', label: i18n.t("ui.fit"), desc: i18n.t('mergeUi.fitDescription') },
+  { value: 'MONITORING', label: i18n.t("horseFlow.health.MONITORING"), desc: i18n.t("ui.signsRequiringFurtherMonitoring") },
+  { value: 'INJURED', label: i18n.t("horseFlow.health.INJURED"), desc: i18n.t("ui.theHorseIsInjuredAndMayNeedRestrictedActivity") },
+  { value: 'QUARANTINED', label: i18n.t("horseFlow.health.QUARANTINED"), desc: i18n.t("ui.theHorseIsInMedicalQuarantine") },
+];
 
 export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, horseName }: Props) {
-  const { t } = useTranslation();
+  useTranslation();
   const [examDate, setExamDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [diagnosis, setDiagnosis] = useState('');
   const [treatment, setTreatment] = useState('');
@@ -87,7 +87,7 @@ export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, h
         <ModalBody>
           <ErrorText err={err} />
 
-          <Field label={i18n.t("ui.horseBeingExamined")}>
+          <Field label={i18n.t("mergeUi.examHorse")}>
             <Input value={horseName} disabled ro />
           </Field>
 
@@ -111,31 +111,32 @@ export function CreateHealthRecordModal({ isOpen, onClose, onCreated, horseId, h
 
           <Field label={i18n.t("ui.updateHealthStatus")} hint={i18n.t("ui.updateTheHorseSHealthStatusAfterThisExaminationLeaveUnchangedIfNotAppl")}>
             <select
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+              className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
               value={healthStatus} onChange={(e) => setHealthStatus(e.target.value as HealthStatus | '')}
             >
               <option value="">{i18n.t("ui.keepCurrentStatus")}</option>
-              {HEALTH_STATUS_OPTIONS().map((opt) => <option key={opt.value} value={opt.value}>{t(`horseStatusBadge.${opt.value}`)}</option>)}
+              {HEALTH_STATUS_OPTIONS().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
           </Field>
 
           {selectedStatus && (selectedStatus.value === 'INJURED' || selectedStatus.value === 'QUARANTINED') && (
             <Alert tone="bad" icon="alert" title={selectedStatus.value === 'QUARANTINED' ? i18n.t("ui.theHorseWillBeMarkedAsQuarantined") : i18n.t("ui.theHorseWillBeMarkedAsInjured")}>
               {selectedStatus.desc}.
-              {' '}{t('healthView.separation')}
+              {' '}{selectedStatus.value === 'QUARANTINED' && i18n.t('mergeUi.quarantineWarning')}
+              {selectedStatus.value === 'INJURED' && i18n.t('mergeUi.injuryLockWarning')}
             </Alert>
           )}
 
           {selectedStatus && selectedStatus.value === 'FIT' && (
             <Alert tone="ok" icon="check">
-              <strong>{t('horseStatusBadge.FIT')}</strong>. {t('healthView.separation')}
+              {i18n.t('mergeUi.fitWarning')}
             </Alert>
           )}
         </ModalBody>
 
         <ModalFoot>
           <Btn onClick={handleClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{busy ? i18n.t("horseFlow.saving") : i18n.t("ui.saveExamination")}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{busy ? i18n.t("races.saving") : i18n.t("ui.saveExamination")}</Btn>
         </ModalFoot>
       </form>
     </Modal>

@@ -4,50 +4,65 @@
 
 @layer base {
   h1, h2, h3, h4, p { margin: 0; }
-  body { @apply bg-page text-ink; }
+  /* App body text is 14/20; any text that sets no size of its own inherits this
+     instead of the browser's 16px (which made table cells louder than labels). */
+  body { @apply bg-page text-ink; font-size: 14px; line-height: 20px; -webkit-font-smoothing: antialiased; }
+  :focus-visible { outline: 2px solid #1a4b8a; outline-offset: 2px; }
+  input::placeholder, textarea::placeholder { color: #6b6b6b; }
+  p, li, dd { text-wrap: pretty; }
+  /* File pickers read like the app's secondary button instead of the browser's grey bevel. */
+  /* A scroll box is the containing block for anything absolutely positioned
+     inside it, so hidden helpers can't stretch the page sideways on phones. */
+  .overflow-x-auto { position: relative; }
+  input[type='file'] { @apply text-[13px] text-muted max-w-full; }
+  input[type='file']::file-selector-button {
+    @apply mr-3 h-9 px-3.5 rounded-btn border border-solid border-line-strong bg-white text-ink font-medium text-[13px] cursor-pointer transition-colors;
+    font-family: inherit;
+  }
+  input[type='file']::file-selector-button:hover { @apply bg-subtle; }
+}
+
+@keyframes ringIn { from { stroke-dasharray: 0 100; } }
+.ring-arc { animation: ringIn .9s cubic-bezier(.22, 1, .36, 1) both; }
+
+@keyframes waveHop {
+  0%, 100% { transform: none; }
+  40% { transform: translateY(-5px); }
+}
+
+/* People who ask the OS for less motion get none of the hover/count-up motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .hop, .lift, .nudge { transform: none !important; }
 }
 
 @layer components {
-  /* Big condensed display type — race-board feel */
-  .disp { @apply font-display font-bold uppercase; line-height: .95; }
   .num { font-variant-numeric: tabular-nums; }
-  .lbl { @apply text-[11px] leading-4 font-semibold uppercase tracking-[.04em] text-muted; }
-  .cap { @apply text-[11.5px] leading-4 text-muted; }
+  /* Small label above a value: sentence case, readable, grey at 4.5:1. */
+  .lbl { @apply text-[12px] leading-4 font-medium text-muted; }
+  .cap { @apply text-[12px] leading-4 text-muted; }
 
-  /* Navy hero band with track-lane rules */
-  .hero { @apply relative overflow-hidden rounded-[14px] bg-navy text-white; }
-  .hero::before { content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: repeating-linear-gradient(90deg, transparent 0 119px, rgba(255,255,255,.045) 119px 120px); }
-  .hero::after { content: ""; position: absolute; right: -120px; top: -160px; width: 520px; height: 520px; border-radius: 50%; pointer-events: none;
-    border: 1px solid rgba(255,255,255,.07); box-shadow: 0 0 0 40px rgba(255,255,255,.025), 0 0 0 80px rgba(255,255,255,.02); }
-  .hero > * { position: relative; z-index: 1; }
-  .hero .lbl { @apply text-hero-label; }
-  .hero .cap { @apply text-hero-muted; }
+  /* ---------- hover motion ----------
+     A number (or short text) marked .hop springs up a few pixels when the row,
+     card or cell around it is hovered or focused, then settles back. */
+  .hop { display: inline-block; transition: transform .38s cubic-bezier(.34, 1.56, .64, 1); will-change: transform; }
+  :where(a, button, tr, li, .hover-hop):hover .hop,
+  :where(a, button, tr, li, .hover-hop):focus-visible .hop,
+  .hop:hover { transform: translateY(-3px); }
 
-  /* Saddle cloth number */
+  /* Page titles: each letter jumps in turn while the title is hovered. */
+  .wave > span { display: inline-block; white-space: pre; }
+  :where(h1, .wave-host):hover .wave > span { animation: waveHop .55s cubic-bezier(.34, 1.56, .64, 1) both; animation-delay: calc(var(--i) * 22ms); }
+
+  /* Cards that open something lift a little on hover. */
+  .lift { transition: transform .25s cubic-bezier(.34, 1.56, .64, 1), box-shadow .25s ease, border-color .15s ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(28, 43, 58, .09); }
+
+  /* An arrow inside a link slides toward where it goes. */
+  .nudge { transition: transform .25s cubic-bezier(.34, 1.56, .64, 1); }
+  :where(a, button):hover .nudge { transform: translateX(3px); }
+
+  /* Saddle-cloth number — the one job of the condensed face. */
   .cloth { @apply inline-flex flex-none items-center justify-center rounded-badge bg-navy px-[5px] font-display font-bold text-white;
-    min-width: 26px; height: 30px; font-size: 19px; line-height: 1; }
-  .cloth-inv { @apply bg-cream text-navy; }
-
-  /* Diagonal hatch for locked items */
-  .hatch { background: repeating-linear-gradient(135deg,#fff 0 10px,#fdf7f7 10px 20px); }
-  .lockband { @apply absolute bg-bad text-white text-[10px] font-bold uppercase tracking-[.12em];
-    top: 14px; right: -34px; transform: rotate(35deg); padding: 4px 40px; }
-
-  /* Photo placeholder */
-  .photo { @apply relative flex min-h-[120px] items-end overflow-hidden rounded-card border border-line;
-    background: repeating-linear-gradient(135deg,#e9e6df 0 10px,#f1efea 10px 20px); }
-
-  /* Vertical connector for timelines */
-  .tl-line::before { content: ""; position: absolute; top: 28px; bottom: -22px; left: 50%; width: 2px; margin-left: -1px; background: #e2e0db; }
+    min-width: 24px; height: 26px; font-size: 17px; line-height: 1; font-variant-numeric: tabular-nums; }
 }
-
-/* Racing silks: kept outside @layer so dynamically-built class names (silk-a…f) are never purged */
-.silk { display: inline-block; flex: none; width: 30px; height: 30px; background: #cdc9c3;
-  clip-path: polygon(28% 0,72% 0,100% 16%,90% 40%,78% 34%,78% 100%,22% 100%,22% 34%,10% 40%,0 16%); }
-.silk-a { background: repeating-linear-gradient(90deg,#1c2b3a 0 18%,#f5f4f1 18% 34%); }
-.silk-b { background: repeating-linear-gradient(180deg,#d39a2a 0 22%,#1c2b3a 22% 34%); }
-.silk-c { background: conic-gradient(from 0deg at 50% 52%,#7a1f2b 0 25%,#f5f4f1 0 50%,#7a1f2b 0 75%,#f5f4f1 0); }
-.silk-d { background: linear-gradient(135deg,#2f6b45 0 38%,#f5f4f1 38% 58%,#2f6b45 58%); }
-.silk-e { background: repeating-conic-gradient(#4b2d7f 0 25%,#e9e3f5 0 50%) 0 0/34% 34%; }
-.silk-f { background: radial-gradient(circle at 50% 50%,#f5f4f1 0 18%,transparent 19%) 0 0/50% 50%, #1a4b8a; }

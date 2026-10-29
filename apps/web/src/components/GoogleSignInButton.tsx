@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEffect, useRef } from 'react';
 
 interface GoogleCredentialResponse {
   credential: string;
@@ -42,10 +42,12 @@ export function GoogleSignInButton({
         callback: (response) => onToken(response.credential),
       });
       window.google.accounts.id.renderButton(ref.current, {
+        locale: i18n.language,
         theme: 'outline',
         size: 'large',
-        width: 320,
-        locale: i18n.language,
+        shape: 'rectangular',
+        // GSI draws at a fixed pixel width (max 400): match the form column so it lines up with the inputs.
+        width: Math.min(400, Math.max(200, ref.current.offsetWidth)),
       });
     };
 
@@ -69,5 +71,5 @@ export function GoogleSignInButton({
   }, [clientId, onToken, i18n.language]);
 
   if (!clientId) return null;
-  return <div ref={ref} />;
+  return <div ref={ref} className="w-full flex justify-center min-h-[44px]" />;
 }

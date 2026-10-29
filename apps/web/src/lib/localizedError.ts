@@ -31,6 +31,10 @@ export function localizedError(err: unknown): string {
     }
     const conflict = /^This horse already has a planned session within (\d+) minutes of (.+)$/.exec(message);
     if (conflict) return i18n.t('errorDetails.sessionConflict', { minutes: conflict[1], time: conflict[2] });
+    const rescheduleConflict = /^Ngựa đã có buổi tập "(.+)" lúc (.+) — hai buổi tập phải cách nhau ít nhất (\d+) phút\.$/.exec(message);
+    if (rescheduleConflict) return i18n.t('errorDetails.sessionClash', {
+      type: rescheduleConflict[1], time: rescheduleConflict[2], minutes: rescheduleConflict[3],
+    });
     const locked = /^Horse training is locked(?:: (.*))?$/.exec(message);
     if (locked) return i18n.t('session.locked') + (locked[1] ? ': ' + locked[1] : '');
     const terminal = /^Session is already (DONE|CANCELLED)$/.exec(message);

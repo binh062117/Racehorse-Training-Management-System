@@ -96,7 +96,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
     }
   };
 
-  const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
+  const selectCls = 'h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15';
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="edit-horse-title">
@@ -131,10 +131,10 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
           </div>
 
           <div className="grid grid-cols-2 gap-3.5">
-            <Field label={i18n.t("horse.status")}>
+            <Field label={i18n.t("user.status")}>
               <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as HorseStatus)}>
-                <option value="ACTIVE">{i18n.t("ui.active3")}</option>
-                <option value="RESTING">{i18n.t("ui.resting")}</option>
+                <option value="ACTIVE">{i18n.t("ui.active")}</option>
+                <option value="RESTING">{i18n.t("ui.resting2")}</option>
                 <option value="RETIRED">{i18n.t("ui.retired")}</option>
               </select>
             </Field>
@@ -143,20 +143,20 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
             </Field>
           </div>
 
-          <Field label={i18n.t("ui.saddleNumberOptional")} hint={i18n.t("ui.numberDisplayedOnTheSaddleCloth")}>
+          <Field label={i18n.t("ui.saddleNumberOptional")} hint="Số hiển thị trên yếm số (saddle cloth)">
             <Input type="number" min={0} max={999} placeholder={i18n.t("ui.eG7")} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
           </Field>
 
           <div className="p-3 rounded-card border border-line bg-subtle">
-            <div className="lbl text-navy mb-2">{i18n.t("ui.pedigree")}</div>
+            <div className="lbl text-navy mb-2">Phả hệ (Pedigree)</div>
             <div className="grid grid-cols-2 gap-3.5">
-              <Field label={i18n.t("ui.sire")}>
+              <Field label="Ngựa cha (Sire)">
                 <select className={selectCls} value={sireId} onChange={(e) => setSireId(e.target.value)}>
                   <option value="">{i18n.t("ui.none")}</option>
                   {allHorses.filter((h) => h.id !== damId).map((h) => <option key={h.id} value={h.id}>{h.name} ({h.breed ?? '—'})</option>)}
                 </select>
               </Field>
-              <Field label={i18n.t("ui.dam")}>
+              <Field label="Ngựa mẹ (Dam)">
                 <select className={selectCls} value={damId} onChange={(e) => setDamId(e.target.value)}>
                   <option value="">{i18n.t("ui.none")}</option>
                   {allHorses.filter((h) => h.id !== sireId).map((h) => <option key={h.id} value={h.id}>{h.name} ({h.breed ?? '—'})</option>)}
@@ -170,7 +170,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
 
         <ModalFoot>
           <Btn onClick={onClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{busy ? i18n.t("horseFlow.saving") : i18n.t("ui.saveChanges")}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{busy ? i18n.t("races.saving") : i18n.t("ui.saveChanges")}</Btn>
         </ModalFoot>
       </form>
     </Modal>

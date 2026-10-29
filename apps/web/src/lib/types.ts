@@ -144,6 +144,28 @@ export interface HealthRecord {
   createdAt: string;
 }
 
+export interface TreatmentPlan {
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  id: string;
+  healthRecordId: string;
+  description: string;
+  startDate: string;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Medication {
+  id: string;
+  healthRecordId: string;
+  treatmentPlanId: string | null;
+  name: string;
+  dosage: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+}
+
 export interface FeedingRecord {
   id: string;
   horseId: string;
@@ -202,25 +224,4 @@ export interface OtpRequiredResponse {
 
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
-}
-export interface TreatmentPlan {
-  id: string;
-  healthRecordId: string;
-  description: string;
-  startDate: string;
-  endDate: string | null;
-  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Medication {
-  id: string;
-  healthRecordId: string;
-  treatmentPlanId: string | null;
-  name: string;
-  dosage: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  createdAt: string;
 }

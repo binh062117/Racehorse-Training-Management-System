@@ -7,10 +7,9 @@ import { ErrorText } from '../../components/ErrorText';
 import { api } from '../../lib/api';
 import type { Horse, HorseGender, HorseStatus, Paginated, User } from '../../lib/types';
 import { usePageChrome } from '../../ds/AppShell';
-import { FileInput, Btn, Card, Field, Input } from '../../ds/ui';
+import { Btn, Card, Field, Input, NativeSelect, PageHeader } from '../../ds/ui';
 
 const HORSE_STATUSES: HorseStatus[] = ['ACTIVE', 'RESTING', 'RETIRED'];
-const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
 
 type HorseFormState = {
   name: string;
@@ -135,16 +134,16 @@ export function HorseFormPage() {
     }
   };
 
-  if (loading) return <p className="cap">{t('horseFlow.loading')}</p>;
+  if (loading) return <p className="text-muted">{t('horseFlow.loading')}</p>;
   if (loadError) return <ErrorText err={loadError} />;
 
   return (
-    <div className="flex flex-col gap-4 max-w-3xl">
-      <div>
-        <p className="lbl">{t('horseFlow.managementEyebrow')}</p>
-        <h1 className="text-lg font-semibold mt-0.5">{id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')}</h1>
-        <p className="cap mt-0.5">{t('horseFlow.formDescription')}</p>
-      </div>
+    <div className="flex flex-col gap-5 max-w-3xl">
+      <PageHeader
+        crumbs={[[i18n.t("nav.horses"), '/horses'], ...(id && form.name ? [[form.name, `/horses/${id}`] as [string, string]] : [])]}
+        title={id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')}
+        sub={t('horseFlow.formDescription')}
+      />
 
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Card className="p-5 flex flex-col gap-3.5">
@@ -154,11 +153,11 @@ export function HorseFormPage() {
               <Input value={form.name} onChange={(event) => setValue('name', event.target.value)} required maxLength={120} />
             </Field>
             <Field label={t('horse.gender')}>
-              <select className={selectCls} value={form.gender} onChange={(event) => setValue('gender', event.target.value as HorseGender | '')}>
+              <NativeSelect value={form.gender} onChange={(event) => setValue('gender', event.target.value as HorseGender | '')}>
                 <option value="">— {t('horse.genderUnknown')} —</option>
                 <option value="MALE">{t('horse.genderMale')}</option>
                 <option value="FEMALE">{t('horse.genderFemale')}</option>
-              </select>
+              </NativeSelect>
             </Field>
             <Field label={t('horse.breed')}>
               <Input value={form.breed} onChange={(event) => setValue('breed', event.target.value)} maxLength={120} />
@@ -167,18 +166,18 @@ export function HorseFormPage() {
               <Input type="date" value={form.birthDate} onChange={(event) => setValue('birthDate', event.target.value)} />
             </Field>
             <Field label={t('horse.owner')}>
-              <select className={selectCls} value={form.ownerId} onChange={(event) => setValue('ownerId', event.target.value)} required>
+              <NativeSelect value={form.ownerId} onChange={(event) => setValue('ownerId', event.target.value)} required>
                 <option value="">{t('horseFlow.selectOwner')}</option>
                 {owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name} ({owner.email})</option>)}
-              </select>
+              </NativeSelect>
             </Field>
             <Field label={t('horse.status')}>
-              <select className={selectCls} value={form.status} onChange={(event) => setValue('status', event.target.value as HorseStatus)}>
+              <NativeSelect value={form.status} onChange={(event) => setValue('status', event.target.value as HorseStatus)}>
                 {HORSE_STATUSES.map((status) => <option key={status} value={status}>{t(`horseFlow.status.${status}`)}</option>)}
-              </select>
+              </NativeSelect>
             </Field>
             <Field label={t('horseFlow.photo')}>
-              <FileInput type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} className="text-[12.5px]" />
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} className="text-[13px]" />
             </Field>
           </div>
         </Card>
@@ -188,16 +187,16 @@ export function HorseFormPage() {
             <h2 className="font-semibold text-[15px]">{t('horseFlow.pedigreeAndFitness')}</h2>
             <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
               <Field label={t('horseFlow.sire')}>
-                <select className={selectCls} value={form.sireId} onChange={(event) => setValue('sireId', event.target.value)}>
+                <NativeSelect value={form.sireId} onChange={(event) => setValue('sireId', event.target.value)}>
                   <option value="">{t('horseFlow.unknown')}</option>
                   {horses.filter((horse) => horse.id !== id && horse.id !== form.damId).map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
-                </select>
+                </NativeSelect>
               </Field>
               <Field label={t('horseFlow.dam')}>
-                <select className={selectCls} value={form.damId} onChange={(event) => setValue('damId', event.target.value)}>
+                <NativeSelect value={form.damId} onChange={(event) => setValue('damId', event.target.value)}>
                   <option value="">{t('horseFlow.unknown')}</option>
                   {horses.filter((horse) => horse.id !== id && horse.id !== form.sireId).map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
-                </select>
+                </NativeSelect>
               </Field>
               <Field label={t('horseFlow.fitnessScore')}>
                 <Input type="number" min="0" max="100" value={form.fitnessScore} onChange={(event) => setValue('fitnessScore', event.target.value)} />

@@ -1,7 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { HealthStatusBadge } from '../components/health/HealthStatusBadge';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { HealthRecord, HealthStatus, Horse, Paginated } from '../lib/types';
@@ -10,11 +9,11 @@ import { ErrorText } from '../components/ErrorText';
 import { CreateHealthRecordModal } from '../components/health/CreateHealthRecordModal';
 import { formatDate } from '../lib/format';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, HeroStats, Icon } from '../ds/ui';
+import { Btn, Card, CardHeader, Chip, ChipCount, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip, LockBadge, PageHeader } from '../ds/ui';
 
 export function HealthRecordsPage() {
+  useTranslation();
   const { user } = useAuth();
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const isVet = user?.role === 'VET';
 
@@ -31,7 +30,7 @@ export function HealthRecordsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<HealthStatus | 'ALL'>('ALL');
 
-  usePageChrome({ crumbs: [i18n.t("ui.health"), i18n.t("nav.healthRecords")], search: i18n.t("ui.searchHorseName"), onSearch: setSearch });
+  usePageChrome({ crumbs: [i18n.t("ui.health"), i18n.t("nav.healthRecords")] });
 
   const loadHorses = useCallback(async () => {
     setHorsesLoading(true);
@@ -80,6 +79,9 @@ export function HealthRecordsPage() {
     return acc;
   }, {} as Record<string, number>);
   const lockedCount = horses.filter((h) => h.locked).length;
+  const fit = healthCounts.FIT ?? 0;
+  const watch = healthCounts.MONITORING ?? 0;
+  const sick = (healthCounts.INJURED ?? 0) + (healthCounts.QUARANTINED ?? 0);
 
   const [healthResult, setHealthResult] = useState<{ status: HealthStatus; source: Horse[]; rows: Horse[]; err: unknown } | null>(null);
   useEffect(() => {
@@ -105,96 +107,112 @@ export function HealthRecordsPage() {
     setModalOpen(true);
   };
 
-  const handleCreated = () => {
-    void loadHorses();
-  };
+  // A new horses array re-runs the records effect, so reloading horses refreshes both lists.
+  const handleCreated = () => { void loadHorses(); };
+
+  const lockedNote = lockedCount ? i18n.t('mergeUi.lockedSummary', { count: lockedCount }) : '';
+  const sub = loading
+    ? i18n.t("mergeUi.loadingHealth")
+    : horses.length === 0
+      ? i18n.t("mergeUi.noHorsesSystem")
+      : sick + watch === 0
+        ? i18n.t('mergeUi.allHealthy', { count: horses.length, locked: lockedNote })
+        : i18n.t('mergeUi.needsMonitoring', { count: sick + watch, total: horses.length, locked: lockedNote });
+
+  const filters: [HealthStatus | 'ALL', string, number][] = [
+    ['ALL', i18n.t("races.filters.ALL"), horses.length],
+    ['FIT', i18n.t("ui.fit"), fit],
+    ['MONITORING', i18n.t("horseFlow.health.MONITORING"), watch],
+    ['INJURED', i18n.t("horseFlow.health.INJURED"), healthCounts.INJURED ?? 0],
+    ['QUARANTINED', i18n.t("horseFlow.health.QUARANTINED"), healthCounts.QUARANTINED ?? 0],
+  ];
+  const th = 'h-10 px-4 text-[12px] font-medium text-muted border-b border-line';
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div>
-          <div className="lbl">{i18n.t("ui.medicalRecords")}</div>
-          <h1 className="disp text-[56px] mt-2">{i18n.t("ui.medicalExaminations")}</h1>
-          <p className="text-hero-muted mt-2 max-w-[560px]">{i18n.t("ui.browseHorseHealthRecordExaminationsAndDiagnosesAndUpdateHealthStatus")}</p>
-        </div>
-        <HeroStats items={[
-          { label: i18n.t("ui.loadedHorses"), value: horses.length },
-          { label: t('horseStatusBadge.FIT'), value: healthCounts.FIT ?? 0, color: '#9fd9b1' },
-          { label: t('horseStatusBadge.MONITORING'), value: healthCounts.MONITORING ?? 0, color: '#f3d29a' },
-          { label: t('horseStatusBadge.INJURED'), value: healthCounts.INJURED ?? 0, color: '#f3b4b4' },
-          { label: t('horseStatusBadge.QUARANTINED'), value: healthCounts.QUARANTINED ?? 0, color: '#f3b4b4' },
-          { label: i18n.t("ui.trainingLocked2"), value: lockedCount, color: '#f3b4b4' },
-        ]} />
-      </section>
+      <PageHeader
+        title={i18n.t("nav.healthRecords")}
+        sub={sub}
+        search={{ placeholder: i18n.t("horseFlow.searchPlaceholder"), value: search, onChange: setSearch }}
+      />
 
-      <div className="flex flex-wrap gap-2.5 items-center">
-        {(['ALL', 'FIT', 'MONITORING', 'INJURED', 'QUARANTINED'] as const).map((s) => (
-          <button key={s} type="button" aria-pressed={statusFilter === s} onClick={() => setStatusFilter(s)}
-            className={`inline-flex items-center h-[30px] px-3 rounded-full border text-[12.5px] font-medium ${statusFilter === s ? 'bg-navy text-white border-navy' : 'bg-white text-ink border-line'}`}>
-            {t(s === 'ALL' ? 'healthView.all' : `horseStatusBadge.${s}`)}
-          </button>
+      <KpiStrip items={[
+        { label: i18n.t("ui.loadedHorses2"), value: horses.length },
+        { label: i18n.t("ui.fit"), value: fit, tone: fit > 0 ? 'ok' : undefined },
+        { label: i18n.t("horseFlow.health.MONITORING"), value: watch, tone: watch > 0 ? 'warn' : undefined },
+        { label: i18n.t("mergeUi.injuredOrQuarantined"), value: sick, tone: sick > 0 ? 'bad' : undefined, lead: sick > 0 },
+        { label: i18n.t("mergeUi.locked"), value: lockedCount, tone: lockedCount > 0 ? 'bad' : undefined },
+      ]} />
+
+      <div className="flex flex-wrap gap-2 items-center">
+        {filters.map(([k, label, n]) => (
+          <Chip key={k} on={statusFilter === k} onClick={() => setStatusFilter(k)}>{label} <ChipCount n={n} /></Chip>
         ))}
       </div>
 
-      <p className="cap">{t(statusFilter === 'ALL' ? 'healthView.subset' : 'healthView.filterLimit')}</p>
-      <ErrorText err={err || (statusFilter !== 'ALL' ? healthResult?.err : null)} />
-      {!!(err || (statusFilter !== 'ALL' && healthResult?.err)) && <Btn className="self-start" onClick={() => void loadHorses()}>{t('healthView.retry')}</Btn>}
+      <p className="cap">{i18n.t(statusFilter === 'ALL' ? 'healthView.subset' : 'healthView.filterLimit')}</p>
+      <ErrorText err={err || (healthCurrent ? healthResult?.err : null)} />
+      {!!(err || (healthCurrent && healthResult?.err)) && <Btn onClick={() => void loadHorses()}>{i18n.t('healthView.retry')}</Btn>}
 
       {loading || horsesLoading || healthLoading ? (
-        <p className="cap">{t('healthView.loading')}</p>
+        <p className="text-muted">{i18n.t("mergeUi.loadingData")}</p>
       ) : (
-        <div className="flex flex-wrap gap-6 items-start">
-          <div className="flex-[1.4_1_480px] min-w-0">
-            <h3 className="text-[15px] font-semibold mb-3">{i18n.t("ui.healthOverview")}{filteredHorses.length} {' '}{i18n.t("ui.horses")}</h3>
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] border-collapse">
-                  <thead>
-                    <tr className="text-left">
-                      {[i18n.t("horseFlow.horse"), i18n.t("horse.gender"), i18n.t("horse.breed"), i18n.t("ui.healthStatus"), i18n.t("ui.trainingLocked2"), ...(isVet ? [i18n.t("incidents.actions")] : [])].map((th) => (
-                        <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
-                      ))}
+        <div className="grid gap-5 items-start xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+          <Card className="min-w-0">
+            <CardHeader title={i18n.t("mergeUi.horseHealth")}><span className="num text-[13px] text-muted">{filteredHorses.length} {i18n.t("ui.horses2")}</span></CardHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] border-collapse">
+                <thead>
+                  <tr className="text-left">
+                    <th className={`${th} pl-5`}>{i18n.t("incidents.horse")}</th>
+                    <th className={th}>{i18n.t("horse.breed")}</th>
+                    <th className={th}>{i18n.t("ui.health")}</th>
+                    <th className={`${th} ${isVet ? '' : 'pr-5'}`}>{i18n.t("ui.trainingLocked2")}</th>
+                    {isVet && <th className={`${th} pr-5`} aria-label={i18n.t("incidents.actions")} />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredHorses.length === 0 ? (
+                    <tr><td colSpan={isVet ? 5 : 4} className="px-5 py-6 text-center text-muted">{i18n.t("mergeUi.noHealthMatches")}</td></tr>
+                  ) : filteredHorses.map((h) => (
+                    <tr key={h.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                      <td className="pl-5 pr-4 py-2.5">
+                        <button type="button" onClick={() => navigate(`/horses/${h.id}`)} className="flex items-center gap-2.5 font-medium text-ink hover:text-info text-left whitespace-nowrap">
+                          <HorseAvatar src={h.photoUrl} name={h.name} size={28} />{h.name}
+                        </button>
+                      </td>
+                      <td className="px-4 py-2.5">{h.breed ?? <span className="text-muted">{i18n.t("horse.genderUnknown")}</span>}</td>
+                      <td className="px-4 py-2.5"><HealthBadge status={h.healthStatus} /></td>
+                      <td className={`px-4 py-2.5 ${isVet ? '' : 'pr-5'}`}>{h.locked ? <LockBadge /> : <span className="text-muted">{i18n.t("mergeUi.no")}</span>}</td>
+                      {isVet && <td className="pl-4 pr-5 py-2.5 text-right"><Btn sm onClick={() => openModalForHorse(h)}><Icon name="plus" className="w-3.5 h-3.5" />{i18n.t("mergeUi.recordExam")}</Btn></td>}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredHorses.length === 0 ? (
-                      <tr><td colSpan={isVet ? 6 : 5} className="text-center py-6"><span className="cap">{t('healthView.empty')}</span></td></tr>
-                    ) : filteredHorses.map((h) => (
-                      <tr key={h.id} className="border-b border-line-soft hover:bg-subtle">
-                        <td className="px-4 py-3"><button type="button" onClick={() => navigate(`/horses/${h.id}`)} className="font-semibold text-navy">{h.name}</button></td>
-                        <td className="px-4 py-3">{h.gender === 'MALE' ? <Badge tone="neu">{i18n.t("horse.genderMale")}</Badge> : h.gender === 'FEMALE' ? <Badge tone="neu">{i18n.t("horse.genderFemale")}</Badge> : <span className="cap">—</span>}</td>
-                        <td className="px-4 py-3">{h.breed ?? '—'}</td>
-                        <td className="px-4 py-3"><HealthStatusBadge status={h.healthStatus} /></td>
-                        <td className="px-4 py-3">{h.locked ? <Badge tone="bad">{i18n.t("ui.locked2")}</Badge> : <span className="cap">—</span>}</td>
-                        {isVet && <td className="px-4 py-3"><Btn sm onClick={() => openModalForHorse(h)}><Icon name="plus" className="w-3.5 h-3.5" />{i18n.t("ui.examine")}</Btn></td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
-          <div className="flex-[1_1_320px] min-w-0">
-            <h3 className="text-[15px] font-semibold mb-3">{i18n.t("ui.recentExaminations")}{records.length})</h3>
+          <Card className="min-w-0">
+            <CardHeader title={i18n.t("mergeUi.recentExams")}><span className="num text-[13px] text-muted">{records.length}</span></CardHeader>
             {records.length === 0 ? (
-              <Card className="text-center py-6"><p className="cap">{i18n.t("ui.noMedicalExaminationsRecordedYet")}</p></Card>
+              <div className="p-4"><EmptyState>{i18n.t("ui.noMedicalExaminationsRecordedYet")}</EmptyState></div>
             ) : (
-              <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
+              <ul className="list-none p-0 m-0">
                 {records.slice(0, 20).map((r) => (
-                  <li key={r.id}>
-                    <Card className="p-3.5 cursor-pointer hover:border-line-strong" onClick={() => navigate(`/horses/${r.horseId}`)}>
-                      <div className="flex justify-between items-center">
-                        <div><strong>{r.horse.name}</strong><span className="cap ml-2">{formatDate(r.examDate)}</span></div>
-                        <span className="cap">{i18n.t("ui.vet")}{' '}{r.vet.name}</span>
+                  <li key={r.id} className="border-b border-line-soft last:border-0">
+                    <button type="button" onClick={() => navigate(`/horses/${r.horseId}?tab=health`)} className="w-full text-left px-5 py-3 hover:bg-subtle">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="font-medium truncate">{r.horse.name}</span>
+                        <span className="num text-[12.5px] text-muted flex-none">{formatDate(r.examDate)}</span>
                       </div>
-                      <p className="text-[12.5px] text-muted mt-1.5">{r.diagnosis.length > 120 ? r.diagnosis.slice(0, 120) + '...' : r.diagnosis}</p>
-                    </Card>
+                      <p className="text-[13px] text-muted mt-0.5 line-clamp-2">{r.diagnosis}</p>
+                      <p className="text-[12px] text-muted mt-1">{i18n.t('role.VET')}: {r.vet.name}</p>
+                    </button>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
         </div>
       )}
 

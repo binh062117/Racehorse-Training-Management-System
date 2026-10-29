@@ -8,7 +8,7 @@ import { api } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import type { Horse, HorseRaceEntry, Paginated, Race, RaceEntry } from '../../lib/types';
 import { usePageChrome } from '../../ds/AppShell';
-import { Badge, Btn, Card, Field } from '../../ds/ui';
+import { Badge, Btn, Card, CardHeader, EmptyState, Field, KpiStrip, NativeSelect, PageHeader, thCls } from '../../ds/ui';
 import { HorseRecordNav } from './HorseRecordNav';
 
 // Flow 1: đăng ký ngựa cho cuộc đua và xem lịch sử kết quả thi đấu.
@@ -83,90 +83,83 @@ export function HorseRaceHistoryPage() {
     }
   };
 
-  if (loading) return <p className="cap">{t('horseFlow.loading')}</p>;
+  if (loading) return <p className="text-muted">{t('horseFlow.loading')}</p>;
   if (error) return <ErrorText err={error} />;
   if (!horse) return null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <>
+      <PageHeader
+        crumbs={[['Ngựa đua', '/horses'], [horse.name, `/horses/${id}`]]}
+        title={t('horseFlow.performanceTitle')}
+        sub={entries.length === 0
+          ? `${horse.name} chưa có kết quả thi đấu nào.`
+          : `${horse.name} đã chạy ${entries.length} giải · ${wins} lần thắng · ${podiums} lần vào top 3.`}
+      />
       <HorseRecordNav horseId={id} />
-
-      <div>
-        <h1 className="text-lg font-semibold">{t('horseFlow.performanceTitle')}</h1>
-        <p className="cap mt-0.5">{horse.name} · {t('horseFlow.performanceDescription')}</p>
-      </div>
 
       {user?.role === 'MANAGER' && (
         <Card className="p-5">
-          <p className="lbl">{t('horseFlow.entryEyebrow')}</p>
-          <h2 className="font-semibold text-[15px] mt-0.5">{t('horseFlow.registerForRace')}</h2>
-          <p className="cap mt-0.5">{t('horseFlow.entryDescription', { horse: horse.name })}</p>
+          <h2 className="font-semibold text-[15px]">{t('horseFlow.registerForRace')}</h2>
+          <p className="text-[13px] text-muted mt-0.5">{t('horseFlow.entryDescription', { horse: horse.name })}</p>
           {availableRaces.length > 0 ? (
             <form onSubmit={registerForRace} className="flex items-end gap-3 flex-wrap mt-3.5">
               <Field label={t('horseFlow.upcomingRace')} className="min-w-[260px] flex-1">
-                <select
-                  className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-                  value={selectedRaceId} onChange={(event) => setSelectedRaceId(event.target.value)} required
-                >
+                <NativeSelect value={selectedRaceId} onChange={(event) => setSelectedRaceId(event.target.value)} required>
                   <option value="">{t('horseFlow.selectRace')}</option>
                   {availableRaces.map((race) => (
                     <option key={race.id} value={race.id}>
                       {race.name} · {formatDate(race.date)}{race.venue ? ` · ${race.venue}` : ''}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </Field>
               <Btn v="p" type="submit" disabled={registering || !selectedRaceId}>
                 {registering ? t('horseFlow.registering') : t('horseFlow.registerHorse')}
               </Btn>
             </form>
           ) : (
-            <p className="cap mt-3">{t('horseFlow.noAvailableRaces')}</p>
+            <p className="text-[13px] text-muted mt-3">{t('horseFlow.noAvailableRaces')}</p>
           )}
           {registrationError && <div className="mt-2"><ErrorText err={registrationError} /></div>}
         </Card>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          [t('horseFlow.racesStarted'), entries.length],
-          [t('horseFlow.wins'), wins],
-          [t('horseFlow.podiums'), podiums],
-          [t('horseFlow.bestFinish'), bestPlace == null ? '—' : `#${bestPlace}`],
-        ].map(([label, value]) => (
-          <Card key={label} className="p-4">
-            <span className="cap">{label}</span>
-            <div className="num font-bold text-xl mt-0.5">{value}</div>
-          </Card>
-        ))}
-      </div>
+      {entries.length > 0 && <KpiStrip items={[
+        { label: t('horseFlow.racesStarted'), value: entries.length },
+        { label: t('horseFlow.wins'), value: wins, lead: wins > 0 },
+        { label: t('horseFlow.podiums'), value: podiums },
+        { label: t('horseFlow.bestFinish'), value: bestPlace == null ? <span className="text-muted text-[16px] font-normal">Chưa có</span> : `Hạng ${bestPlace}` },
+      ]} />}
 
       {entries.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <p className="font-semibold">{t('horseFlow.noRaceResults')}</p>
-          <p className="cap mt-1">{t('horseFlow.noRaceResultsDescription')}</p>
-        </Card>
+        <EmptyState>{t('horseFlow.noRaceResults')}. {t('horseFlow.noRaceResultsDescription')}</EmptyState>
       ) : (
         <Card>
+          <CardHeader title="Các giải đã tham gia" />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead>
-                <tr className="text-left">
-                  {[t('horseFlow.race'), t('horseFlow.date'), t('horseFlow.venue'), t('horseFlow.finish'), t('horseFlow.time')].map((th) => (
-                    <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
-                  ))}
+                <tr>
+                  <th className={`${thCls} pl-5`}>{t('horseFlow.race')}</th>
+                  <th className={`${thCls} text-right`}>{t('horseFlow.date')}</th>
+                  <th className={thCls}>{t('horseFlow.venue')}</th>
+                  <th className={`${thCls} text-right`}>{t('horseFlow.finish')}</th>
+                  <th className={`${thCls} text-right pr-5`}>{t('horseFlow.time')}</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map((entry) => (
-                  <tr key={entry.id} className="border-b border-line-soft hover:bg-subtle">
-                    <td className="px-4 py-3 font-semibold">{entry.race.name}</td>
-                    <td className="px-4 py-3">{formatDate(entry.race.date)}</td>
-                    <td className="px-4 py-3 cap">{entry.race.venue ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      {entry.position == null ? <Badge tone="neu">{t('horseFlow.pendingResult')}</Badge> : <span className="num font-semibold">#{entry.position}</span>}
+                  <tr key={entry.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                    <td className="pl-5 pr-4 py-3 font-medium">{entry.race.name}</td>
+                    <td className="px-4 py-3 num text-right whitespace-nowrap">{formatDate(entry.race.date)}</td>
+                    <td className="px-4 py-3 text-muted">{entry.race.venue ?? 'Chưa rõ'}</td>
+                    <td className="px-4 py-3 text-right">
+                      {entry.position == null
+                        ? <Badge tone="neu">{t('horseFlow.pendingResult')}</Badge>
+                        : <span className={`num font-semibold ${entry.position === 1 ? 'text-ok' : ''}`}>{entry.position}</span>}
                     </td>
-                    <td className="px-4 py-3 num">{entry.time ?? '—'}</td>
+                    <td className="pl-4 pr-5 py-3 num text-right">{entry.time ?? <span className="text-muted">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -174,6 +167,6 @@ export function HorseRaceHistoryPage() {
           </div>
         </Card>
       )}
-    </div>
+    </>
   );
 }

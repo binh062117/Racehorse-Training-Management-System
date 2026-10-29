@@ -27,7 +27,7 @@ import {
   LockHorseDto,
   UpdateHorseDto,
 } from './dto/horses.dto';
-import { HORSE_PHOTO_KIND } from '../files/upload';
+import { buildImageMemoryMulterOptions } from '../files/upload';
 
 @ApiTags('horses')
 @ApiBearerAuth()
@@ -101,7 +101,7 @@ export class HorsesController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', buildImageMemoryMulterOptions()))
   uploadPhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file?: Express.Multer.File,
@@ -109,6 +109,6 @@ export class HorsesController {
     if (!file) {
       throw new AppException('VALIDATION_ERROR', 'A "file" field is required');
     }
-    return this.horses.setPhoto(id, `${HORSE_PHOTO_KIND}/${file.filename}`);
+    return this.horses.savePhoto(id, file);
   }
 }

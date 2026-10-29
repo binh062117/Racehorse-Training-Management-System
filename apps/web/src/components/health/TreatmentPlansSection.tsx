@@ -1,14 +1,11 @@
-import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../auth/useAuth';
-import { Alert, Badge, Btn, Card, Icon } from '../../ds/ui';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { createMedication, createTreatmentPlan, listMedications, listTreatmentPlans } from '../../lib/treatmentPlans';
 import type { Medication, TreatmentPlan } from '../../lib/types';
-import { listMedications, listTreatmentPlans } from '../../lib/treatmentPlans';
 import { ErrorText } from '../ErrorText';
-import { AddMedicationModal } from './AddMedicationModal';
-import { CreateTreatmentPlanModal } from './CreateTreatmentPlanModal';
+import { formatDate } from '../../lib/format';
+import { Btn, Field, Icon, Input, Textarea } from '../../ds/ui';
 
-// Only mounted after the examination's treatment section is expanded.
 function useTreatmentList<T>(id: string, fetchList: (id: string) => Promise<T[]>) {
   const [version, setVersion] = useState(0);
   const [result, setResult] = useState<{ id: string; version: number; items: T[]; err: unknown } | null>(null);
@@ -22,83 +19,236 @@ function useTreatmentList<T>(id: string, fetchList: (id: string) => Promise<T[]>
   return { items: current?.items ?? [], loading: !current, err: current?.err, reload: () => setVersion((v) => v + 1) };
 }
 
-export function TreatmentPlansSection({ recordId }: { recordId: string }) {
-  const { t } = useTranslation();
-  const id = useId();
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <section className="mt-4 border-t border-line pt-4">
-      <Btn sm aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded(!expanded)}>
-        <Icon name={expanded ? 'chevDown' : 'chevRight'} />{t('treatmentPlans.title')}
-      </Btn>
-      <div id={id} hidden={!expanded}>
-        {expanded && <PlanList key={recordId} recordId={recordId} />}
-      </div>
-    </section>
-  );
+interface Props {
+  healthRecordId: string;
+  isVet: boolean;
 }
 
-function PlanList({ recordId }: { recordId: string }) {
+/** Collapsible "treatment plans + medications" block for a health record (UC-20). */
+export function TreatmentPlansSection({ healthRecordId, isVet }: Props) {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const isVet = user?.role === 'VET';
-  const { items, loading, err, reload } = useTreatmentList(recordId, listTreatmentPlans);
-  const [creating, setCreating] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const id = useId();
+  const [open, setOpen] = useState(false);
+
+
   return (
-    <div className="flex flex-col gap-3 mt-3" aria-busy={loading}>
-      <p className="cap">{t('treatmentPlans.scope')}</p>
-      {saved && <Alert tone="ok">{t('treatmentPlans.planSaved')}</Alert>}
-      {loading ? <p role="status" className="cap">{t('treatmentPlans.loading')}</p> : err ? (
-        <div><ErrorText err={err} /><Btn sm onClick={reload}>{t('treatmentPlans.retry')}</Btn></div>
-      ) : items.length === 0 ? <p className="cap">{t('treatmentPlans.empty')}</p> : (
-        items.map((plan) => <PlanCard key={plan.id} plan={plan} isVet={isVet} />)
-      )}
-      {isVet && <Btn className="self-start" onClick={() => { setSaved(false); setCreating(true); }}><Icon name="plus" />{t('treatmentPlans.addPlan')}</Btn>}
-      {creating && <CreateTreatmentPlanModal recordId={recordId} onClose={() => setCreating(false)} onCreated={() => {
-        setCreating(false); setSaved(true); reload();
-      }} />}
+    <div className="mt-3.5 pt-3.5 border-t border-line-soft">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={id} className="flex items-center gap-1.5 text-[13px] font-semibold text-info">
+        <Icon name={open ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />
+        {t("treatmentPlans.title")}
+      </button>
+
+      <div id={id} hidden={!open}>
+        {open && <PlanList key={healthRecordId} healthRecordId={healthRecordId} isVet={isVet} />}
+      </div>
     </div>
   );
 }
 
-function PlanCard({ plan, isVet }: { plan: TreatmentPlan; isVet: boolean }) {
-  const { t, i18n } = useTranslation();
-  const { items, loading, err, reload } = useTreatmentList<Medication>(plan.id, listMedications);
-  const [adding, setAdding] = useState(false);
+function PlanList({ healthRecordId, isVet }: Props) {
+  const { t } = useTranslation();
+  const { items: plans, loading, err, reload } = useTreatmentList(healthRecordId, listTreatmentPlans);
+  const [formOpen, setFormOpen] = useState(false);
   const [saved, setSaved] = useState(false);
-  const date = (value: string | null) => value
-    ? new Intl.DateTimeFormat(i18n.language, { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'medium' }).format(new Date(value))
-    : t('treatmentPlans.notRecorded');
   return (
-    <Card className="p-4 min-w-0">
-      <Badge tone={plan.status === 'ACTIVE' ? 'info' : plan.status === 'COMPLETED' ? 'ok' : 'neu'}>{t(`treatmentPlans.status.${plan.status}`)}</Badge>
-      <p className="mt-2 whitespace-pre-wrap break-words font-medium">{plan.description}</p>
-      <dl className="grid gap-2 sm:grid-cols-2 mt-3 text-[12.5px]">
-        <div><dt className="text-muted">{t('treatmentPlans.startDate')}</dt><dd>{date(plan.startDate)}</dd></div>
-        <div><dt className="text-muted">{t('treatmentPlans.endDate')}</dt><dd>{date(plan.endDate)}</dd></div>
-      </dl>
-      <h4 className="font-semibold mt-4 mb-2">{t('treatmentPlans.medications')}</h4>
-      {saved && <Alert tone="ok" className="mb-2">{t('treatmentPlans.medicationSaved')}</Alert>}
-      {loading ? <p role="status" className="cap">{t('treatmentPlans.loading')}</p> : err ? (
+    <div className="mt-3 flex flex-col gap-3" aria-busy={loading}>
+      <p className="cap">{t('treatmentPlans.scope')}</p>
+      {saved && <p role="status" className="text-ok">{t('treatmentPlans.planSaved')}</p>}
+      {loading ? <p className="cap" role="status">{t('treatmentPlans.loading')}</p> : err ? (
         <div><ErrorText err={err} /><Btn sm onClick={reload}>{t('treatmentPlans.retry')}</Btn></div>
-      ) : items.length === 0 ? <p className="cap">{t('treatmentPlans.noMedications')}</p> : (
-        <ul className="list-none p-0 divide-y divide-line-soft">
-          {items.map((med) => (
-            <li key={med.id} className="py-3 grid gap-2 sm:grid-cols-2 break-words">
-              <div><span className="cap block">{t('treatmentPlans.medicationName')}</span><strong>{med.name}</strong></div>
-              <div><span className="cap block">{t('treatmentPlans.dosage')}</span>{med.dosage?.trim() || t('treatmentPlans.notRecorded')}</div>
-              {(med.startDate || med.endDate) && <div className="sm:col-span-2 text-[12.5px] text-muted">
-                {t('treatmentPlans.startDate')}: {date(med.startDate)} · {t('treatmentPlans.endDate')}: {date(med.endDate)}
-              </div>}
-            </li>
-          ))}
-        </ul>
+      ) : plans.length === 0 ? <p className="cap">{t('treatmentPlans.empty')}</p> : (
+        plans.map((plan) => <PlanItem key={plan.id} plan={plan} isVet={isVet} />)
       )}
-      {isVet && <Btn sm className="mt-3" onClick={() => { setSaved(false); setAdding(true); }}><Icon name="plus" />{t('treatmentPlans.addMedication')}</Btn>}
-      {adding && <AddMedicationModal planId={plan.id} onClose={() => setAdding(false)} onCreated={() => {
-        setAdding(false); setSaved(true); reload();
-      }} />}
-    </Card>
+      {isVet && (formOpen ? (
+        <CreatePlanForm healthRecordId={healthRecordId} onCancel={() => setFormOpen(false)}
+          onCreated={() => { setFormOpen(false); setSaved(true); reload(); }} />
+      ) : <Btn sm onClick={() => { setSaved(false); setFormOpen(true); }}><Icon name="plus" />{t('treatmentPlans.addPlan')}</Btn>)}
+    </div>
+  );
+}
+
+function PlanItem({ plan, isVet }: { plan: TreatmentPlan; isVet: boolean }) {
+  const { t } = useTranslation();
+  const { items: medications, loading, err, reload: load } = useTreatmentList<Medication>(plan.id, listMedications);
+  const [formOpen, setFormOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <div className="rounded-btn border border-line p-3.5">
+      <p className="cap">{t(`treatmentPlans.status.${plan.status}`)}</p>
+      <p className="leading-relaxed whitespace-pre-wrap break-words">{plan.description}</p>
+      <p className="cap mt-1">{formatDate(plan.startDate)} — {plan.endDate ? formatDate(plan.endDate) : t('treatmentPlans.notRecorded')}</p>
+
+      {saved && <p role="status" className="text-ok">{t("treatmentPlans.medicationSaved")}</p>}
+      <div className="mt-2.5 pl-3 border-l-2 border-line-soft flex flex-col gap-2">
+        <span className="lbl">{t('treatmentPlans.medications')}</span>
+        {loading ? (
+          <p className="cap">{t("treatmentPlans.loading")}</p>
+        ) : (
+          <>
+            <ErrorText err={err} />
+            {!!err && <Btn sm onClick={load}>{t('treatmentPlans.retry')}</Btn>}
+            {!err && medications.length === 0 && !formOpen && <p className="cap">{t('treatmentPlans.noMedications')}</p>}
+            {medications?.map((m) => (
+              <div key={m.id} className="text-[13px]">
+                <strong>{m.name}</strong>
+                {m.dosage && <span className="cap"> · {m.dosage}</span>}
+                {(m.startDate || m.endDate) && (
+                  <span className="cap"> · {m.startDate ? formatDate(m.startDate) : '—'} — {m.endDate ? formatDate(m.endDate) : t('treatmentPlans.notRecorded')}</span>
+                )}
+              </div>
+            ))}
+          </>
+        )}
+
+        {isVet && (
+          formOpen ? (
+            <CreateMedicationForm
+              planId={plan.id}
+              onCancel={() => setFormOpen(false)}
+              onCreated={() => { setFormOpen(false); setSaved(true); load(); }}
+            />
+          ) : (
+            <Btn sm onClick={() => setFormOpen(true)}><Icon name="plus" className="w-3.5 h-3.5" />{t("treatmentPlans.addMedication")}</Btn>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CreatePlanForm({ healthRecordId, onCancel, onCreated }: {
+  healthRecordId: string; onCancel: () => void; onCreated: () => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const saving = useRef(false);
+  const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [validation, setValidation] = useState('');
+  const [err, setErr] = useState<unknown>(null);
+  const close = () => { if (!saving.current) onCancel(); };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (saving.current) return;
+    setErr(null);
+    setValidation('');
+    if (!description.trim()) { setValidation('descriptionRequired'); return; }
+    if (!startDate || !Number.isFinite(Date.parse(startDate)) || (endDate && !Number.isFinite(Date.parse(endDate)))) {
+      setValidation('invalidDates'); return;
+    }
+    if (endDate && endDate < startDate) { setValidation('dateOrder'); return; }
+    saving.current = true;
+    setBusy(true);
+    try {
+      await createTreatmentPlan(healthRecordId, {
+        description: description.trim(), startDate: new Date(`${startDate}T00:00:00`).toISOString(),
+        ...(endDate ? { endDate: new Date(`${endDate}T00:00:00`).toISOString() } : {}),
+      });
+      onCreated();
+    } catch (error) {
+      setErr(error);
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="rounded-btn border border-line bg-subtle p-3.5 flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
+          {validation && <p role="alert" className="text-bad">{t(`treatmentPlans.${validation}`)}</p>}
+          <ErrorText err={err} />
+          <Field label={t('treatmentPlans.description')} htmlFor={`${id}-description`} req>
+            <Textarea id={`${id}-description`} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} required disabled={busy} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t('treatmentPlans.startDate')} htmlFor={`${id}-start`} req>
+              <Input id={`${id}-start`} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required disabled={busy} />
+            </Field>
+            <Field label={t('treatmentPlans.endDate')} htmlFor={`${id}-end`} hint={t('treatmentPlans.optional')}>
+              <Input id={`${id}-end`} type="date" min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={busy} />
+            </Field>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Btn onClick={close} disabled={busy}>{t('common.cancel')}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{t(busy ? 'treatmentPlans.saving' : 'common.save')}</Btn>
+        </div>
+      </form>
+
+  );
+}
+
+function CreateMedicationForm({ planId, onCancel, onCreated }: {
+  planId: string; onCancel: () => void; onCreated: () => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const saving = useRef(false);
+  const [name, setName] = useState('');
+  const [dosage, setDosage] = useState('');
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [validation, setValidation] = useState('');
+  const [err, setErr] = useState<unknown>(null);
+  const close = () => { if (!saving.current) onCancel(); };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (saving.current) return;
+    setErr(null);
+    setValidation('');
+    if (!name.trim()) { setValidation('nameRequired'); return; }
+    if ((startDate && !Number.isFinite(Date.parse(startDate))) || (endDate && !Number.isFinite(Date.parse(endDate)))) {
+      setValidation('invalidDates'); return;
+    }
+    if (startDate && endDate && endDate < startDate) { setValidation('dateOrder'); return; }
+    saving.current = true;
+    setBusy(true);
+    try {
+      await createMedication(planId, {
+        name: name.trim(), ...(dosage.trim() ? { dosage: dosage.trim() } : {}),
+        ...(startDate ? { startDate: new Date(`${startDate}T00:00:00`).toISOString() } : {}), ...(endDate ? { endDate: new Date(`${endDate}T00:00:00`).toISOString() } : {}),
+      });
+      onCreated();
+    } catch (error) {
+      setErr(error);
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="rounded-btn border border-line bg-subtle p-3.5 flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
+          {validation && <p role="alert" className="text-bad">{t(`treatmentPlans.${validation}`)}</p>}
+          <ErrorText err={err} />
+          <Field label={t('treatmentPlans.medicationName')} htmlFor={`${id}-name`} req>
+            <Input id={`${id}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required disabled={busy} />
+          </Field>
+          <Field label={t('treatmentPlans.dosage')} htmlFor={`${id}-dosage`} hint={t('treatmentPlans.optional')}>
+            <Input id={`${id}-dosage`} value={dosage} onChange={(e) => setDosage(e.target.value)} maxLength={120} disabled={busy} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t('treatmentPlans.startDate')} htmlFor={`${id}-start`} hint={t('treatmentPlans.optional')}>
+              <Input id={`${id}-start`} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={busy} />
+            </Field>
+            <Field label={t('treatmentPlans.endDate')} htmlFor={`${id}-end`} hint={t('treatmentPlans.optional')}>
+              <Input id={`${id}-end`} type="date" min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={busy} />
+            </Field>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Btn onClick={close} disabled={busy}>{t('common.cancel')}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{t(busy ? 'treatmentPlans.saving' : 'common.save')}</Btn>
+        </div>
+      </form>
+
   );
 }

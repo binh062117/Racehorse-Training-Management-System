@@ -222,9 +222,7 @@ describe('Training plans & lock (e2e)', () => {
   });
 
   it('GET /training-plans lists all visible plans for TRAINER', async () => {
-    const res = await api()
-      .get('/api/v1/training-plans')
-      .set(auth('trainer'));
+    const res = await api().get('/api/v1/training-plans').set(auth('trainer'));
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBeGreaterThan(0);

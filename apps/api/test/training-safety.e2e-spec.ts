@@ -122,6 +122,56 @@ describe('Training safety rules (e2e)', () => {
     sessionIds.push(res.body.id);
   });
 
+  it('the conflict message names the clashing session and its time in Vietnam time', async () => {
+    const within = new Date(baseTime.getTime() + 15 * 60_000).toISOString();
+    const res = await createSession(horseAId, within);
+    expect(res.status).toBe(409);
+    // baseTime 08:00Z = 15:00 in Asia/Ho_Chi_Minh.
+    expect(res.body.error.message).toContain('"gallop"');
+    expect(res.body.error.message).toContain('15:00');
+    expect(res.body.error.message).toContain('60 phút');
+  });
+
+  it('moving a planned session onto another one is rejected (409 CONFLICT)', async () => {
+    const onTop = new Date(baseTime.getTime() + 20 * 60_000).toISOString();
+    const res = await api()
+      .patch(`/api/v1/sessions/${sessionIds[1]}`)
+      .set(auth('trainer'))
+      .send({ scheduledAt: onTop });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('CONFLICT');
+  });
+
+  it('moving a planned session a little does not clash with itself (200)', async () => {
+    // sessionIds[0] sits at baseTime; 30 min earlier is still 91 min from sessionIds[1].
+    const earlier = new Date(baseTime.getTime() - 30 * 60_000).toISOString();
+    const res = await api()
+      .patch(`/api/v1/sessions/${sessionIds[0]}`)
+      .set(auth('trainer'))
+      .send({ scheduledAt: earlier });
+    expect(res.status).toBe(200);
+    expect(res.body.scheduledAt).toBe(earlier);
+  });
+
+  it('a cancelled session no longer blocks its time slot (201)', async () => {
+    const slot = new Date(baseTime.getTime() + 4 * 60 * 60_000);
+    const first = await createSession(horseAId, slot.toISOString());
+    expect(first.status).toBe(201);
+    sessionIds.push(first.body.id);
+    const cancel = await api()
+      .patch(`/api/v1/sessions/${first.body.id}`)
+      .set(auth('trainer'))
+      .send({ status: 'CANCELLED' });
+    expect(cancel.status).toBe(200);
+
+    const again = await createSession(
+      horseAId,
+      new Date(slot.getTime() + 10 * 60_000).toISOString(),
+    );
+    expect(again.status).toBe(201);
+    sessionIds.push(again.body.id);
+  });
+
   it('Training Lock still takes priority over the conflict rule (400, not 409)', async () => {
     await api()
       .patch(`/api/v1/horses/${horseBId}/lock`)

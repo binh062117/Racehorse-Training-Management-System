@@ -38,7 +38,8 @@ export class JwtAuthGuard implements CanActivate {
       .getRequest<Request & { user: AuthUser }>();
     const header = req.headers.authorization ?? '';
     const [scheme, bearerToken] = header.split(' ');
-    const queryToken = typeof req.query?.token === 'string' ? req.query.token : undefined;
+    const queryToken =
+      typeof req.query?.token === 'string' ? req.query.token : undefined;
     const token = scheme === 'Bearer' && bearerToken ? bearerToken : queryToken;
     if (!token) {
       throw new AppException('UNAUTHENTICATED', 'Missing bearer token');

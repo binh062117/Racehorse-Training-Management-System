@@ -1,7 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { HealthStatusBadge } from '../components/health/HealthStatusBadge';
 import { Link } from 'react-router-dom';
 import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
@@ -13,18 +12,17 @@ import { EditHorseModal } from '../components/horse/EditHorseModal';
 import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Badge, Btn, Card, Chip, Cloth, HeroStats, Icon, LockBadge, Ring, Seg, Silk,
-  careerTone, fitColor,
+  Btn, Card, CareerBadge, Chip, ChipCount, Cloth, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip,
+  LockBadge, PageHeader, Ring, Seg, fitColor, lockReasonText,
 } from '../ds/ui';
 
-type Filter = 'all' | 'locked' | HealthStatus;
-const FILTERS: Filter[] = ['all', 'locked', 'FIT', 'MONITORING', 'INJURED', 'QUARANTINED'];
-const HEALTH_DIST: () => { key: HealthStatus; label: string; color: string }[] = () => ([
-  { key: 'FIT', label: i18n.t("horseStatusBadge.FIT"), color: '#6fae84' },
-  { key: 'MONITORING', label: i18n.t("horseStatusBadge.MONITORING"), color: '#e0b55a' },
-  { key: 'QUARANTINED', label: i18n.t("horseStatusBadge.QUARANTINED"), color: '#d98080' },
-  { key: 'INJURED', label: i18n.t("horseStatusBadge.INJURED"), color: '#b94a4a' },
-]);
+type Filter = 'all' | 'locked' | 'injured' | 'mon';
+const FILTERS = (): [Filter, string, (h: Horse) => boolean][] => [
+  ['all', i18n.t("races.filters.ALL"), () => true],
+  ['locked', i18n.t("ui.trainingLocked2"), (h) => h.locked],
+  ['injured', i18n.t("mergeUi.injuredOrQuarantined"), (h) => h.healthStatus === 'INJURED' || h.healthStatus === 'QUARANTINED'],
+  ['mon', i18n.t("horseFlow.health.MONITORING"), (h) => h.healthStatus === 'MONITORING'],
+];
 
 function calculateAge(birthDate: string | null): number | null {
   if (!birthDate) return null;
@@ -33,16 +31,22 @@ function calculateAge(birthDate: string | null): number | null {
   const years = Math.floor((Date.now() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
   return years >= 0 ? years : null;
 }
+const genderText = (g: Horse['gender']) => (g === 'MALE' ? i18n.t("horse.genderMale") : g === 'FEMALE' ? i18n.t("horse.genderFemale") : i18n.t("ui.unknownSex"));
+const ageText = (birthDate: string | null) => {
+  const age = calculateAge(birthDate);
+  return age != null ? i18n.t('ui.age', { count: age }) : i18n.t("ui.unknownAge");
+};
 
 export function HorsesPage({ personal = false }: { personal?: boolean }) {
+  useTranslation();
   const { user } = useAuth();
-  const { t } = useTranslation();
   const isManager = user?.role === 'MANAGER';
   const isOwner = user?.role === 'OWNER';
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [healthFilter, setHealthFilter] = useState<HealthStatus | ''>('');
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
   useEffect(() => {
@@ -56,6 +60,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 
   const queryParams = {
     limit: 100,
+    ...(healthFilter ? { healthStatus: healthFilter } : {}),
     ...(personal && isOwner && user?.id ? { ownerId: user.id } : {}),
   };
   const cacheKey = `horses:${JSON.stringify(queryParams)}`;
@@ -63,152 +68,121 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
     api.get<Paginated<Horse>>('/horses', { params: queryParams }).then((r) => r.data),
   );
   const all = data?.data ?? [];
-  const healthFilter = filter === 'all' || filter === 'locked' ? null : filter;
-  const [healthResult, setHealthResult] = useState<{ status: HealthStatus; source: typeof data; rows: Horse[]; err: unknown } | null>(null);
-  useEffect(() => {
-    if (!healthFilter) return;
-    let active = true;
-    api.get<Paginated<Horse>>('/horses', { params: { ...queryParams, healthStatus: healthFilter } })
-      .then((r) => { if (active) setHealthResult({ status: healthFilter, source: data, rows: r.data.data, err: null }); })
-      .catch((err: unknown) => { if (active) setHealthResult({ status: healthFilter, source: data, rows: [], err }); });
-    return () => { active = false; };
-  // Query parameters are captured by the existing cache key; data refreshes after horse edits.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [healthFilter, cacheKey, data]);
-  const healthCurrent = healthResult?.status === healthFilter && healthResult?.source === data;
-  const source = healthFilter ? (healthCurrent ? healthResult!.rows : []) : all;
-  const healthLoading = !!healthFilter && !healthCurrent;
-  const bySearch = debouncedSearch.trim()
-    ? source.filter((h) => h.name.toLowerCase().includes(debouncedSearch.trim().toLowerCase()))
-    : source;
-  const rows = [...bySearch].filter((h) => filter !== 'locked' || h.locked)
+  const q = debouncedSearch.trim().toLowerCase();
+  const bySearch = q ? all.filter((h) => h.name.toLowerCase().includes(q)) : all;
+  const rows = [...bySearch].filter(FILTERS().find((f) => f[0] === filter)![2])
     .sort((a, b) => (b.fitnessScore ?? -1) - (a.fitnessScore ?? -1));
 
   const locked = all.filter((h) => h.locked).length;
   const active = all.filter((h) => h.status === 'ACTIVE').length;
   const scored = all.filter((h) => h.fitnessScore != null);
-  const avgFit = scored.length ? (scored.reduce((s, h) => s + (h.fitnessScore ?? 0), 0) / scored.length).toFixed(1) : '—';
-  const healthCounts = HEALTH_DIST().map((d) => ({ ...d, label: t(`horseStatusBadge.${d.key}`), n: all.filter((h) => h.healthStatus === d.key).length }));
+  const avgFit = scored.length ? (scored.reduce((s, h) => s + (h.fitnessScore ?? 0), 0) / scored.length).toFixed(1) : null;
+  const avgFitNum = avgFit != null ? Number(avgFit) : null;
 
-  const title = personal ? i18n.t("nav.horsesOwner") : i18n.t("ui.stables");
-  usePageChrome({ crumbs: [i18n.t("nav.horses"), title], search: i18n.t("ui.searchHorseName"), onSearch: setSearch });
+  const title = personal ? i18n.t("horseFlow.myHorses") : i18n.t("nav.horses");
+  usePageChrome({ crumbs: [title] });
+
+  const sub = loading && all.length === 0
+    ? i18n.t("ui.loadingHorses")
+    : i18n.t('mergeUi.horseSummary', { count: all.length, locked: locked > 0 ? i18n.t('mergeUi.lockedSummary', { count: locked }) : '', owned: personal ? i18n.t('mergeUi.ownedSuffix') : '' });
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div className="flex flex-wrap gap-6 items-end">
-          <div className="flex-[1_1_360px] min-w-0">
-            <div className="lbl">{i18n.t("ui.2026SeasonRacehorseClub")}</div>
-            <h1 className="disp text-[64px] mt-2">{title}</h1>
-            <p className="text-hero-muted mt-2.5 max-w-[520px]">
-              {isManager
-                ? i18n.t("ui.clubHorsesCurrentOperationalStatusHealthAndFitness")
-                : personal
-                  ? i18n.t("ui.horsesOwnedByYou")
-                  : i18n.t("ui.horsesVisibleToYourRole")}
-            </p>
-          </div>
-          {isManager && (
-            <div className="flex flex-wrap gap-2">
-              <Btn v="light" onClick={() => setCreateOpen(true)}><Icon name="plus" />{i18n.t("horse.new")}</Btn>
-            </div>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-y-6 items-end">
-          <HeroStats items={[
-            { label: i18n.t("ui.loadedHorses2"), value: all.length, small: i18n.t("ui.horses2") },
-            { label: i18n.t("ui.active"), value: active, small: `/ ${all.length}` },
-            { label: i18n.t("ui.averageFitnessScore"), value: avgFit },
-            { label: i18n.t("ui.trainingLocked2"), value: locked, small: i18n.t("ui.horses2"), color: '#f3b4b4' },
-          ]} />
-          <div className="flex-[1_1_320px] min-w-[260px] pl-6 border-l border-white/10">
-            <span className="lbl">{i18n.t("ui.herdHealth")}</span>
-            <div className="flex gap-0.5 h-2.5 rounded overflow-hidden mt-2" role="img" aria-label={healthCounts.map((d) => `${d.label} ${d.n}`).join(', ')}>
-              {healthCounts.map((d) => (
-                <i key={d.key} className="block" style={{ width: all.length ? `${(d.n / all.length) * 100}%` : 0, background: d.color }} />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-x-3.5 gap-y-1 mt-2 text-[11.5px] text-hero-line">
-              {healthCounts.map((d) => (
-                <span key={d.key} className="flex gap-1.5 items-center"><i className="w-2 h-2 rounded-sm" style={{ background: d.color }} />{d.label} <b className="text-white">{d.n}</b></span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        title={title}
+        sub={sub}
+        search={{ placeholder: i18n.t("horseFlow.searchPlaceholder"), value: search, onChange: setSearch }}
+        actions={isManager ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{i18n.t("horse.new")}</Btn> : undefined}
+      />
 
-      <div className="flex flex-wrap gap-2.5 items-center">
-        {FILTERS.map((k) => (
-          <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{t(k === 'all' ? 'healthView.all' : k === 'locked' ? 'healthView.locked' : `horseStatusBadge.${k}`)}</Chip>
+      <KpiStrip items={[
+        { label: i18n.t("dashboard.totalHorses"), value: all.length },
+        { label: i18n.t("ui.active"), value: active, unit: `/ ${all.length}` },
+        { label: i18n.t("mergeUi.averageFitness"), value: avgFitNum ?? '—', unit: avgFit ? '/100' : undefined, sub: scored.length < all.length ? i18n.t('mergeUi.assessedHorses', { count: scored.length, total: all.length }) : undefined },
+        { label: i18n.t("mergeUi.locked"), value: locked, tone: locked > 0 ? 'bad' : undefined },
+      ]} />
+
+      <div className="flex flex-wrap gap-2 items-center">
+        {FILTERS().map(([k, l, fn]) => (
+          <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{l} <ChipCount n={bySearch.filter(fn).length} /></Chip>
         ))}
-        <div className="ml-auto flex gap-2.5 items-center">
-          <span className="cap">{i18n.t("ui.sortFitnessScore")}</span>
-          <Seg options={[['cards', i18n.t("ui.cards")], ['table', i18n.t("ui.table")]]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} />
-        </div>
+        <select className="h-9 w-auto rounded-btn border border-line-strong bg-white px-3" aria-label={i18n.t('ui.healthStatus')} value={healthFilter}
+          onChange={(e) => setHealthFilter(e.target.value as HealthStatus | '')}>
+          <option value="">{i18n.t('healthView.all')}</option>
+          {(['FIT', 'MONITORING', 'INJURED', 'QUARANTINED'] as const).map((status) => <option key={status} value={status}>{i18n.t('horseStatusBadge.' + status)}</option>)}
+        </select>
+        <div className="ml-auto"><Seg options={[['cards', i18n.t("ui.cards")], ['table', i18n.t("ui.table")]]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} /></div>
       </div>
 
-      <p className="cap">{t(healthFilter ? 'healthView.filterLimit' : 'healthView.subset')}</p>
-      <ErrorText err={loadErr || (healthFilter ? healthResult?.err : null)} />
-      {!!(loadErr || (healthFilter && healthResult?.err)) && <Btn className="self-start" onClick={() => void load()}>{t('healthView.retry')}</Btn>}
+      <ErrorText err={loadErr} />
 
-      {(loading || healthLoading) && rows.length === 0 ? (
-        <p className="cap">{t('healthView.loading')}</p>
+      {loading && rows.length === 0 ? (
+        <p className="text-muted">{i18n.t("ui.loadingHorses")}</p>
       ) : rows.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <p className="cap">{t('healthView.empty')}</p>
-        </Card>
+        <EmptyState action={filter !== 'all' || healthFilter || q ? <Btn sm onClick={() => { setFilter('all'); setHealthFilter(''); setSearch(''); }}>{i18n.t("mergeUi.clearFilters")}</Btn> : undefined}>
+          {all.length === 0 ? i18n.t("mergeUi.noHorses") : i18n.t("mergeUi.noMatches")}
+        </EmptyState>
       ) : view === 'cards' ? (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))' }}>
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(290px, 100%), 1fr))' }}>
           {rows.map((h) => <HorseCard key={h.id} h={h} canManage={isManager} onEdit={() => setEditingHorse(h)} onDelete={() => setDeletingHorse(h)} />)}
         </div>
       ) : (
         <Card>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse">
+            <table className="w-full min-w-[960px] border-collapse">
               <thead>
-                <tr className="text-left">
-                  {[i18n.t("healthSchedule.horse"), i18n.t("ui.owner2"), i18n.t("horse.breed"), i18n.t("horseFlow.fitnessScore"), i18n.t("horse.status"), i18n.t("ui.health"), i18n.t("ui.trainingLocked2"), ...(isManager ? [i18n.t("incidents.actions")] : [])].map((t) => (
-                    <th key={t} className="h-[42px] px-4 bg-cream lbl border-b border-line">{t}</th>
-                  ))}
+                <tr className="text-left text-[12px] text-muted">
+                  <th className="h-10 px-5 font-medium border-b border-line">{i18n.t("incidents.horse")}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("ui.owner2")}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("horse.breed")}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line text-right">{i18n.t("mergeUi.fitness")}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("mergeUi.racing")}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("ui.health")}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("ui.trainingLocked2")}</th>
+                  {isManager && <th className="h-10 px-5 border-b border-line" aria-label={i18n.t("incidents.actions")} />}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((h) => {
-                  const age = calculateAge(h.birthDate);
-                  return (
-                    <tr key={h.id} className={`border-b border-line-soft hover:bg-subtle ${h.locked ? 'bg-[#fdfbfb]' : ''}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Cloth n={h.saddleNumber ?? '—'} /><Silk owner={h.owner.id} />
-                          <div>
-                            <Link to={`/horses/${h.id}`} className="font-semibold text-ink no-underline">{h.name}</Link>
-                            <div className="cap num">{h.gender === 'MALE' ? i18n.t("horse.genderMale") : h.gender === 'FEMALE' ? i18n.t("horse.genderFemale") : '—'} · {age != null ? i18n.t('ui.age', { count: age }) : '—'}</div>
-                          </div>
+                {rows.map((h) => (
+                  <tr key={h.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 flex justify-center"><Cloth n={h.saddleNumber} /></span>
+                        <HorseAvatar src={getFileUrl(h.photoUrl)} name={h.name} size={32} />
+                        <div className="min-w-0">
+                          <Link to={`/horses/${h.id}`} className="font-medium text-ink no-underline hover:text-info">{h.name}</Link>
+                          <div className="text-[12.5px] text-muted">{genderText(h.gender)} · {ageText(h.birthDate)}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{h.owner.name}</td>
+                    <td className="px-4 py-3 text-muted">{h.breed ?? '—'}</td>
+                    <td className="px-4 py-3 text-right num">
+                      {h.fitnessScore != null ? <span className="font-semibold hop" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore}</span> : <span className="text-muted">—</span>}
+                    </td>
+                    <td className="px-4 py-3"><CareerBadge status={h.status} /></td>
+                    <td className="px-4 py-3"><HealthBadge status={h.healthStatus} /></td>
+                    <td className="px-4 py-3 max-w-[260px]">
+                      {h.locked
+                        ? <div className="flex flex-col gap-1 items-start"><LockBadge /><span className="text-[12.5px] text-muted line-clamp-1" title={lockReasonText(h.lockReason)}>{lockReasonText(h.lockReason)}</span></div>
+                        : <span className="text-muted">—</span>}
+                    </td>
+                    {isManager && (
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-1">
+                          <button type="button" aria-label={`Sửa ${h.name}`} onClick={() => setEditingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
+                          <button type="button" aria-label={`Xóa ${h.name}`} onClick={() => setDeletingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
                         </div>
                       </td>
-                      <td className="px-4 py-3">{h.owner.name}</td>
-                      <td className="px-4 py-3">{h.breed ?? '—'}</td>
-                      <td className="px-4 py-3"><b className="num" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore ?? '—'}</b></td>
-                      <td className="px-4 py-3"><Badge tone={careerTone[h.status]}>{i18n.t(`horseStatusBadge.${h.status}`)}</Badge></td>
-                      <td className="px-4 py-3"><HealthStatusBadge status={h.healthStatus} /></td>
-                      <td className="px-4 py-3">{h.locked ? <LockBadge>{h.lockReason ?? i18n.t("ui.locked")}</LockBadge> : <span className="cap">—</span>}</td>
-                      {isManager && (
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1.5">
-                            <Btn sm onClick={() => setEditingHorse(h)}><Icon name="edit" className="w-3.5 h-3.5" />{i18n.t("ui.edit")}</Btn>
-                            <Btn sm v="d" onClick={() => setDeletingHorse(h)}><Icon name="trash" className="w-3.5 h-3.5" />{i18n.t("ui.delete")}</Btn>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
+                    )}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </Card>
       )}
-      <div className="flex items-center gap-3"><span className="cap">{i18n.t("ui.showing")}{' '}{rows.length} / {source.length} {' '}{i18n.t("ui.horses2")}</span></div>
+      {rows.length > 0 && <p className="text-[13px] text-muted">{i18n.t('mergeUi.horseRows', { count: rows.length, total: all.length })}</p>}
 
       <CreateHorseModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onCreated={load} />
       <EditHorseModal horse={editingHorse} isOpen={editingHorse !== null} onClose={() => setEditingHorse(null)} onUpdated={load} />
@@ -219,41 +193,44 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 
 function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: boolean; onEdit: () => void; onDelete: () => void }) {
   useTranslation();
-  const age = calculateAge(h.birthDate);
-  const photo = getFileUrl(h.photoUrl);
   return (
-    <div className={`relative flex flex-col rounded-xl border border-line overflow-hidden text-ink transition hover:border-line-strong hover:shadow-lift ${h.locked ? 'hatch' : 'bg-white'}`}>
-      {h.locked && <span className="lockband" aria-hidden="true">{i18n.t("ui.locked2")}</span>}
-      <Link to={`/horses/${h.id}`} aria-label={i18n.t('ui.horseProfileNamed', { name: h.name })} className="flex gap-3 items-start p-4 pb-3 no-underline text-ink">
-        {photo ? (
-          <img src={photo} alt="" className="w-9 h-9 rounded-full object-cover flex-none border border-line" />
-        ) : (
-          <Cloth n={h.saddleNumber ?? '—'} />
-        )}
-        <Silk owner={h.owner.id} size={34} />
-        <div className="flex-1 min-w-0"><div className="disp text-2xl leading-6 truncate">{h.name}</div><div className="cap num mt-1">{h.breed ?? i18n.t("ui.unknownBreed2")} · {age != null ? i18n.t('ui.age', { count: age }) : i18n.t("ui.unknownAge")}</div></div>
+    <div className="group lift hover-hop flex flex-col bg-white rounded-card border border-line hover:border-line-strong">
+      <Link to={`/horses/${h.id}`} aria-label={`Hồ sơ ${h.name}`} className="flex gap-3 items-center px-4 pt-4 no-underline text-ink">
+        <HorseAvatar src={getFileUrl(h.photoUrl)} name={h.name} size={40} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[16px] font-semibold leading-5 truncate group-hover:text-info">{h.name}</span>
+            <Cloth n={h.saddleNumber} />
+          </div>
+          <div className="text-[12.5px] text-muted mt-0.5 truncate">{h.breed ?? i18n.t("ui.unknownBreed2")} · {ageText(h.birthDate)}</div>
+        </div>
       </Link>
-      <div className="flex items-center gap-3.5 px-4 pb-3.5">
-        <Ring value={h.fitnessScore ?? 0} color={fitColor(h.fitnessScore)} text={h.fitnessScore ?? '—'} label={i18n.t('ui.fitnessNamed', { value: h.fitnessScore ?? i18n.t('ui.notAssessed2') })} />
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          <div className="flex justify-between items-baseline"><span className="lbl">{i18n.t("ui.fitness")}</span></div>
-          <span className="cap">{h.fitnessScore != null ? `${h.fitnessScore} / 100` : i18n.t("ui.notAssessed")}</span>
-          <div className="flex items-center gap-2"><span className="lbl">{i18n.t("horse.gender")}</span><span className="cap">{h.gender === 'MALE' ? i18n.t("horse.genderMale") : h.gender === 'FEMALE' ? i18n.t("horse.genderFemale") : i18n.t("horse.genderUnknown")}</span></div>
+
+      <div className="flex items-center gap-3 px-4 pt-4">
+        <Ring value={h.fitnessScore ?? 0} size={44} color={fitColor(h.fitnessScore)} text={h.fitnessScore ?? '—'} label={`Thể lực ${h.fitnessScore ?? i18n.t("ui.notAssessed2")}`} />
+        <div className="min-w-0">
+          <div className="text-[13px] text-muted">{i18n.t("mergeUi.fitness")}</div>
+          <div className="text-[13.5px]">{h.fitnessScore != null ? <><span className="num font-medium">{h.fitnessScore}</span><span className="text-muted"> / 100</span></> : <span className="text-muted">{i18n.t("ui.notAssessed")}</span>}</div>
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5 px-4 pb-3.5">
-        <Badge tone={careerTone[h.status]}>{i18n.t(`horseStatusBadge.${h.status}`)}</Badge>
-        <HealthStatusBadge status={h.healthStatus} />
-        {h.locked && <LockBadge>{h.lockReason ?? i18n.t("ui.locked")}</LockBadge>}
+
+      <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+        <CareerBadge status={h.status} />
+        <HealthBadge status={h.healthStatus} />
+        {h.locked && <LockBadge />}
       </div>
-      <div className="mt-auto flex items-center gap-2 px-4 py-2.5 border-t border-line-soft bg-subtle">
-        <span className="cap flex-1 min-w-0 truncate">{i18n.t("ui.owner2")}{' '}<b className="text-ink">{h.owner.name}</b></span>
-        {canManage && (
-          <div className="flex gap-1">
-            <button type="button" aria-label={i18n.t("ui.edit")} onClick={onEdit} className="w-7 h-7 rounded-btn inline-flex items-center justify-center text-muted hover:bg-white hover:text-ink"><Icon name="edit" className="w-3.5 h-3.5" /></button>
-            <button type="button" aria-label={i18n.t("ui.delete")} onClick={onDelete} className="w-7 h-7 rounded-btn inline-flex items-center justify-center text-muted hover:bg-white hover:text-bad"><Icon name="trash" className="w-3.5 h-3.5" /></button>
-          </div>
-        )}
+      {h.locked && <p className="px-4 pt-2 text-[12.5px] text-bad-ink line-clamp-2" title={lockReasonText(h.lockReason)}>{lockReasonText(h.lockReason)}</p>}
+
+      <div className="mt-auto pt-4">
+        <div className="flex items-center gap-2 px-4 h-11 border-t border-line-soft">
+          <span className="text-[13px] text-muted flex-1 min-w-0 truncate">{i18n.t("ui.owner2")}<span className="text-ink">{h.owner.name}</span></span>
+          {canManage && (
+            <div className="flex gap-0.5 -mr-1.5">
+              <button type="button" aria-label={`Sửa ${h.name}`} onClick={onEdit} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
+              <button type="button" aria-label={`Xóa ${h.name}`} onClick={onDelete} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

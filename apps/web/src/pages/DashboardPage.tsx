@@ -1,74 +1,85 @@
 import i18n from '../i18n';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, Paginated, Notification, User, Role } from '../lib/types';
-import { formatDate, formatNotificationMessage } from '../lib/format';
+import { formatDate } from '../lib/format';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Badge, Btn, Card, CardHeader, HeroStats, Icon, Silk,
-  careerTone, healthTone,
+  Badge, Btn, Card, CardHeader, Cloth, EmptyState, HorseAvatar, Icon, KpiStrip, PageHeader,
+  fitColor, lockReasonText, notificationIcon, type Tone,
 } from '../ds/ui';
 
-interface QuickAction {
-  icon: string;
-  title: string;
-  desc: string;
-  to: string;
-}
+interface Job { title: string; desc: string; to: string }
 
-const QUICK_ACTIONS: () => Partial<Record<Role, QuickAction[]>> = () => ({
+/** The jobs each role opens this screen to do, most frequent first. */
+const JOBS: Partial<Record<Role, Job[]>> = {
+  MANAGER: [
+    { to: '/horses', title: 'Thêm hồ sơ ngựa', desc: 'Đăng ký ngựa mới và gán chủ sở hữu' },
+    { to: '/admin/users', title: 'Duyệt tài khoản', desc: 'Gán vai trò cho tài khoản mới đăng ký' },
+    { to: '/races', title: 'Quản lý giải đua', desc: 'Tạo giải, đăng ký ngựa, nhập kết quả' },
+  ],
   TRAINER: [
-    { icon: 'plans', to: '/plans?action=create', title: i18n.t("ui.createADetailedTrainingPlan"), desc: i18n.t("ui.distanceWorkloadAndSurfaceForEachPhase") },
-    { icon: 'heart', to: '/plans', title: i18n.t("ui.trackProgressTrainingPlans"), desc: i18n.t("ui.manageAllHorseTrainingPlans") },
-    { icon: 'flag', to: '/races', title: i18n.t("ui.selectHorsesForARace"), desc: i18n.t("ui.registerSuitableRaceEntries") },
+    { to: '/plans?action=create', title: 'Lập giáo án mới', desc: 'Mục tiêu, cự ly và thời gian cho từng ngựa' },
+    { to: '/plans', title: 'Theo dõi giáo án', desc: 'Giáo án đang áp dụng của cả chuồng' },
+    { to: '/races', title: 'Chọn ngựa dự giải', desc: 'Đăng ký ngựa vào các giải sắp diễn ra' },
   ],
   VET: [
-    { icon: 'heart', to: '/health-records', title: i18n.t("ui.recordAMedicalExamination"), desc: i18n.t("ui.recordDiagnosesAndUpdateTreatmentPlans") },
-    { icon: 'lock', to: '/horses', title: i18n.t("ui.issueAnEmergencyTrainingLock"), desc: i18n.t("ui.preventStrenuousSessionsForInjuredHorses") },
-    { icon: 'check', to: '/vaccinations', title: i18n.t("ui.vaccinationDewormingSchedule"), desc: i18n.t("ui.trackUpcomingPreventiveCare") },
+    { to: '/health-records', title: 'Ghi hồ sơ khám bệnh', desc: 'Chẩn đoán, điều trị và cập nhật tình trạng' },
+    { to: '/incidents', title: 'Xử lý sự cố', desc: 'Các sự cố Groom báo đang chờ thú y' },
+    { to: '/vaccinations', title: 'Lịch tiêm phòng', desc: 'Mũi tiêm và tẩy giun sắp đến hạn' },
   ],
   GROOM: [
-    { icon: 'check', to: '/horses', title: i18n.t("ui.recordDailyFeeding"), desc: i18n.t("ui.feedTypeAndQuantityForEachHorse") },
-    { icon: 'alert', to: '/incidents', title: i18n.t("ui.reportAStableIncident"), desc: i18n.t("ui.lossOfAppetiteFeverOrHoofDamageWithPhotos") },
-    { icon: 'horse', to: '/horses', title: i18n.t("ui.viewTheVaccinationSchedule"), desc: i18n.t("ui.planWorkAroundUpcomingAppointments") },
+    { to: '/incidents', title: 'Báo sự cố tại chuồng', desc: 'Bỏ ăn, sốt, xước móng — kèm ảnh' },
+    { to: '/horses', title: 'Ghi khẩu phần ăn', desc: 'Loại thức ăn và khối lượng mỗi bữa' },
+    { to: '/vaccinations', title: 'Lịch tiêm phòng', desc: 'Việc chăm sóc sắp đến hạn' },
   ],
   OWNER: [
-    { icon: 'horse', to: '/my-horses', title: i18n.t("ui.viewPedigreeHorseProfile"), desc: i18n.t("ui.threeGenerationPedigreeAndRaceHistory") },
-    { icon: 'heart', to: '/my-horses', title: i18n.t("ui.monitorHealthFitness"), desc: i18n.t("ui.viewTheHealthOfYourHorses") },
-    { icon: 'plans', to: '/plans', title: i18n.t("ui.trainingSchedule"), desc: i18n.t("ui.viewPlansPreparedByTheTrainer") },
+    { to: '/my-horses', title: 'Ngựa của tôi', desc: 'Hồ sơ, phả hệ và thành tích thi đấu' },
+    { to: '/plans', title: 'Giáo án huấn luyện', desc: 'Huấn luyện viên đang cho ngựa tập gì' },
+    { to: '/races', title: 'Giải đua', desc: 'Lịch thi đấu và kết quả' },
   ],
-  MANAGER: [
-    { icon: 'plus', to: '/horses', title: i18n.t("ui.addAHorseProfile"), desc: i18n.t("ui.manageTheClubSHorseRegistry") },
-    { icon: 'user', to: '/admin/users', title: i18n.t("ui.systemAccessControlRbac"), desc: i18n.t("ui.approveAccountsAndAssignRoles") },
-    { icon: 'flag', to: '/races', title: i18n.t("ui.raceManagement"), desc: i18n.t("ui.createRacesRegisterHorsesAndRecordResults") },
-  ],
-});
+};
+
+type Readiness = { label: string; tone: Tone; rank: number; reason?: string };
+
+/** Can this horse train today? Locked first — it is the one that needs someone. */
+function readiness(h: Horse): Readiness {
+  if (h.locked) return { label: i18n.t("ui.trainingLocked2"), tone: 'bad', rank: 0, reason: lockReasonText(h.lockReason) };
+  if (h.healthStatus === 'INJURED' || h.healthStatus === 'QUARANTINED') {
+    return { label: 'Không tập được', tone: 'bad', rank: 1, reason: i18n.t('horseStatusBadge.' + h.healthStatus) };
+  }
+  if (h.status === 'RETIRED') return { label: i18n.t("ui.retired"), tone: 'neu', rank: 4 };
+  if (h.status === 'RESTING') return { label: i18n.t("ui.resting2"), tone: 'neu', rank: 3 };
+  if (h.healthStatus === 'MONITORING') return { label: 'Tập nhẹ', tone: 'warn', rank: 2, reason: 'Đang được thú y theo dõi' };
+  return { label: 'Sẵn sàng', tone: 'ok', rank: 5 };
+}
+
+const BOARD_ROWS = 8;
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const role: Role | null = user?.role ?? null;
 
   usePageChrome({ crumbs: [t('nav.dashboard')] });
 
+  // Every count below is computed from all horses, never from a capped page.
   const { data: horsesData, loading: horsesLoading } = useCachedResource('dashboard:horses', async () => {
-    const res = await api.get<Paginated<Horse>>('/horses', { params: { limit: 6 } });
-    return { items: res.data.data ?? [], total: res.data.meta?.total ?? res.data.data.length };
+    const res = await api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } });
+    return res.data.data ?? [];
   });
-  const horses = horsesData?.items ?? [];
-  const totalHorses = horsesData?.total ?? 0;
+  const horses = horsesData ?? [];
 
-  const { data: notificationsData, loading: notificationsLoading } = useCachedResource('dashboard:notifications', () =>
-    api.get<Paginated<Notification>>('/notifications', { params: { type: 'AI_RISK_ALERT', limit: 5 } })
+  const { data: notificationsData } = useCachedResource('dashboard:notifications', () =>
+    api.get<Paginated<Notification>>('/notifications', { params: { limit: 4 } })
       .then((r) => r.data.data ?? []).catch(() => []),
   );
   const notifications = notificationsData ?? [];
 
-  const { data: pendingUsersData, loading: pendingUsersLoading } = useCachedResource(
+  const { data: pendingUsersData } = useCachedResource(
     role === 'MANAGER' ? 'dashboard:pending-users' : 'dashboard:pending-users:skip',
     async () => {
       if (role !== 'MANAGER') return 0;
@@ -76,143 +87,125 @@ export function DashboardPage() {
       return res.data.filter((u) => u.status === 'PENDING').length;
     },
   );
-  const pendingUsersCount = pendingUsersData ?? 0;
-  const loading = horsesLoading || notificationsLoading || pendingUsersLoading;
+  const pendingUsers = pendingUsersData ?? 0;
 
-  const lockedHorses = horses.filter((h) => h.locked);
-  const activeHorses = horses.filter((h) => h.status === 'ACTIVE' && !h.locked);
-  const fitHorses = horses.filter((h) => h.healthStatus === 'FIT');
-  const monitoringHorses = horses.filter((h) => h.healthStatus === 'MONITORING');
-  const injuredHorses = horses.filter((h) => h.healthStatus === 'INJURED');
-  const quarantinedHorses = horses.filter((h) => h.healthStatus === 'QUARANTINED');
+  const board = horses.map((h) => ({ horse: h, r: readiness(h) })).sort((a, b) => a.r.rank - b.r.rank || a.horse.name.localeCompare(b.horse.name));
+  const ready = board.filter((x) => x.r.rank === 5).length;
+  const locked = horses.filter((h) => h.locked).length;
+  const watch = horses.filter((h) => !h.locked && h.healthStatus !== 'FIT').length;
+  const blocked = board.filter((x) => x.r.rank <= 1).length;
 
-  const subtitle: Partial<Record<Role, string>> = {
-    TRAINER: i18n.t("ui.trackTrainingProgressFitnessAlertsAndPlansForAllHorses"),
-    VET: i18n.t("ui.reviewHerdHealthMedicalRecordsAndTrainingLocks"),
-    GROOM: i18n.t("ui.manageDailyFeedingAndReportStableIncidents"),
-    OWNER: i18n.t("ui.viewProfilesPedigreesAndHealthInformationForYourHorses"),
-    MANAGER: i18n.t("ui.overseeClubOperationsTheHorseRegistryAndAccessControl"),
-  };
+  const finding = horsesLoading && horses.length === 0
+    ? 'Đang tải tình trạng chuồng…'
+    : horses.length === 0
+      ? 'Chuồng chưa có ngựa nào.'
+      : blocked > 0
+        ? `${ready} trong ${horses.length} ngựa sẵn sàng tập hôm nay — ${blocked} ngựa đang bị chặn, cần xem lý do bên dưới.`
+        : `${ready} trong ${horses.length} ngựa sẵn sàng tập hôm nay; không có ngựa nào bị khóa.`;
 
-  const heroStats = role === 'VET'
-    ? [
-      { label: i18n.t("ui.fit"), value: loading ? '…' : fitHorses.length, color: '#9fd9b1' },
-      { label: i18n.t("horseStatusBadge.MONITORING"), value: loading ? '…' : monitoringHorses.length, color: monitoringHorses.length ? '#f3d29a' : undefined },
-      { label: i18n.t("ui.injured"), value: loading ? '…' : injuredHorses.length, color: injuredHorses.length ? '#f3b4b4' : undefined },
-      { label: i18n.t("ui.quarantined"), value: loading ? '…' : quarantinedHorses.length, color: quarantinedHorses.length ? '#f3b4b4' : undefined },
-    ]
-    : [
-      { label: role === 'OWNER' ? i18n.t("ui.ownedHorses") : i18n.t("dashboard.kpi.totalHorses"), value: loading ? '…' : totalHorses },
-      { label: i18n.t("ui.trainingLocked"), value: loading ? '…' : lockedHorses.length, color: lockedHorses.length ? '#f3b4b4' : '#9fd9b1' },
-      { label: role === 'TRAINER' ? i18n.t("ui.readyForTraining") : i18n.t("ui.activeHorses"), value: loading ? '…' : activeHorses.length, color: '#9fd9b1' },
-      ...(role === 'MANAGER' ? [{ label: i18n.t("ui.accountsPendingApproval"), value: loading ? '…' : pendingUsersCount, color: pendingUsersCount ? '#f3d29a' : undefined }] : []),
-    ];
+  const dash = horsesLoading && horses.length === 0 ? '…' : undefined;
+  const kpis = [
+    { label: role === 'OWNER' ? i18n.t("horseFlow.myHorses") : i18n.t("dashboard.totalHorses"), value: dash ?? horses.length },
+    { label: 'Sẵn sàng tập hôm nay', value: dash ?? ready, lead: true },
+    { label: i18n.t("mergeUi.locked"), value: dash ?? locked, tone: locked > 0 ? ('bad' as const) : undefined },
+    { label: 'Cần thú y theo dõi', value: dash ?? watch, tone: watch > 0 ? ('warn' as const) : undefined },
+    ...(role === 'MANAGER' ? [{ label: i18n.t("dashboard.pendingAccounts"), value: pendingUsers, sub: pendingUsers > 0 ? <Link to="/admin/users" className="text-info no-underline">Duyệt ngay</Link> : undefined }] : []),
+  ];
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div className="flex flex-wrap gap-6 items-end justify-between">
-          <div>
-            <div className="lbl">{i18n.t("ui.racehorseClub")}</div>
-            <h1 className="disp text-[56px] mt-2">{t('dashboard.welcome')} {user?.name}</h1>
-            <p className="text-hero-muted mt-2 max-w-[560px]">{(role && subtitle[role]) || t('dashboard.subtitle')}</p>
-          </div>
-          {role === 'MANAGER' && <Btn v="light" to="/horses"><Icon name="plus" />{t('dashboard.newHorse')}</Btn>}
-          {role === 'TRAINER' && <Btn v="light" to="/plans?action=create"><Icon name="plus" />{i18n.t("ui.newTrainingPlan")}</Btn>}
-        </div>
-        <HeroStats items={heroStats} />
-      </section>
+      <PageHeader
+        title={i18n.t("horseFlow.overview")}
+        sub={finding}
+        actions={
+          role === 'MANAGER' ? <Btn v="p" to="/horses"><Icon name="plus" />{i18n.t("horse.new")}</Btn>
+            : role === 'TRAINER' ? <Btn v="p" to="/plans?action=create"><Icon name="plus" />Lập giáo án</Btn>
+              : role === 'GROOM' ? <Btn v="p" to="/incidents"><Icon name="plus" />Báo sự cố</Btn>
+                : undefined
+        }
+      />
 
-      <div className="flex flex-wrap gap-5 items-start">
-        <div className="flex-[1.6_1_480px] min-w-0">
+      <KpiStrip items={kpis} />
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] items-start">
+        <Card>
+          <CardHeader title="Bảng chuồng hôm nay">
+            <Link to={role === 'OWNER' ? '/my-horses' : '/horses'} className="text-[13px] font-medium text-info no-underline flex items-center gap-1">
+              {i18n.t("dashboard.viewAll")}{horses.length > 0 ? horses.length : ''} {i18n.t("ui.horses2")}<Icon name="chevRight" className="w-3.5 h-3.5 nudge" />
+            </Link>
+          </CardHeader>
+          {horses.length === 0 && !horsesLoading ? (
+            <div className="p-5"><EmptyState action={role === 'MANAGER' ? <Btn sm to="/horses">Thêm ngựa đầu tiên</Btn> : undefined}>{t('horse.empty')}</EmptyState></div>
+          ) : (
+            <ul className="list-none p-0 m-0">
+              {board.slice(0, BOARD_ROWS).map(({ horse, r }) => (
+                <li key={horse.id}>
+                  <Link to={`/horses/${horse.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_64px] items-center gap-x-4 gap-y-1 px-5 py-3 border-b border-line-soft no-underline text-ink hover:bg-subtle">
+                    <span className="flex items-center gap-2.5">
+                      <span className="w-6 flex justify-center"><Cloth n={horse.saddleNumber} /></span>
+                      <HorseAvatar src={getFileUrl(horse.photoUrl)} name={horse.name} size={32} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-medium truncate">{horse.name}</span>
+                      <span className="block text-[12.5px] text-muted truncate">{horse.breed || i18n.t("ui.unknownBreed2")} · {horse.owner?.name}</span>
+                    </span>
+                    <span className="min-w-0 col-span-3 col-start-2 sm:col-span-1 sm:col-start-auto row-start-2 sm:row-start-auto flex items-center gap-2">
+                      <Badge tone={r.tone}>{r.tone === 'bad' && <Icon name="lock" className="w-3 h-3" />}{r.label}</Badge>
+                      {r.reason && <span className="text-[12.5px] text-muted truncate" title={r.reason}>{r.reason}</span>}
+                    </span>
+                    <span className="num text-right col-start-3 row-start-1 sm:col-start-auto sm:row-start-auto">
+                      {horse.fitnessScore != null
+                        ? <><span className="font-semibold hop" style={{ color: fitColor(horse.fitnessScore) }}>{horse.fitnessScore}</span><span className="text-[12px] text-muted">/100</span></>
+                        : <span className="text-muted">—</span>}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {board.length > BOARD_ROWS && (
+            <Link to="/horses" className="block px-5 py-3 text-[13px] text-muted no-underline hover:text-ink">Còn {board.length - BOARD_ROWS} ngựa khác</Link>
+          )}
+        </Card>
+
+        <div className="flex flex-col gap-5 min-w-0">
           <Card>
-            <CardHeader title={
-              role === 'OWNER' ? i18n.t("ui.yourHorses")
-                : role === 'VET' ? i18n.t("ui.herdHealthOverview")
-                  : role === 'GROOM' ? i18n.t("ui.horsesInYourCare")
-                    : i18n.t("ui.horseList")
-            }>
-              <Link to="/horses" className="font-semibold text-info text-[12.5px] no-underline flex items-center gap-1">{i18n.t("dashboard.viewAll")}{' '}<Icon name="chevRight" className="w-3.5 h-3.5" /></Link>
-            </CardHeader>
-            {horses.length === 0 ? (
-              <div className="py-10 text-center"><p className="cap">{t('horse.empty')}</p></div>
-            ) : (
+            <CardHeader title="Việc cần làm" />
+            {role && JOBS[role] ? (
               <ul className="list-none p-0 m-0">
-                {horses.map((horse) => {
-                  const photo = getFileUrl(horse.photoUrl);
-                  return (
-                    <li key={horse.id} onClick={() => navigate(`/horses/${horse.id}`)}
-                      className="flex items-center gap-3 px-5 py-3 border-b border-line-soft last:border-0 cursor-pointer hover:bg-subtle">
-                      {photo ? (
-                        <img src={photo} alt="" className="w-9 h-9 rounded-full object-cover flex-none border border-line" />
-                      ) : (
-                        <Silk owner={horse.owner.id} size={34} />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{horse.name}</span>
-                          {horse.locked && <Badge tone="bad"><Icon name="lock" className="w-3 h-3" />{i18n.t("ui.trainingLocked2")}</Badge>}
-                        </div>
-                        <div className="cap truncate">{horse.breed || i18n.t("ui.unknownBreed")}{horse.gender ? ` · ${horse.gender === 'MALE' ? i18n.t("horse.genderMale") : i18n.t("horse.genderFemale")}` : ''} {' '}{i18n.t("ui.owner")}{' '}{horse.owner?.name || i18n.t("horseFlow.unknown")}</div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-none">
-                        <Badge tone={careerTone[horse.status]}>{i18n.t(`horseStatusBadge.${horse.status}`)}</Badge>
-                        <Badge tone={healthTone[horse.healthStatus]}>{i18n.t(`horseStatusBadge.${horse.healthStatus}`)}</Badge>
-                      </div>
-                    </li>
-                  );
-                })}
+                {JOBS[role]!.map((job) => (
+                  <li key={job.title}>
+                    <Link to={job.to} className="flex items-center gap-3 px-5 py-3 border-b border-line-soft last:border-0 no-underline text-ink hover:bg-subtle">
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-medium">{job.title}</span>
+                        <span className="block text-[12.5px] text-muted">{job.desc}</span>
+                      </span>
+                      <Icon name="chevRight" className="w-4 h-4 text-muted nudge" />
+                    </Link>
+                  </li>
+                ))}
               </ul>
+            ) : (
+              <p className="px-5 py-4 text-[13.5px] text-muted">Tài khoản đang chờ quản lý câu lạc bộ duyệt vai trò.</p>
             )}
           </Card>
-        </div>
-
-        <div className="flex-[1_1_320px] min-w-0 flex flex-col gap-5">
-          <Card>
-            <CardHeader title={i18n.t('ui.quickActionsRole', { role: role ? t(`role.${role}`) : i18n.t('nav.users') })} />
-            <div className="p-3 flex flex-col gap-1">
-              {role && QUICK_ACTIONS()[role]?.map((action) => (
-                <Link key={action.title} to={action.to} className="flex gap-3 items-start p-2.5 rounded-btn no-underline text-ink hover:bg-subtle">
-                  <span className="w-9 h-9 rounded-btn bg-info-bg text-info flex items-center justify-center flex-none"><Icon name={action.icon} /></span>
-                  <div>
-                    <div className="font-semibold text-[13px]">{action.title}</div>
-                    <div className="cap mt-0.5">{action.desc}</div>
-                  </div>
-                </Link>
-              ))}
-              {!role && <p className="cap p-2.5">{i18n.t("ui.yourAccountIsAwaitingRoleApprovalByAClubManagerBeforeOperationalFeatur")}</p>}
-            </div>
-          </Card>
 
           <Card>
-            <CardHeader title={role === 'VET' ? i18n.t("ui.healthInjuryAlerts") : role === 'TRAINER' ? i18n.t("ui.fitnessTrainingLockAlerts") : i18n.t("ui.alertsOperationalStatus")} />
-            <div className="p-5">
-              {lockedHorses.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {lockedHorses.map((h) => (
-                    <div key={h.id} className="rounded-btn border border-bad-bd bg-bad-bg px-3 py-2.5 text-[12.5px]">
-                      <div className="flex items-center gap-1.5"><Icon name="lock" className="w-4 h-4 text-bad" /><strong>{h.name}</strong> {' '}{i18n.t("ui.isUnderAnEmergencyTrainingLock")}</div>
-                      {h.lockReason && <div className="text-bad mt-0.5 pl-[22px]">{i18n.t("ui.reason")}{' '}{h.lockReason}</div>}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-[13px] text-ok flex gap-2 items-center"><Icon name="check" />{i18n.t("ui.thereAreNoTrainingLockAlertsInTheDisplayedHorses")}</div>
-              )}
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader title={i18n.t("ui.recentNotifications")}><Link to="/notifications" className="font-semibold text-info text-[12.5px] no-underline">{t('dashboard.viewAll')}</Link></CardHeader>
+            <CardHeader title={i18n.t("ui.recentNotifications")}>
+              <Link to="/notifications" className="text-[13px] font-medium text-info no-underline">{t('dashboard.viewAll')}</Link>
+            </CardHeader>
             {notifications.length === 0 ? (
-              <div className="py-6 text-center"><p className="cap">{t('dashboard.noNotifs')}</p></div>
+              <p className="px-5 py-4 text-[13.5px] text-muted">{t('dashboard.noNotifs')}</p>
             ) : (
               <ul className="list-none p-0 m-0">
                 {notifications.map((n) => (
-                  <li key={n.id} className="border-b border-line-soft last:border-0">
-                    <Link to="/notifications" className="block px-5 py-3 text-[12.5px] no-underline text-ink">
-                      <div className="font-semibold">{formatNotificationMessage(n.message)}</div>
-                      <div className="cap mt-0.5">{formatDate(n.createdAt)}</div>
+                  <li key={n.id}>
+                    <Link to="/notifications" className="flex gap-3 px-5 py-3 border-b border-line-soft last:border-0 no-underline text-ink hover:bg-subtle">
+                      <Icon name={notificationIcon[n.type] ?? 'bell'} className="w-4 h-4 mt-0.5 text-muted" />
+                      <span className="flex-1 min-w-0">
+                        <span className={`block text-[13px] leading-[18px] line-clamp-2 ${n.read ? 'text-muted' : ''}`}>{n.message.replace(/^\s*⚠\s*/, '')}</span>
+                        <span className="block text-[12px] text-muted mt-1">{formatDate(n.createdAt)}</span>
+                      </span>
                     </Link>
                   </li>
                 ))}

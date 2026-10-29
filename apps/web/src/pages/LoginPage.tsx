@@ -1,4 +1,3 @@
-import i18n from '../i18n';
 import { useCallback, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -55,7 +54,7 @@ export function LoginPage() {
 
   if (googleOtpDone) {
     return (
-      <AuthLayout eyebrow={i18n.t("ui.racehorseClub")} title={t('auth.register')}>
+      <AuthLayout eyebrow={t('auth.createAccountEyebrow')} title={t('auth.register')}>
         <p>{t('auth.registerDone')}</p>
         <Btn v="p" onClick={() => { setGoogleOtpEmail(null); setGoogleOtpDone(false); }}>{t('auth.login')}</Btn>
       </AuthLayout>
@@ -64,7 +63,7 @@ export function LoginPage() {
 
   if (googleOtpEmail) {
     return (
-      <AuthLayout eyebrow={i18n.t("ui.racehorseClub")} title={t('auth.register')}>
+      <AuthLayout eyebrow={t('auth.createAccountEyebrow')} title={t('auth.register')}>
         <OtpStep email={googleOtpEmail} onVerified={() => setGoogleOtpDone(true)} />
       </AuthLayout>
     );
@@ -87,7 +86,7 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout eyebrow={i18n.t("ui.trainingManagement")} title={t('auth.login')}>
+    <AuthLayout eyebrow={t('auth.portalEyebrow')} title={t('auth.login')} subtitle={t('auth.loginSubtitle')}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Field label={t('auth.email')}>
           <Input
@@ -98,14 +97,19 @@ export function LoginPage() {
             required
           />
         </Field>
-        <Field label={t('auth.password')}>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label htmlFor="login-password" className="text-[12.5px] font-semibold">{t('auth.password')}</label>
+            <Link to="/forgot-password" className="text-[12.5px] font-semibold text-info no-underline">{t('auth.forgotPasswordLink')}</Link>
+          </div>
           <PasswordInput
+            id="login-password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-        </Field>
+        </div>
         <ErrorText err={err} />
         <Btn v="p" type="submit" className="w-full h-11" disabled={busy}>
           {t('auth.login')}

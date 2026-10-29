@@ -4,7 +4,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import type { Horse, Paginated, User, HorseGender, HorseStatus } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
-import { FileInput, Btn, Field, Input, Modal, ModalBody, ModalFoot, ModalHead } from '../../ds/ui';
+import { Btn, Field, Input, Modal, ModalBody, ModalFoot, ModalHead } from '../../ds/ui';
 
 interface CreateHorseModalProps {
   isOpen: boolean;
@@ -78,7 +78,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
     }
   };
 
-  const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
+  const selectCls = 'h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15';
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="create-horse-title">
@@ -105,7 +105,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
               </select>
             </Field>
 
-            <Field label={i18n.t("ui.saddleNumberOptional")} hint={i18n.t("ui.numberDisplayedOnTheSaddleCloth")}>
+            <Field label={i18n.t("ui.saddleNumberOptional")} hint="Số hiển thị trên yếm số (saddle cloth)">
               <Input type="number" min={0} max={999} placeholder={i18n.t("ui.eG7")} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
             </Field>
 
@@ -119,14 +119,14 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
 
             <Field label={i18n.t("ui.initialStatus")}>
               <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as HorseStatus)}>
-                <option value="ACTIVE">{i18n.t("ui.active3")}</option>
-                <option value="RESTING">{i18n.t("ui.resting")}</option>
+                <option value="ACTIVE">{i18n.t("ui.active")}</option>
+                <option value="RESTING">{i18n.t("ui.resting2")}</option>
                 <option value="RETIRED">{i18n.t("ui.retired")}</option>
               </select>
             </Field>
 
             <Field label={i18n.t("ui.profilePhotoOptional")} hint={i18n.t("ui.jpgPngOrWebpMaximum5Mb")}>
-              <FileInput
+              <input
                 type="file" accept="image/jpeg,image/png,image/webp" className="text-[13px]"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -146,7 +146,7 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
               />
               {preview && (
                 <div className="mt-2 text-center">
-                  <img src={preview} alt={i18n.t("ui.preview")} className="max-h-[120px] rounded-btn border border-line object-cover inline-block" />
+                  <img src={preview} alt="Preview" className="max-h-[120px] rounded-btn border border-line object-cover inline-block" />
                 </div>
               )}
             </Field>

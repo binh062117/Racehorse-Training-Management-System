@@ -20,12 +20,6 @@ const GOAL_TEMPLATES = [
   'Rèn luyện bứt tốc nước rút cự ly 1200m chuẩn bị giải đấu',
   'Bài tập nhẹ phục hồi thể trạng & theo dõi gân cơ',
 ];
-const GOAL_TEMPLATE_LABELS = [
-  'ui.buildBaselineFitness1400MOnSandModerateWorkload',
-  'ui.buildEndurance1600MOnTurfHighWorkload',
-  'ui.practice1200MSprintsInPreparationForRacing',
-  'ui.lightRecoveryExerciseAndTendonMonitoring',
-];
 
 export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHorseId, defaultHorseName }: Props) {
   useTranslation();
@@ -74,7 +68,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
 
     const targetHorseId = defaultHorseId ?? horseId;
     if (!targetHorseId) {
-      setErr(new Error(i18n.t("ui.selectAHorseForTheTrainingPlan")));
+      setErr(new Error('Vui lòng chọn ngựa để lập giáo án.'));
       return;
     }
     if (!goal.trim()) {
@@ -86,7 +80,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
       return;
     }
     if (endDate && endDate < startDate) {
-      setErr(new Error(i18n.t("ui.endDateMustBeOnOrAfterStartDate")));
+      setErr(new Error(i18n.t("errorDetails.trainingDateOrder")));
       return;
     }
 
@@ -106,7 +100,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
     }
   };
 
-  const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
+  const selectCls = 'h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15';
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} width={560} labelledBy="create-plan-title">
@@ -116,11 +110,11 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
           <ErrorText err={err} />
 
           {defaultHorseId ? (
-            <Field label={i18n.t("ui.horseForThisPlan")}>
+            <Field label="Ngựa áp dụng">
               <Input value={defaultHorseName ?? defaultHorseId} disabled ro />
             </Field>
           ) : (
-            <Field label={i18n.t("ui.selectHorse")} hint={i18n.t("ui.retiredAndQuarantinedHorsesAreExcludedFromThisList")}>
+            <Field label={i18n.t("races.chooseHorse")} hint={i18n.t("ui.retiredAndQuarantinedHorsesAreExcludedFromThisList")}>
               {loadingHorses ? (
                 <p className="cap">{i18n.t("ui.loadingHorses")}</p>
               ) : (
@@ -129,13 +123,13 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
                   {horses.map((h) => {
                     const tags: string[] = [];
                     if (h.status === 'RESTING') tags.push(i18n.t("ui.resting2"));
-                    if (h.healthStatus === 'INJURED') tags.push(i18n.t("horseStatusBadge.INJURED"));
+                    if (h.healthStatus === 'INJURED') tags.push(i18n.t("horseFlow.health.INJURED"));
                     if (h.healthStatus === 'MONITORING') tags.push(i18n.t("ui.monitoring"));
                     if (h.locked) tags.push(i18n.t("ui.trainingLocked3"));
                     const suffix = tags.length > 0 ? ` [${tags.join(' · ')}]` : '';
                     return (
                       <option key={h.id} value={h.id}>
-                        {h.name} {h.breed ? `(${h.breed})` : ''} {' '}{i18n.t("ui.owner3")}{' '}{h.owner.name}{suffix}
+                        {h.name} {h.breed ? `(${h.breed})` : ''} {i18n.t("ui.owner3")}{h.owner.name}{suffix}
                       </option>
                     );
                   })}
@@ -152,7 +146,9 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
               )}
               {!selectedHorse.locked && selectedHorse.healthStatus === 'INJURED' && (
                 <>
-                  {i18n.t("ui.thisHorseIsInjuredThePlanCanBeSavedButCoordinateWithAVeterinarianBefor")}</>
+                  Ngựa đang trong trạng thái chấn thương.
+                  Giáo án sẽ được lưu nhưng nên phối hợp với bác sĩ thú y trước khi lên lịch buổi tập thực tế.
+                </>
               )}
             </Alert>
           )}
@@ -166,8 +162,8 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
             <div className="mt-2">
               <div className="cap mb-1.5">{i18n.t("ui.suggestedGoalsSelectToUse")}</div>
               <div className="flex flex-wrap gap-1.5">
-                {GOAL_TEMPLATES.map((tpl, index) => (
-                  <Chip key={tpl} onClick={() => setGoal(tpl)} className="h-auto py-1 text-[11.5px]">+ {i18n.t(GOAL_TEMPLATE_LABELS[index])}</Chip>
+                {GOAL_TEMPLATES.map((tpl) => (
+                  <Chip key={tpl} onClick={() => setGoal(tpl)} className="h-auto py-1 text-[11.5px]">+ {tpl}</Chip>
                 ))}
               </div>
             </div>
