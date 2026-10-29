@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, getFileUrl } from '../lib/api';
@@ -14,6 +14,117 @@ import {
   Btn, Card, CareerBadge, Chip, ChipCount, Cloth, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip,
   LockBadge, PageHeader, Ring, Seg, fitColor, lockReasonText,
 } from '../ds/ui';
+
+
+function BadgeLegendPopover() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-btn border border-line bg-white text-[12.5px] font-medium text-muted hover:text-ink hover:bg-subtle transition-colors shadow-xs"
+        aria-label={t('badgeLegend.btnLabel', 'Chú thích nhãn')}
+      >
+        <Icon name="info" className="w-3.5 h-3.5 text-info" />
+        <span>{t('badgeLegend.btnLabel', 'Chú thích nhãn')}</span>
+      </button>
+
+      {open && (
+        <div
+          role="dialog"
+          aria-label={t('badgeLegend.title', 'Ý nghĩa các nhãn trạng thái')}
+          className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 z-50 w-[340px] rounded-card border border-line bg-white shadow-xl p-4 flex flex-col gap-3 text-ink"
+        >
+          <div className="flex items-center justify-between pb-2 border-b border-line-soft">
+            <span className="text-[13px] font-semibold text-ink flex items-center gap-1.5">
+              <Icon name="info" className="w-4 h-4 text-info" />
+              {t('badgeLegend.title', 'Ý nghĩa các nhãn trạng thái')}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="w-6 h-6 rounded-btn inline-flex items-center justify-center text-muted hover:bg-subtle hover:text-ink"
+              aria-label="Đóng"
+            >
+              <Icon name="x" className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">
+              {t('badgeLegend.careerTitle', 'Sự nghiệp (Career Status)')}
+            </p>
+            <div className="space-y-1.5 text-[12px]">
+              <div className="flex items-start gap-2">
+                <CareerBadge status="ACTIVE" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.careerActive', 'Đang thi đấu tích cực')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CareerBadge status="RESTING" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.careerResting', 'Đang trong giai đoạn nghỉ dưỡng')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CareerBadge status="RETIRED" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.careerRetired', 'Đã giải nghệ, kết thúc thi đấu')}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-line-soft">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">
+              {t('badgeLegend.healthTitle', 'Sức khỏe (Health Status)')}
+            </p>
+            <div className="space-y-1.5 text-[12px]">
+              <div className="flex items-start gap-2">
+                <HealthBadge status="FIT" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.healthFit', 'Khỏe mạnh, sẵn sàng huấn luyện & thi đấu')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <HealthBadge status="MONITORING" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.healthMonitoring', 'Cần theo dõi sát, hạn chế bài tập nặng')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <HealthBadge status="INJURED" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.healthInjured', 'Chấn thương, đang được bác sĩ thú y điều trị')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <HealthBadge status="QUARANTINED" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.healthQuarantined', 'Cách ly y tế, cấm hoàn toàn tập luyện')}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-line-soft">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">
+              {t('badgeLegend.lockTitle', 'Khóa tập (Training Lock)')}
+            </p>
+            <div className="flex items-start gap-2 text-[12px]">
+              <LockBadge />
+              <span className="text-muted leading-tight pt-0.5">
+                {t('badgeLegend.lockDesc', 'Bác sĩ thú y đã ban hành lệnh khóa tập. Không thể tạo giáo án hay buổi tập cho đến khi được mở khóa.')}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Filter = 'all' | 'locked' | 'injured' | 'mon';
 
@@ -108,7 +219,8 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
         {filters.map(([k, l, fn]) => (
           <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{l} <ChipCount n={bySearch.filter(fn).length} /></Chip>
         ))}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <BadgeLegendPopover />
           <Seg options={[['cards', t('horsesPage.cards', 'Thẻ')], ['table', t('horsesPage.table', 'Bảng')]]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} />
         </div>
       </div>

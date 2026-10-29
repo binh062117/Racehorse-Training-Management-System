@@ -68,6 +68,10 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
       setErr(new Error('Vui lòng chọn ngựa để lập giáo án.'));
       return;
     }
+    if (selectedHorse?.locked) {
+      setErr(new Error('Không thể lập giáo án cho ngựa đang bị khóa tập luyện.'));
+      return;
+    }
     if (!goal.trim()) {
       setErr(new Error('Vui lòng nhập mục tiêu huấn luyện.'));
       return;
@@ -135,21 +139,18 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
             </Field>
           )}
 
-          {(selectedHorse?.locked || selectedHorse?.healthStatus === 'INJURED') && (
+          {selectedHorse?.locked && (
+            <Alert tone="bad" icon="alert" title="Ngựa đang bị khóa tập luyện">
+              Ngựa <strong>{selectedHorse.name}</strong> đang bị bác sĩ thú y khóa huấn luyện
+              {selectedHorse.lockReason ? ` (Lý do: ${selectedHorse.lockReason})` : ''}.
+              Bạn không thể lập giáo án huấn luyện mới cho ngựa này cho đến khi được mở khóa.
+            </Alert>
+          )}
+
+          {!selectedHorse?.locked && selectedHorse?.healthStatus === 'INJURED' && (
             <Alert tone="warn" icon="alert" title="Lưu ý">
-              {selectedHorse.locked && (
-                <>
-                  Ngựa này đang bị bác sĩ thú y khóa huấn luyện
-                  {selectedHorse.lockReason ? ` (${selectedHorse.lockReason})` : ''}.
-                  Bạn vẫn có thể soạn trước kế hoạch, nhưng không thể lên lịch buổi tập cho đến khi được mở khóa.
-                </>
-              )}
-              {!selectedHorse.locked && selectedHorse.healthStatus === 'INJURED' && (
-                <>
-                  Ngựa đang trong trạng thái chấn thương.
-                  Giáo án sẽ được lưu nhưng nên phối hợp với bác sĩ thú y trước khi lên lịch buổi tập thực tế.
-                </>
-              )}
+              Ngựa đang trong trạng thái chấn thương.
+              Giáo án sẽ được lưu nhưng nên phối hợp với bác sĩ thú y trước khi lên lịch buổi tập thực tế.
             </Alert>
           )}
 
@@ -181,7 +182,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
 
         <ModalFoot>
           <Btn onClick={onClose} disabled={busy}>Hủy</Btn>
-          <Btn v="p" type="submit" disabled={busy || loadingHorses}>{busy ? 'Đang tạo…' : 'Tạo giáo án'}</Btn>
+          <Btn v="p" type="submit" disabled={busy || loadingHorses || Boolean(selectedHorse?.locked)}>{busy ? 'Đang tạo…' : 'Tạo giáo án'}</Btn>
         </ModalFoot>
       </form>
     </Modal>

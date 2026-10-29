@@ -368,9 +368,13 @@ export class TrainingService {
       );
     }
 
-    // Note: locked horses (Training Lock) are allowed to have plans created —
-    // a plan is a strategic document, not an active session. The lock only
-    // prevents scheduling concrete training sessions (see createSession).
+    // BR-3: Cannot create training plan for a locked horse (Training Lock)
+    if (horse.locked) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `${horse.name} đang bị khóa tập luyện (Training Lock), không thể lập giáo án huấn luyện mới.`,
+      );
+    }
 
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : null;

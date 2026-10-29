@@ -642,5 +642,20 @@
     "thRecordedBy": "Người ghi",
     "saveBtn": "Lưu khẩu phần",
     "saving": "Đang lưu..."
+  },
+  "badgeLegend": {
+    "btnLabel": "Chú thích nhãn",
+    "title": "Ý nghĩa các nhãn trạng thái",
+    "careerTitle": "Sự nghiệp (Career Status)",
+    "careerActive": "Đang thi đấu tích cực",
+    "careerResting": "Đang trong giai đoạn nghỉ dưỡng",
+    "careerRetired": "Đã giải nghệ, kết thúc thi đấu",
+    "healthTitle": "Sức khỏe (Health Status)",
+    "healthFit": "Khỏe mạnh, sẵn sàng huấn luyện & thi đấu",
+    "healthMonitoring": "Cần theo dõi sát, hạn chế bài tập nặng",
+    "healthInjured": "Chấn thương, đang được bác sĩ thú y điều trị",
+    "healthQuarantined": "Cách ly y tế, cấm hoàn toàn tập luyện",
+    "lockTitle": "Khóa tập (Training Lock)",
+    "lockDesc": "Bác sĩ thú y đã ban hành lệnh khóa tập. Không thể tạo giáo án hay buổi tập cho đến khi được mở khóa."
   }
 }

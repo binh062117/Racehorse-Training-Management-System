@@ -642,5 +642,20 @@
     "thRecordedBy": "Recorded By",
     "saveBtn": "Save Record",
     "saving": "Saving..."
+  },
+  "badgeLegend": {
+    "btnLabel": "Badge legend",
+    "title": "Status badge meanings",
+    "careerTitle": "Career status",
+    "careerActive": "Actively competing",
+    "careerResting": "In a rest or recovery phase",
+    "careerRetired": "Retired from competition",
+    "healthTitle": "Health status",
+    "healthFit": "Healthy, ready for training and racing",
+    "healthMonitoring": "Under observation, avoid high-intensity drills",
+    "healthInjured": "Injured, undergoing veterinary treatment",
+    "healthQuarantined": "Medical quarantine, no training activities",
+    "lockTitle": "Training lock",
+    "lockDesc": "A veterinarian has locked training. No new training plans or sessions can be created until unlocked."
   }
 }

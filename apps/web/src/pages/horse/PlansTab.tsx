@@ -58,6 +58,15 @@ export function PlansTab({ horse }: Props) {
             : <>Horse is under <strong>medical quarantine</strong>. Wait for a veterinarian to lift quarantine before scheduling training.</>}
         </Alert>
       )}
+      {horse.locked && (
+        <Alert tone="bad" icon="alert">
+          {isVi ? (
+            <>Ngựa <strong>{horse.name}</strong> đang bị khóa tập luyện{horse.lockReason ? ` (Lý do: ${horse.lockReason})` : ''}. Hệ thống không cho phép tạo giáo án huấn luyện mới cho đến khi Bác sĩ thú y mở khóa.</>
+          ) : (
+            <>Horse <strong>{horse.name}</strong> training is currently locked{horse.lockReason ? ` (Reason: ${horse.lockReason})` : ''}. Creating new training plans is disabled until unlocked by a veterinarian.</>
+          )}
+        </Alert>
+      )}
 
       <div className="flex justify-between items-center flex-wrap gap-2.5">
         <div>
@@ -68,7 +77,7 @@ export function PlansTab({ horse }: Props) {
               : `${plans.length} ${t('plansPage.title', 'giáo án')} · ${t('horsesPage.thFitness', 'thể lực')} ${horse.fitnessScore != null ? `${horse.fitnessScore}/100` : '—'}`}
           </p>
         </div>
-        {canCreate && isEligible && (
+        {canCreate && isEligible && !horse.locked && (
           <Btn v="p" sm onClick={() => setCreateOpen(true)}>
             <Icon name="plus" />{t('plansPage.newPlan', 'Tạo giáo án mới')}
           </Btn>
@@ -80,7 +89,7 @@ export function PlansTab({ horse }: Props) {
       {loading && plans.length === 0 ? (
         <p className="text-muted">{t('plansPage.loading', 'Đang tải giáo án…')}</p>
       ) : plans.length === 0 ? (
-        <EmptyState action={canCreate && isEligible ? <Btn v="p" sm onClick={() => setCreateOpen(true)}>{t('plansPage.newPlan', 'Thiết lập giáo án đầu tiên')}</Btn> : undefined}>
+        <EmptyState action={canCreate && isEligible && !horse.locked ? <Btn v="p" sm onClick={() => setCreateOpen(true)}>{t('plansPage.newPlan', 'Thiết lập giáo án đầu tiên')}</Btn> : undefined}>
           {t('plansPage.empty', 'Ngựa này chưa có giáo án huấn luyện nào.')}
         </EmptyState>
       ) : (
