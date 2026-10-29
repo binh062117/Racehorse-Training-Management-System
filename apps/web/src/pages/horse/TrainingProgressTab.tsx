@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
 import { ErrorText } from '../../components/ErrorText';
@@ -34,6 +35,8 @@ export function TrainingProgressTab({ horseId }: { horseId: string }) {
 }
 
 function ProgressContent({ horseId }: { horseId: string }) {
+  const { t, i18n } = useTranslation();
+  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [plans, setPlans] = useState<TrainingPlan[]>([]);
   const [err, setErr] = useState<unknown>(null);
@@ -60,7 +63,7 @@ function ProgressContent({ horseId }: { horseId: string }) {
     return () => controller.abort();
   }, [horseId]);
 
-  if (loading) return <p className="text-muted" role="status">Đang tải tiến độ huấn luyện…</p>;
+  if (loading) return <p className="text-muted" role="status">{isVi ? 'Đang tải tiến độ huấn luyện…' : 'Loading training progress…'}</p>;
   if (err) return <ErrorText err={err} />;
 
   const total = sessions.length;
@@ -88,25 +91,43 @@ function ProgressContent({ horseId }: { horseId: string }) {
   const now = new Date().getTime();
 
   if (total === 0 && plans.length === 0) {
-    return <EmptyState>Ngựa chưa có giáo án hay buổi tập nào — tiến độ sẽ hiện ở đây khi huấn luyện viên bắt đầu lên lịch.</EmptyState>;
+    return (
+      <EmptyState>
+        {isVi
+          ? 'Ngựa chưa có giáo án hay buổi tập nào — tiến độ sẽ hiện ở đây khi huấn luyện viên bắt đầu lên lịch.'
+          : 'No training plans or sessions yet — progress will appear here once scheduled.'}
+      </EmptyState>
+    );
   }
 
   return (
     <div className="flex flex-col gap-5">
-      {total > 0 && <KpiStrip items={[
-        { label: 'Tổng số buổi tập', value: total, sub: planned ? `${planned} buổi chưa diễn ra` : undefined },
-        { label: 'Đã hoàn thành', value: done },
-        { label: 'Đã hủy', value: cancelled, tone: cancelled > 0 ? 'warn' : undefined },
-        { label: 'Tỷ lệ hoàn thành', value: completionRate ?? <span className="text-muted text-[16px] font-normal">Chưa có</span>, unit: completionRate != null ? '%' : undefined, lead: completionRate != null },
-      ]} />}
+      {total > 0 && (
+        <KpiStrip items={[
+          {
+            label: isVi ? 'Tổng số buổi tập' : 'Total Sessions',
+            value: total,
+            sub: planned ? (isVi ? `${planned} buổi chưa diễn ra` : `${planned} upcoming`) : undefined,
+          },
+          { label: isVi ? 'Đã hoàn thành' : 'Completed', value: done },
+          { label: isVi ? 'Đã hủy' : 'Cancelled', value: cancelled, tone: cancelled > 0 ? 'warn' : undefined },
+          {
+            label: isVi ? 'Tỷ lệ hoàn thành' : 'Completion Rate',
+            value: completionRate ?? <span className="text-muted text-[16px] font-normal">—</span>,
+            unit: completionRate != null ? '%' : undefined,
+            lead: completionRate != null,
+          },
+        ]} />
+      )}
 
       <Card>
-        <CardHeader title="Buổi tập hoàn thành theo tuần"><span className="text-[13px] text-muted">{WEEKS} tuần gần nhất</span></CardHeader>
+        <CardHeader title={isVi ? 'Buổi tập hoàn thành theo tuần' : 'Weekly Completed Sessions'}>
+          <span className="text-[13px] text-muted">{isVi ? `${WEEKS} tuần gần nhất` : `Past ${WEEKS} weeks`}</span>
+        </CardHeader>
         <div className="px-5 pt-3 pb-4">
           {total === 0 ? (
-            <EmptyState>Chưa có buổi tập nào để thống kê.</EmptyState>
+            <EmptyState>{isVi ? 'Chưa có buổi tập nào để thống kê.' : 'No sessions to display.'}</EmptyState>
           ) : (
-            // A wide viewBox keeps the chart's text near its true size when the card is wide.
             <div className="max-w-[960px]">
               <LineChart
                 values={values}
@@ -116,7 +137,7 @@ function ProgressContent({ horseId }: { horseId: string }) {
                 ticks={[0, Math.round(maxValue / 2), maxValue]}
                 W={900}
                 H={230}
-                describe="Số buổi tập hoàn thành mỗi tuần"
+                describe={isVi ? 'Số buổi tập hoàn thành mỗi tuần' : 'Completed training sessions per week'}
               />
             </div>
           )}
@@ -124,9 +145,11 @@ function ProgressContent({ horseId }: { horseId: string }) {
       </Card>
 
       <Card>
-        <CardHeader title="Tiến độ theo giáo án" />
+        <CardHeader title={isVi ? 'Tiến độ theo giáo án' : 'Progress by Training Plan'} />
         {plans.length === 0 ? (
-          <div className="p-4"><EmptyState>Ngựa chưa có giáo án huấn luyện nào.</EmptyState></div>
+          <div className="p-4">
+            <EmptyState>{t('plansPage.empty', 'Ngựa chưa có giáo án huấn luyện nào.')}</EmptyState>
+          </div>
         ) : (
           <ul className="list-none m-0 p-0">
             {plans.map((p) => {
@@ -137,11 +160,16 @@ function ProgressContent({ horseId }: { horseId: string }) {
               return (
                 <li key={p.id} className="px-5 py-3.5 border-b border-line-soft last:border-0">
                   <div className="flex justify-between items-baseline gap-3">
+                    {/* User-entered plan goal is preserved as-is */}
                     <span className="font-medium min-w-0 truncate">{p.goal}</span>
-                    <span className="num text-[13px] text-muted flex-none">{pct != null ? `${pct}%` : 'Dài hạn'}</span>
+                    <span className="num text-[13px] text-muted flex-none">
+                      {pct != null ? `${pct}%` : t('plansPage.openEnded', 'Dài hạn')}
+                    </span>
                   </div>
                   {pct != null && <Bar pct={pct} color={over ? '#9ca3af' : '#1a4b8a'} className="mt-2" />}
-                  <p className="num text-[12.5px] text-muted mt-1.5">{formatDate(p.startDate)} – {p.endDate ? formatDate(p.endDate) : 'không giới hạn'}</p>
+                  <p className="num text-[12.5px] text-muted mt-1.5">
+                    {formatDate(p.startDate)} – {p.endDate ? formatDate(p.endDate) : t('plansPage.openEnded', 'không giới hạn')}
+                  </p>
                 </li>
               );
             })}

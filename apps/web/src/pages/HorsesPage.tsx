@@ -17,12 +17,6 @@ import {
 } from '../ds/ui';
 
 type Filter = 'all' | 'locked' | 'injured' | 'mon';
-const FILTERS = (): [Filter, string, (h: Horse) => boolean][] => [
-  ['all', i18n.t("races.filters.ALL"), () => true],
-  ['locked', i18n.t("ui.trainingLocked2"), (h) => h.locked],
-  ['injured', i18n.t("mergeUi.injuredOrQuarantined"), (h) => h.healthStatus === 'INJURED' || h.healthStatus === 'QUARANTINED'],
-  ['mon', i18n.t("horseFlow.health.MONITORING"), (h) => h.healthStatus === 'MONITORING'],
-];
 
 function calculateAge(birthDate: string | null): number | null {
   if (!birthDate) return null;
@@ -31,14 +25,9 @@ function calculateAge(birthDate: string | null): number | null {
   const years = Math.floor((Date.now() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
   return years >= 0 ? years : null;
 }
-const genderText = (g: Horse['gender']) => (g === 'MALE' ? i18n.t("horse.genderMale") : g === 'FEMALE' ? i18n.t("horse.genderFemale") : i18n.t("ui.unknownSex"));
-const ageText = (birthDate: string | null) => {
-  const age = calculateAge(birthDate);
-  return age != null ? i18n.t('ui.age', { count: age }) : i18n.t("ui.unknownAge");
-};
 
 export function HorsesPage({ personal = false }: { personal?: boolean }) {
-  useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isManager = user?.role === 'MANAGER';
   const isOwner = user?.role === 'OWNER';
@@ -70,7 +59,15 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const all = data?.data ?? [];
   const q = debouncedSearch.trim().toLowerCase();
   const bySearch = q ? all.filter((h) => h.name.toLowerCase().includes(q)) : all;
-  const rows = [...bySearch].filter(FILTERS().find((f) => f[0] === filter)![2])
+
+  const filters: [Filter, string, (h: Horse) => boolean][] = [
+    ['all', t('horsesPage.all', 'Tất cả'), () => true],
+    ['locked', t('horsesPage.filterLocked', 'Khóa tập'), (h) => h.locked],
+    ['injured', t('horsesPage.filterInjured', 'Chấn thương / cách ly'), (h) => h.healthStatus === 'INJURED' || h.healthStatus === 'QUARANTINED'],
+    ['mon', t('horsesPage.filterMonitoring', 'Cần theo dõi'), (h) => h.healthStatus === 'MONITORING'],
+  ];
+
+  const rows = [...bySearch].filter(filters.find((f) => f[0] === filter)![2])
     .sort((a, b) => (b.fitnessScore ?? -1) - (a.fitnessScore ?? -1));
 
   const locked = all.filter((h) => h.locked).length;
@@ -79,31 +76,39 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const avgFit = scored.length ? (scored.reduce((s, h) => s + (h.fitnessScore ?? 0), 0) / scored.length).toFixed(1) : null;
   const avgFitNum = avgFit != null ? Number(avgFit) : null;
 
-  const title = personal ? i18n.t("horseFlow.myHorses") : i18n.t("nav.horses");
+  const title = personal ? t('horsesPage.myHorses', 'Ngựa của tôi') : t('horsesPage.title', 'Ngựa đua');
   usePageChrome({ crumbs: [title] });
 
   const sub = loading && all.length === 0
-    ? i18n.t("ui.loadingHorses")
-    : i18n.t('mergeUi.horseSummary', { count: all.length, locked: locked > 0 ? i18n.t('mergeUi.lockedSummary', { count: locked }) : '', owned: personal ? i18n.t('mergeUi.ownedSuffix') : '' });
+    ? t('horsesPage.loading', 'Đang tải danh sách ngựa…')
+    : `${t('horsesPage.countSummary', { count: all.length })}${locked > 0 ? ` · ${t('horsesPage.countLocked', { count: locked })}` : ''}${personal ? ` ${t('horsesPage.countOwned', 'thuộc sở hữu của bạn')}` : ''}.`;
+
+  const genderText = (g: Horse['gender']) => (
+    g === 'MALE' ? t('horsesPage.genderMale', 'Đực') : g === 'FEMALE' ? t('horsesPage.genderFemale', 'Cái') : t('horsesPage.genderUnknown', 'Chưa rõ giới tính')
+  );
+  const ageText = (birthDate: string | null) => {
+    const age = calculateAge(birthDate);
+    return age != null ? t('horsesPage.age', { age }) : t('horsesPage.ageUnknown', 'Chưa rõ tuổi');
+  };
 
   return (
     <>
       <PageHeader
         title={title}
         sub={sub}
-        search={{ placeholder: i18n.t("horseFlow.searchPlaceholder"), value: search, onChange: setSearch }}
-        actions={isManager ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{i18n.t("horse.new")}</Btn> : undefined}
+        search={{ placeholder: t('horsesPage.searchPlaceholder', 'Tìm theo tên ngựa'), value: search, onChange: setSearch }}
+        actions={isManager ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('horsesPage.addHorse', 'Thêm ngựa')}</Btn> : undefined}
       />
 
       <KpiStrip items={[
-        { label: i18n.t("dashboard.totalHorses"), value: all.length },
-        { label: i18n.t("ui.active"), value: active, unit: `/ ${all.length}` },
-        { label: i18n.t("mergeUi.averageFitness"), value: avgFitNum ?? '—', unit: avgFit ? '/100' : undefined, sub: scored.length < all.length ? i18n.t('mergeUi.assessedHorses', { count: scored.length, total: all.length }) : undefined },
-        { label: i18n.t("mergeUi.locked"), value: locked, tone: locked > 0 ? 'bad' : undefined },
+        { label: t('horsesPage.kpiTotal', 'Tổng số ngựa'), value: all.length },
+        { label: t('horsesPage.kpiActive', 'Đang thi đấu'), value: active, unit: `/ ${all.length}` },
+        { label: t('horsesPage.kpiAvgFitness', 'Thể lực trung bình'), value: avgFitNum ?? '—', unit: avgFit ? '/100' : undefined, sub: scored.length < all.length ? t('horsesPage.evaluatedCount', { count: scored.length, total: all.length }) : undefined },
+        { label: t('horsesPage.kpiLocked', 'Đang khóa tập'), value: locked, tone: locked > 0 ? 'bad' : undefined },
       ]} />
 
       <div className="flex flex-wrap gap-2 items-center">
-        {FILTERS().map(([k, l, fn]) => (
+        {filters.map(([k, l, fn]) => (
           <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{l} <ChipCount n={bySearch.filter(fn).length} /></Chip>
         ))}
         <select className="h-9 w-auto rounded-btn border border-line-strong bg-white px-3" aria-label={i18n.t('ui.healthStatus')} value={healthFilter}
@@ -111,20 +116,32 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
           <option value="">{i18n.t('healthView.all')}</option>
           {(['FIT', 'MONITORING', 'INJURED', 'QUARANTINED'] as const).map((status) => <option key={status} value={status}>{i18n.t('horseStatusBadge.' + status)}</option>)}
         </select>
-        <div className="ml-auto"><Seg options={[['cards', i18n.t("ui.cards")], ['table', i18n.t("ui.table")]]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} /></div>
+        <div className="ml-auto">
+          <Seg options={[['cards', t('horsesPage.cards', 'Thẻ')], ['table', t('horsesPage.table', 'Bảng')]]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} />
+        </div>
       </div>
 
       <ErrorText err={loadErr} />
 
       {loading && rows.length === 0 ? (
-        <p className="text-muted">{i18n.t("ui.loadingHorses")}</p>
+        <p className="text-muted">{t('horsesPage.loading', 'Đang tải danh sách ngựa…')}</p>
       ) : rows.length === 0 ? (
-        <EmptyState action={filter !== 'all' || healthFilter || q ? <Btn sm onClick={() => { setFilter('all'); setHealthFilter(''); setSearch(''); }}>{i18n.t("mergeUi.clearFilters")}</Btn> : undefined}>
-          {all.length === 0 ? i18n.t("mergeUi.noHorses") : i18n.t("mergeUi.noMatches")}
+        <EmptyState action={filter !== 'all' || healthFilter || q ? <Btn sm onClick={() => { setFilter('all'); setHealthFilter(''); setSearch(''); }}>{t('horsesPage.clearFilters', 'Xóa bộ lọc')}</Btn> : undefined}>
+          {all.length === 0 ? t('horsesPage.emptyNone', 'Chưa có hồ sơ ngựa nào.') : t('horsesPage.emptyFilter', 'Không có ngựa nào khớp với bộ lọc hiện tại.')}
         </EmptyState>
       ) : view === 'cards' ? (
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(290px, 100%), 1fr))' }}>
-          {rows.map((h) => <HorseCard key={h.id} h={h} canManage={isManager} onEdit={() => setEditingHorse(h)} onDelete={() => setDeletingHorse(h)} />)}
+          {rows.map((h) => (
+            <HorseCard
+              key={h.id}
+              h={h}
+              canManage={isManager}
+              genderText={genderText(h.gender)}
+              ageText={ageText(h.birthDate)}
+              onEdit={() => setEditingHorse(h)}
+              onDelete={() => setDeletingHorse(h)}
+            />
+          ))}
         </div>
       ) : (
         <Card>
@@ -132,14 +149,14 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
             <table className="w-full min-w-[960px] border-collapse">
               <thead>
                 <tr className="text-left text-[12px] text-muted">
-                  <th className="h-10 px-5 font-medium border-b border-line">{i18n.t("incidents.horse")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("ui.owner2")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("horse.breed")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line text-right">{i18n.t("mergeUi.fitness")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("mergeUi.racing")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("ui.health")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("ui.trainingLocked2")}</th>
-                  {isManager && <th className="h-10 px-5 border-b border-line" aria-label={i18n.t("incidents.actions")} />}
+                  <th className="h-10 px-5 font-medium border-b border-line">{t('horsesPage.thHorse', 'Ngựa')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thOwner', 'Chủ sở hữu')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thBreed', 'Giống')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line text-right">{t('horsesPage.thFitness', 'Thể lực')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thRacing', 'Thi đấu')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thHealth', 'Sức khỏe')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thLock', 'Khóa tập')}</th>
+                  {isManager && <th className="h-10 px-5 border-b border-line" aria-label={t('horsesPage.thActions', 'Thao tác')} />}
                 </tr>
               </thead>
               <tbody>
@@ -170,8 +187,8 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
                     {isManager && (
                       <td className="px-5 py-3">
                         <div className="flex justify-end gap-1">
-                          <button type="button" aria-label={`Sửa ${h.name}`} onClick={() => setEditingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
-                          <button type="button" aria-label={`Xóa ${h.name}`} onClick={() => setDeletingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
+                          <button type="button" aria-label={`${t('common.update', 'Sửa')} ${h.name}`} onClick={() => setEditingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
+                          <button type="button" aria-label={`${t('common.cancel', 'Xóa')} ${h.name}`} onClick={() => setDeletingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
                         </div>
                       </td>
                     )}
@@ -191,26 +208,46 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   );
 }
 
-function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: boolean; onEdit: () => void; onDelete: () => void }) {
-  useTranslation();
+function HorseCard({
+  h,
+  canManage,
+  genderText,
+  ageText,
+  onEdit,
+  onDelete,
+}: {
+  h: Horse;
+  canManage: boolean;
+  genderText: string;
+  ageText: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { t } = useTranslation();
   return (
     <div className="group lift hover-hop flex flex-col bg-white rounded-card border border-line hover:border-line-strong">
-      <Link to={`/horses/${h.id}`} aria-label={`Hồ sơ ${h.name}`} className="flex gap-3 items-center px-4 pt-4 no-underline text-ink">
+      <Link to={`/horses/${h.id}`} aria-label={`${t('horseFlow.openProfile', 'Hồ sơ')} ${h.name}`} className="flex gap-3 items-center px-4 pt-4 no-underline text-ink">
         <HorseAvatar src={getFileUrl(h.photoUrl)} name={h.name} size={40} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-[16px] font-semibold leading-5 truncate group-hover:text-info">{h.name}</span>
             <Cloth n={h.saddleNumber} />
           </div>
-          <div className="text-[12.5px] text-muted mt-0.5 truncate">{h.breed ?? i18n.t("ui.unknownBreed2")} · {ageText(h.birthDate)}</div>
+          <div className="text-[12.5px] text-muted mt-0.5 truncate">{h.breed ?? t('horseFlow.breedNotSet', 'Chưa rõ giống')} · {genderText} · {ageText}</div>
         </div>
       </Link>
 
       <div className="flex items-center gap-3 px-4 pt-4">
-        <Ring value={h.fitnessScore ?? 0} size={44} color={fitColor(h.fitnessScore)} text={h.fitnessScore ?? '—'} label={`Thể lực ${h.fitnessScore ?? i18n.t("ui.notAssessed2")}`} />
+        <Ring value={h.fitnessScore ?? 0} size={44} color={fitColor(h.fitnessScore)} text={h.fitnessScore ?? '—'} label={`${t('horsesPage.thFitness', 'Thể lực')} ${h.fitnessScore ?? ''}`} />
         <div className="min-w-0">
-          <div className="text-[13px] text-muted">{i18n.t("mergeUi.fitness")}</div>
-          <div className="text-[13.5px]">{h.fitnessScore != null ? <><span className="num font-medium">{h.fitnessScore}</span><span className="text-muted"> / 100</span></> : <span className="text-muted">{i18n.t("ui.notAssessed")}</span>}</div>
+          <div className="text-[13px] text-muted">{t('horsesPage.thFitness', 'Thể lực')}</div>
+          <div className="text-[13.5px]">
+            {h.fitnessScore != null ? (
+              <><span className="num font-medium">{h.fitnessScore}</span><span className="text-muted"> / 100</span></>
+            ) : (
+              <span className="text-muted">—</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -223,11 +260,11 @@ function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: bo
 
       <div className="mt-auto pt-4">
         <div className="flex items-center gap-2 px-4 h-11 border-t border-line-soft">
-          <span className="text-[13px] text-muted flex-1 min-w-0 truncate">{i18n.t("ui.owner2")}<span className="text-ink">{h.owner.name}</span></span>
+          <span className="text-[13px] text-muted flex-1 min-w-0 truncate">{t('horsesPage.thOwner', 'Chủ sở hữu')} <span className="text-ink">{h.owner.name}</span></span>
           {canManage && (
             <div className="flex gap-0.5 -mr-1.5">
-              <button type="button" aria-label={`Sửa ${h.name}`} onClick={onEdit} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
-              <button type="button" aria-label={`Xóa ${h.name}`} onClick={onDelete} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
+              <button type="button" aria-label={`${t('common.update', 'Sửa')} ${h.name}`} onClick={onEdit} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
+              <button type="button" aria-label={`${t('common.cancel', 'Xóa')} ${h.name}`} onClick={onDelete} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
             </div>
           )}
         </div>

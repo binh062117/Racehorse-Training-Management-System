@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import i18n from '../i18n';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, getFileUrl } from '../lib/api';
@@ -18,19 +17,9 @@ import { PhotoUploadModal } from '../components/horse/PhotoUploadModal';
 import { PedigreeTab } from './horse/PedigreeTab';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Alert, Btn, Card, CareerBadge, CountUp, Cloth, HealthBadge, HorseAvatar, Icon, ImageLightbox, KpiStrip, LockBadge,
+  Alert, Btn, Card, CountUp, Cloth, HealthBadge, CareerBadge, HorseAvatar, Icon, ImageLightbox, KpiStrip, LockBadge,
   fitColor, lockReasonText,
 } from '../ds/ui';
-
-const TAB_ITEMS = (): [Tab, string][] => [
-  ['profile', i18n.t("ui.horseProfile")],
-  ['pedigree', i18n.t("ui.pedigree")],
-  ['plans', i18n.t("nav.plansTrainer")],
-  ['sessions', i18n.t("session.heading")],
-  ['progress', 'Tiến độ huấn luyện'],
-  ['health', i18n.t("ui.medicalRecords")],
-  ['feeding', i18n.t("ui.feeding")],
-];
 
 type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'progress' | 'health' | 'feeding';
 
@@ -43,12 +32,11 @@ function calculateAge(birthDate: string | null): number | null {
   );
   return ageYears >= 0 ? ageYears : null;
 }
-const genderText = (g: Horse['gender']) => (g === 'MALE' ? i18n.t("horse.genderMale") : g === 'FEMALE' ? i18n.t("horse.genderFemale") : null);
 
 export function HorseDetailPage() {
-  useTranslation();
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isManager = user?.role === 'MANAGER';
   const isVet = user?.role === 'VET';
@@ -83,9 +71,20 @@ export function HorseDetailPage() {
     setParams(nextParams, { replace: true });
   };
 
-  // Mỗi tab chỉ fetch dữ liệu đúng 1 lần (lúc lần đầu được mở) — sau đó giữ
-  // mounted, chỉ ẩn/hiện bằng CSS, để chuyển qua lại các tab không phải gọi
-  // lại API mỗi lần.
+  const tabItems: [Tab, string][] = [
+    ['profile', t('horseDetail.tabs.profile', 'Hồ sơ chi tiết')],
+    ['pedigree', t('horseDetail.tabs.pedigree', 'Phả hệ')],
+    ['plans', t('horseDetail.tabs.plans', 'Giáo án huấn luyện')],
+    ['sessions', t('horseDetail.tabs.sessions', 'Buổi tập luyện')],
+    ['progress', t('horseDetail.tabs.progress', 'Tiến độ huấn luyện')],
+    ['health', t('horseDetail.tabs.health', 'Hồ sơ y tế')],
+    ['feeding', t('horseDetail.tabs.feeding', 'Khẩu phần ăn')],
+  ];
+
+  const genderText = (g: Horse['gender']) => (
+    g === 'MALE' ? t('horsesPage.genderMale', 'Đực') : g === 'FEMALE' ? t('horsesPage.genderFemale', 'Cái') : null
+  );
+
   const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(() => new Set([tab]));
   useEffect(() => {
     setVisitedTabs((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
@@ -114,9 +113,10 @@ export function HorseDetailPage() {
   const handleToggleLock = async () => {
     if (!horse) return;
     const willLock = !horse.locked;
-    const reason = willLock
-      ? window.prompt(i18n.t("ui.enterATrainingLockReasonOptional")) ?? ''
+    const promptText = willLock
+      ? (t('horsesPage.lockPrompt', 'Nhập lý do khóa tập luyện (tuỳ chọn):'))
       : '';
+    const reason = willLock ? window.prompt(promptText) ?? '' : '';
     try {
       await api.patch(`/horses/${horse.id}/lock`, {
         locked: willLock,
@@ -124,14 +124,14 @@ export function HorseDetailPage() {
       });
       await loadHorse();
     } catch (e) {
-      alert(i18n.t("ui.unableToUpdateTheTrainingLock") + String(e));
+      alert(t('horsesPage.lockUpdateFailed', 'Không thể cập nhật trạng thái khóa tập luyện: ') + String(e));
     }
   };
 
-  usePageChrome({ crumbs: [[i18n.t("nav.horses"), '/horses'], horse?.name ?? '…'] });
+  usePageChrome({ crumbs: [[t('horsesPage.title', 'Ngựa đua'), '/horses'], horse?.name ?? '…'] });
 
   if (loading && !horse) {
-    return <p className="cap">{i18n.t("ui.loadingHorseProfile")}</p>;
+    return <p className="cap">{t('horsesPage.loading', 'Đang tải thông tin hồ sơ ngựa…')}</p>;
   }
   if (err && !horse) {
     return <ErrorText err={err} />;
@@ -144,8 +144,16 @@ export function HorseDetailPage() {
   const podiums = finished.filter((e) => e.position != null && e.position <= 3).length;
   const photo = getFileUrl(horse.photoUrl);
   const age = calculateAge(horse.birthDate);
-  const facts = [horse.breed ?? i18n.t("ui.unknownBreed2"), genderText(horse.gender), age != null ? `${age} tuổi` : null].filter(Boolean).join(' · ');
-  const tabCls = (on: boolean) => `inline-flex items-center h-11 px-3 -mb-px border-b-2 whitespace-nowrap text-[14px] no-underline transition-colors ${on ? 'text-info border-info font-medium' : 'text-muted border-transparent hover:text-ink'}`;
+  const facts = [
+    horse.breed ?? t('horseFlow.breedNotSet', 'Chưa rõ giống'),
+    genderText(horse.gender),
+    age != null ? t('horsesPage.age', { age }) : null,
+  ].filter(Boolean).join(' · ');
+
+  const tabCls = (on: boolean) =>
+    `inline-flex items-center h-11 px-3 -mb-px border-b-2 whitespace-nowrap text-[14px] no-underline transition-colors ${
+      on ? 'text-info border-info font-medium' : 'text-muted border-transparent hover:text-ink'
+    }`;
 
   return (
     <>
@@ -153,15 +161,17 @@ export function HorseDetailPage() {
         <div className="flex items-start gap-4 min-w-0 flex-[1_1_420px]">
           <HorseAvatar src={photo} name={horse.name} size={64} onClick={() => setPhotoViewerOpen(true)} />
           <div className="min-w-0">
-            <nav aria-label="Đường dẫn" className="flex items-center gap-1.5 text-[13px] text-muted mb-0.5">
-              <Link to="/horses" className="no-underline text-muted hover:text-ink">{i18n.t("nav.horses")}</Link>
+            <nav aria-label={t('nav.menu', 'Đường dẫn')} className="flex items-center gap-1.5 text-[13px] text-muted mb-0.5">
+              <Link to="/horses" className="no-underline text-muted hover:text-ink">{t('horsesPage.title', 'Ngựa đua')}</Link>
               <Icon name="chevRight" className="w-3.5 h-3.5 nudge" />
             </nav>
             <div className="flex items-center gap-2.5">
               <h1 className="text-[24px] leading-8 font-semibold tracking-[-0.01em] truncate">{horse.name}</h1>
               <Cloth n={horse.saddleNumber} />
             </div>
-            <p className="text-[14px] text-muted mt-0.5">{facts} · Chủ sở hữu <span className="text-ink">{horse.owner.name}</span></p>
+            <p className="text-[14px] text-muted mt-0.5">
+              {facts} · {t('horsesPage.thOwner', 'Chủ sở hữu')} <span className="text-ink">{horse.owner.name}</span>
+            </p>
             <div className="flex flex-wrap gap-1.5 mt-2.5">
               <CareerBadge status={horse.status} />
               <HealthBadge status={horse.healthStatus} />
@@ -173,14 +183,15 @@ export function HorseDetailPage() {
           <div className="flex flex-wrap gap-2">
             {isVet && (
               <Btn v={horse.locked ? 'p' : 's'} onClick={() => void handleToggleLock()}>
-                <Icon name={horse.locked ? 'unlock' : 'lock'} />{horse.locked ? i18n.t("ui.unlockTraining") : i18n.t("ui.trainingLocked2")}
+                <Icon name={horse.locked ? 'unlock' : 'lock'} />
+                {horse.locked ? t('horseFlow.unlocked', 'Mở khóa tập') : t('horseFlow.locked', 'Khóa tập')}
               </Btn>
             )}
             {isManager && (
               <>
-                <Btn onClick={() => setPhotoOpen(true)}><Icon name="camera" />{i18n.t("ui.changePhoto")}</Btn>
-                <Btn onClick={() => setEditOpen(true)}><Icon name="edit" />{i18n.t("horseFlow.editHorse")}</Btn>
-                <Btn v="d" aria-label={i18n.t("ui.deleteHorse")} title={i18n.t("ui.deleteHorse")} className="!px-2.5" onClick={() => setDeleteOpen(true)}><Icon name="trash" /></Btn>
+                <Btn onClick={() => setPhotoOpen(true)}><Icon name="camera" />{t('horseDetail.uploadPhoto', 'Đổi ảnh')}</Btn>
+                <Btn onClick={() => setEditOpen(true)}><Icon name="edit" />{t('horseDetail.edit', 'Sửa hồ sơ')}</Btn>
+                <Btn v="d" aria-label={t('horseDetail.delete', 'Xóa ngựa')} title={t('horseDetail.delete', 'Xóa ngựa')} className="!px-2.5" onClick={() => setDeleteOpen(true)}><Icon name="trash" /></Btn>
               </>
             )}
           </div>
@@ -188,50 +199,55 @@ export function HorseDetailPage() {
       </header>
 
       {horse.locked && (
-        <Alert tone="bad" icon="lock" title="Ngựa đang bị khóa tập">
-          {lockReasonText(horse.lockReason)}. Không thể xếp buổi tập mới cho đến khi bác sĩ thú y mở khóa.
+        <Alert tone="bad" icon="lock" title={t('horseDetail.lockedWarning', 'Ngựa đang bị khóa tập')}>
+          {lockReasonText(horse.lockReason)}. {t('horsesPage.lockBannerDesc', 'Không thể xếp buổi tập mới cho đến khi bác sĩ thú y mở khóa.')}
         </Alert>
       )}
 
       <KpiStrip items={[
         {
-          label: i18n.t("mergeUi.fitness"), lead: true,
-          value: horse.fitnessScore != null ? <span style={{ color: fitColor(horse.fitnessScore) }}><CountUp value={horse.fitnessScore} /></span> : <span className="text-muted text-[16px] font-normal">{i18n.t("ui.notAssessed")}</span>,
+          label: t('horsesPage.thFitness', 'Thể lực'),
+          lead: true,
+          value: horse.fitnessScore != null ? <span style={{ color: fitColor(horse.fitnessScore) }}><CountUp value={horse.fitnessScore} /></span> : <span className="text-muted text-[16px] font-normal">—</span>,
           unit: horse.fitnessScore != null ? '/100' : undefined,
-          sub: horse.fitnessScore == null ? undefined : horse.fitnessScore >= 80 ? 'Tốt (từ 80)' : horse.fitnessScore >= 60 ? 'Cần theo dõi (60–79)' : 'Thấp (dưới 60)',
+          sub: horse.fitnessScore == null ? undefined : horse.fitnessScore >= 80 ? 'Tốt (≥80)' : horse.fitnessScore >= 60 ? 'Cần theo dõi (60–79)' : 'Thấp (<60)',
         },
-        { label: 'Số lần đua', value: starts, sub: starts > 0 ? `${wins} thắng · ${podiums} lần vào top 3` : i18n.t("races.resultPending") },
-        { label: i18n.t("ui.saddleNumber"), value: horse.saddleNumber ?? <span className="text-muted text-[16px] font-normal">Chưa gán số</span> },
+        {
+          label: t('horseDetail.racesStarted', 'Số lần đua'),
+          value: starts,
+          sub: starts > 0 ? `${wins} ${t('horseFlow.wins', 'thắng')} · ${podiums} ${t('horseFlow.podiums', 'vào top 3')}` : '—',
+        },
+        {
+          label: t('horseFlow.saddleNumber', 'Số áo đua'),
+          value: horse.saddleNumber ?? <span className="text-muted text-[16px] font-normal">—</span>,
+        },
       ]} />
 
-      <nav className="flex border-b border-line overflow-x-auto" aria-label="Mục hồ sơ">
-        {TAB_ITEMS().map(([key, label]) => (
+      <nav className="flex border-b border-line overflow-x-auto" aria-label={t('horseFlow.recordSections', 'Mục hồ sơ')}>
+        {tabItems.map(([key, label]) => (
           <button key={key} type="button" onClick={() => setTab(key)} aria-current={tab === key ? 'page' : undefined} className={tabCls(tab === key)}>
             {label}
           </button>
         ))}
-        <Link to={`/horses/${horse.id}/performance`} className={tabCls(false)}>{i18n.t("horseFlow.performanceTitle")}</Link>
-        <Link to={`/horses/${horse.id}/ownership`} className={tabCls(false)}>{i18n.t("horseFlow.ownership")}</Link>
+        <Link to={`/horses/${horse.id}/performance`} className={tabCls(false)}>{t('horseFlow.performance', 'Thành tích')}</Link>
+        <Link to={`/horses/${horse.id}/ownership`} className={tabCls(false)}>{t('horseFlow.ownership', 'Quyền sở hữu')}</Link>
       </nav>
 
-      {/* Tab Contents — mỗi tab chỉ mount sau khi đã ghé qua ít nhất 1 lần
-          (visitedTabs), rồi giữ mounted luôn (ẩn bằng `hidden`) để tránh
-          fetch lại API mỗi lần chuyển tab. */}
       {visitedTabs.has('profile') && (
         <Card hidden={tab !== 'profile'}>
-          <h2 className="px-5 pt-4 pb-1 text-[15px] font-semibold">{i18n.t("ui.profileInformation")}</h2>
+          <h2 className="px-5 pt-4 pb-1 text-[15px] font-semibold">{t('horseDetail.details', 'Thông tin lý lịch')}</h2>
           <dl className="grid sm:grid-cols-[180px_1fr] m-0 px-5 pb-2">
             {([
-              [i18n.t("ui.horseName"), horse.name],
-              [i18n.t("horse.breed"), horse.breed ?? <span className="text-muted">{i18n.t("horse.genderUnknown")}</span>],
-              [i18n.t("horse.gender"), genderText(horse.gender) ?? <span className="text-muted">{i18n.t("horse.genderUnknown")}</span>],
-              [i18n.t("horse.birthDate"), horse.birthDate ? <>{formatDate(horse.birthDate)}{age != null && <span className="text-muted"> · {age} tuổi</span>}</> : <span className="text-muted">{i18n.t("horse.genderUnknown")}</span>],
-              [i18n.t("ui.owner2"), <>{horse.owner.name} <span className="text-muted">· {horse.owner.email}</span></>],
-              [i18n.t("mergeUi.racing"), <CareerBadge status={horse.status} />],
-              [i18n.t("ui.health"), <HealthBadge status={horse.healthStatus} />],
-              [i18n.t("mergeUi.fitness"), horse.fitnessScore != null ? <><span className="num">{horse.fitnessScore}</span><span className="text-muted"> / 100</span></> : <span className="text-muted">{i18n.t("ui.notAssessed")}</span>],
-              [i18n.t("ui.saddleNumber"), horse.saddleNumber ?? <span className="text-muted">Chưa gán</span>],
-              ['Mã hồ sơ', <span className="font-mono text-[12.5px] text-muted" title={horse.id}>{horse.id.slice(0, 8)}…</span>],
+              [t('horse.name', 'Tên ngựa'), horse.name],
+              [t('horse.breed', 'Giống'), horse.breed ?? <span className="text-muted">—</span>],
+              [t('horse.gender', 'Giới tính'), genderText(horse.gender) ?? <span className="text-muted">—</span>],
+              [t('horse.birthDate', 'Ngày sinh'), horse.birthDate ? <>{formatDate(horse.birthDate)}{age != null && <span className="text-muted"> · {t('horsesPage.age', { age })}</span>}</> : <span className="text-muted">—</span>],
+              [t('horse.owner', 'Chủ sở hữu'), <>{horse.owner.name} <span className="text-muted">· {horse.owner.email}</span></>],
+              [t('horsesPage.thRacing', 'Thi đấu'), <CareerBadge status={horse.status} />],
+              [t('horsesPage.thHealth', 'Sức khỏe'), <HealthBadge status={horse.healthStatus} />],
+              [t('horsesPage.thFitness', 'Thể lực'), horse.fitnessScore != null ? <><span className="num">{horse.fitnessScore}</span><span className="text-muted"> / 100</span></> : <span className="text-muted">—</span>],
+              [t('horseFlow.saddleNumber', 'Số áo đua'), horse.saddleNumber ?? <span className="text-muted">—</span>],
+              [t('horseDetail.code', 'Mã hồ sơ'), <span className="font-mono text-[12.5px] text-muted" title={horse.id}>{horse.id.slice(0, 8)}…</span>],
             ] as [string, ReactNode][]).map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="text-muted pt-3 sm:pb-3 sm:border-b border-line-soft">{k}</dt>

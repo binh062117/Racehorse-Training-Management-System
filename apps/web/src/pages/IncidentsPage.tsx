@@ -114,8 +114,15 @@ export function IncidentsPage() {
         sub={loading && !data
           ? t('incidents.loading')
           : highSeverityCount > 0
-            ? `${highSeverityCount} sự cố mức nặng chưa xử lý xong · ${counts.OPEN} đang chờ, ${counts.IN_PROGRESS} đang xử lý.`
-            : `Không có sự cố mức nặng nào đang mở · ${counts.RESOLVED} trong ${counts.ALL} sự cố đã xử lý.`}
+            ? t('incidents.subUnresolved', {
+                count: highSeverityCount,
+                open: counts.OPEN,
+                inProgress: counts.IN_PROGRESS,
+              })
+            : t('incidents.subAllResolved', {
+                resolved: counts.RESOLVED,
+                total: counts.ALL,
+              })}
         search={{ placeholder: t('incidents.search'), value: search, onChange: setSearch }}
       />
 
@@ -273,7 +280,7 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
               {horses.map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
             </NativeSelect>
           </Field>
-          <Field label={t('incidents.severity')} hint={severity === 'HIGH' ? 'Mức nặng sẽ tự khóa tập ngựa cho đến khi sự cố được xử lý xong.' : undefined} err={severity === 'HIGH'}>
+          <Field label={t('incidents.severity')} hint={severity === 'HIGH' ? t('incidents.highSeverityHint') : undefined} err={severity === 'HIGH'}>
             <NativeSelect value={severity} onChange={(event) => setSeverity(event.target.value as IncidentSeverity)}>
               {(['LOW', 'MEDIUM', 'HIGH'] as const).map((level) => <option key={level} value={level}>{t(`incidents.severities.${level}`)}</option>)}
             </NativeSelect>

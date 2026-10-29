@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import i18n from '../i18n';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -24,7 +23,7 @@ function elapsed(plan: TrainingPlan, now: number): number | null {
 }
 
 export function TrainingPlansPage() {
-  useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -48,7 +47,7 @@ export function TrainingPlansPage() {
   );
   const plans = data?.data ?? [];
 
-  usePageChrome({ crumbs: [i18n.t("nav.plansTrainer")] });
+  usePageChrome({ crumbs: [t('plansPage.title', 'Giáo án huấn luyện')] });
 
   const now = new Date().getTime();
   const isOngoing = (p: TrainingPlan) => !p.endDate || new Date(p.endDate).getTime() >= now;
@@ -67,33 +66,33 @@ export function TrainingPlansPage() {
   });
 
   const sub = loading && plans.length === 0
-    ? i18n.t("session.loadingPlans")
+    ? t('plansPage.loading', 'Đang tải giáo án…')
     : plans.length === 0
-      ? 'Chưa có giáo án nào.'
-      : `${activeCount} giáo án đang áp dụng cho ${horsesOnPlan} ngựa · ${completedCount} đã kết thúc.`;
+      ? t('plansPage.empty', 'Chưa có giáo án nào.')
+      : `${activeCount} ${t('plansPage.active', 'đang áp dụng')} (${horsesOnPlan} ${t('horsesPage.title', 'ngựa')}) · ${completedCount} ${t('plansPage.completed', 'đã kết thúc')}.`;
 
   return (
     <>
       <PageHeader
-        title={i18n.t("nav.plansTrainer")}
+        title={t('plansPage.title', 'Giáo án huấn luyện')}
         sub={sub}
-        search={{ placeholder: 'Tìm ngựa, mục tiêu, huấn luyện viên', value: search, onChange: setSearch }}
-        actions={canCreate ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{i18n.t("ui.createPlan")}</Btn> : undefined}
+        search={{ placeholder: t('plansPage.searchPlaceholder', 'Tìm theo mục tiêu, tên ngựa'), value: search, onChange: setSearch }}
+        actions={canCreate ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('plansPage.newPlan', 'Tạo giáo án')}</Btn> : undefined}
       />
 
       <div className="flex flex-wrap gap-2 items-center">
-        <Chip on={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')}>{i18n.t("races.filters.ALL")}<ChipCount n={plans.length} /></Chip>
-        <Chip on={statusFilter === 'ACTIVE'} onClick={() => setStatusFilter('ACTIVE')}>{i18n.t("ui.active2")}<ChipCount n={activeCount} /></Chip>
-        <Chip on={statusFilter === 'COMPLETED'} onClick={() => setStatusFilter('COMPLETED')}>{i18n.t("ui.ended")}<ChipCount n={completedCount} /></Chip>
+        <Chip on={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')}>{t('plansPage.all', 'Tất cả')} <ChipCount n={plans.length} /></Chip>
+        <Chip on={statusFilter === 'ACTIVE'} onClick={() => setStatusFilter('ACTIVE')}>{t('plansPage.active', 'Đang áp dụng')} <ChipCount n={activeCount} /></Chip>
+        <Chip on={statusFilter === 'COMPLETED'} onClick={() => setStatusFilter('COMPLETED')}>{t('plansPage.completed', 'Đã kết thúc')} <ChipCount n={completedCount} /></Chip>
       </div>
 
       {loading && plans.length === 0 ? (
-        <p className="text-muted">{i18n.t("session.loadingPlans")}</p>
+        <p className="text-muted">{t('plansPage.loading', 'Đang tải giáo án…')}</p>
       ) : loadErr ? (
         <ErrorText err={loadErr} />
       ) : filteredPlans.length === 0 ? (
-        <EmptyState action={canCreate && plans.length === 0 ? <Btn sm v="p" onClick={() => setCreateOpen(true)}>{i18n.t("ui.createTheFirstPlan")}</Btn> : undefined}>
-          {plans.length === 0 ? 'Chưa có giáo án huấn luyện nào.' : 'Không có giáo án nào khớp với bộ lọc.'}
+        <EmptyState action={canCreate && plans.length === 0 ? <Btn sm v="p" onClick={() => setCreateOpen(true)}>{t('plansPage.newPlan', 'Tạo giáo án')}</Btn> : undefined}>
+          {plans.length === 0 ? t('plansPage.empty', 'Chưa có giáo án huấn luyện nào.') : t('plansPage.emptyFilter', 'Không có giáo án nào khớp với bộ lọc.')}
         </EmptyState>
       ) : (
         <Card>
@@ -101,12 +100,12 @@ export function TrainingPlansPage() {
             <table className="w-full min-w-[860px] border-collapse">
               <thead>
                 <tr className="text-left text-[12px] text-muted">
-                  <th className="h-10 px-5 font-medium border-b border-line w-[18%]">{i18n.t("incidents.horse")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">Mục tiêu</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("session.trainer")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{i18n.t("session.scheduledAt")}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line w-[180px]">Tiến độ</th>
-                  <th className="h-10 px-5 font-medium border-b border-line">{i18n.t("user.status")}</th>
+                  <th className="h-10 px-5 font-medium border-b border-line w-[18%]">{t('plansPage.colHorse', 'Ngựa')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('plansPage.colGoal', 'Mục tiêu')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('plansPage.colTrainer', 'Huấn luyện viên')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('plansPage.colTime', 'Thời gian')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line w-[180px]">{t('plansPage.colProgress', 'Tiến độ')}</th>
+                  <th className="h-10 px-5 font-medium border-b border-line">{t('horse.status', 'Trạng thái')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,15 +118,18 @@ export function TrainingPlansPage() {
                         <Link to={`/horses/${plan.horseId}?tab=plans`} className="font-medium text-ink no-underline hover:text-info">{plan.horse?.name ?? '—'}</Link>
                         {plan.horse?.breed && <div className="text-[12.5px] text-muted">{plan.horse.breed}</div>}
                       </td>
+                      {/* User-entered goal is preserved as-is */}
                       <td className="px-4 py-3 max-w-[380px]">{plan.goal}</td>
                       <td className="px-4 py-3">{plan.trainer?.name ?? '—'}</td>
                       <td className="px-4 py-3 whitespace-nowrap num">
                         <div>{formatDate(plan.startDate)}</div>
-                        <div className="text-[12.5px] text-muted">{i18n.t("ui.to")}{plan.endDate ? formatDate(plan.endDate) : 'không giới hạn'}</div>
+                        <div className="text-[12.5px] text-muted">
+                          {plan.endDate ? `${t('common.to', 'đến')} ${formatDate(plan.endDate)}` : t('plansPage.openEnded', 'không giới hạn')}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         {pct == null ? (
-                          <span className="text-[13px] text-muted">{i18n.t("ui.openEnded")}</span>
+                          <span className="text-[13px] text-muted">{t('plansPage.openEnded', 'Dài hạn')}</span>
                         ) : (
                           <div className="flex items-center gap-2.5 pt-1.5">
                             <Bar pct={pct} color={ongoing ? '#1a4b8a' : '#9ca3af'} className="flex-1" />
@@ -136,7 +138,11 @@ export function TrainingPlansPage() {
                         )}
                       </td>
                       <td className="px-5 py-3">
-                        {ongoing ? <Badge tone="ok">{i18n.t("ui.active2")}</Badge> : <Badge tone="neu">{i18n.t("ui.ended")}</Badge>}
+                        {ongoing ? (
+                          <Badge tone="ok">{t('plansPage.active', 'Đang áp dụng')}</Badge>
+                        ) : (
+                          <Badge tone="neu">{t('plansPage.completed', 'Đã kết thúc')}</Badge>
+                        )}
                       </td>
                     </tr>
                   );

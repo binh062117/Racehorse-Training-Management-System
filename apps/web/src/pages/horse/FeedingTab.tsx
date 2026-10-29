@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import i18n from '../../i18n';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import type { FeedingRecord, Horse, Paginated } from '../../lib/types';
@@ -15,7 +14,7 @@ interface FormPrefill {
 }
 
 export function FeedingTab({ horse }: { horse: Horse }) {
-  useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isGroom = user?.role === 'GROOM';
   const canSuggest = isGroom || user?.role === 'VET' || user?.role === 'MANAGER';
@@ -44,14 +43,14 @@ export function FeedingTab({ horse }: { horse: Horse }) {
     <div className="flex flex-col gap-5">
       <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h2 className="text-[15px] font-semibold">{i18n.t("ui.feeding")}</h2>
+          <h2 className="text-[15px] font-semibold">{t('feeding.title', 'Khẩu phần ăn')}</h2>
           <p className="cap mt-0.5">
-            {isGroom ? i18n.t("ui.recordFeedTypeAndQuantityForEachFeedingToSupportAiNutritionAnalysis") : 'Lịch sử khẩu phần ăn của ngựa.'}
+            {isGroom ? t('feeding.groomHelp') : t('feeding.historyHelp')}
           </p>
         </div>
         {isGroom && (
           <Btn v="p" onClick={() => { setPrefill(null); setShowForm((s) => !s); }}>
-            <Icon name="plus" />{showForm ? i18n.t("ui.close") : i18n.t("ui.recordFeeding")}
+            <Icon name="plus" />{showForm ? t('feeding.closeBtn', 'Đóng') : t('feeding.recordBtn', 'Ghi nhận khẩu phần')}
           </Btn>
         )}
       </div>
@@ -73,22 +72,22 @@ export function FeedingTab({ horse }: { horse: Horse }) {
       )}
 
       {loading ? (
-        <p className="cap">{i18n.t("ui.loading")}</p>
+        <p className="cap">{t('ui.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
-        <EmptyState>{i18n.t("ui.noFeedingRecordsYet")}</EmptyState>
+        <EmptyState>{t('feeding.empty', 'Chưa có bản ghi khẩu phần ăn nào.')}</EmptyState>
       ) : (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead>
                 <tr>
-                  <th className={`${thCls} pl-5`}>{i18n.t("horseFlow.date")}</th>
-                  <th className={thCls}>{i18n.t("ui.feedType")}</th>
-                  <th className={`${thCls} text-right`}>{i18n.t("ui.quantity")}</th>
-                  <th className={thCls}>{i18n.t("session.notes")}</th>
-                  <th className={`${thCls} pr-5`}>{i18n.t("ui.recordedBy")}</th>
+                  <th className={`${thCls} pl-5`}>{t('feeding.thDate', 'Ngày')}</th>
+                  <th className={thCls}>{t('feeding.thFeedType', 'Loại thức ăn')}</th>
+                  <th className={`${thCls} text-right`}>{t('feeding.thQuantity', 'Khối lượng')}</th>
+                  <th className={thCls}>{t('feeding.thNotes', 'Ghi chú')}</th>
+                  <th className={`${thCls} pr-5`}>{t('feeding.thRecordedBy', 'Người ghi')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -111,7 +110,7 @@ export function FeedingTab({ horse }: { horse: Horse }) {
 }
 
 function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; initial: FormPrefill | null; onCreated: () => void }) {
-  useTranslation();
+  const { t } = useTranslation();
   const [feedType, setFeedType] = useState(initial?.feedType ?? '');
   const [quantityKg, setQuantityKg] = useState(initial?.quantityKg ?? '');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -142,21 +141,23 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
     <form onSubmit={submit}>
       <Card className="p-5 flex flex-col gap-4">
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
-          <Field label={i18n.t("ui.feedType")}>
-            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required placeholder={i18n.t("ui.exampleAlfalfaHayMixedFeed")} />
+          <Field label={t('feeding.thFeedType', 'Loại thức ăn')}>
+            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required placeholder={t('ui.exampleAlfalfaHayMixedFeed')} />
           </Field>
-          <Field label={i18n.t("ui.quantityKg")}>
+          <Field label={`${t('feeding.thQuantity', 'Khối lượng')} (kg)`}>
             <Input type="number" step="0.1" min="0.1" max="100" value={quantityKg} onChange={(e) => setQuantityKg(e.target.value)} required />
           </Field>
-          <Field label={i18n.t("horseFlow.date")}>
+          <Field label={t('feeding.thDate', 'Ngày')}>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
           </Field>
-          <Field label={i18n.t("ui.notesOptional")}>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder={i18n.t("ui.exampleAteLessThanUsual")} />
+          <Field label={t('feeding.thNotes', 'Ghi chú')}>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder={t('ui.exampleAteLessThanUsual')} />
           </Field>
         </div>
         <ErrorText err={error} />
-        <Btn v="p" type="submit" disabled={saving} className="self-start">{saving ? i18n.t("races.saving") : i18n.t("ui.saveFeeding")}</Btn>
+        <Btn v="p" type="submit" disabled={saving} className="self-start">
+          {saving ? t('feeding.saving', 'Đang lưu...') : t('feeding.saveBtn', 'Lưu khẩu phần')}
+        </Btn>
       </Card>
     </form>
   );

@@ -1,4 +1,3 @@
-import i18n from '../../i18n';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +22,7 @@ export function HorseOwnershipPage() {
     return () => { active = false; };
   }, [id]);
 
-  usePageChrome({ crumbs: [[i18n.t("nav.horses"), '/horses'], horse?.name ?? '…', t('horseFlow.ownershipTitle')] });
+  usePageChrome({ crumbs: [[t('horsesPage.title', 'Ngựa đua'), '/horses'], horse?.name ?? '…', t('horseFlow.ownershipTitle')] });
 
   if (error) return <ErrorText err={error} />;
   if (!horse) return <p className="text-muted">{t('horseFlow.loading')}</p>;
@@ -33,9 +32,9 @@ export function HorseOwnershipPage() {
   return (
     <>
       <PageHeader
-        crumbs={[['Ngựa đua', '/horses'], [horse.name, `/horses/${id}`]]}
+        crumbs={[[t('horsesPage.title', 'Ngựa đua'), '/horses'], [horse.name, `/horses/${id}`]]}
         title={t('horseFlow.ownershipTitle')}
-        sub={`${horse.name} hiện thuộc quyền sở hữu của ${horse.owner.name}.`}
+        sub={t('horseFlow.currentOwnerSub', { horse: horse.name, owner: horse.owner.name })}
       />
       <HorseRecordNav horseId={id} />
 
@@ -44,7 +43,7 @@ export function HorseOwnershipPage() {
           {initials}
         </span>
         <div className="flex-1 min-w-0">
-          <div className="text-[13px] text-muted">Chủ sở hữu hiện tại</div>
+          <div className="text-[13px] text-muted">{t('horseFlow.currentOwner', 'Chủ sở hữu hiện tại')}</div>
           <div className="font-semibold text-[15px] mt-0.5">{horse.owner.name}</div>
           <div className="text-[13px] text-muted truncate">{horse.owner.email}</div>
         </div>

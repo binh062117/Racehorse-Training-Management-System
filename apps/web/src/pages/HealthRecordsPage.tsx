@@ -12,7 +12,7 @@ import { usePageChrome } from '../ds/AppShell';
 import { Btn, Card, CardHeader, Chip, ChipCount, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip, LockBadge, PageHeader } from '../ds/ui';
 
 export function HealthRecordsPage() {
-  useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const isVet = user?.role === 'VET';
@@ -30,7 +30,7 @@ export function HealthRecordsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<HealthStatus | 'ALL'>('ALL');
 
-  usePageChrome({ crumbs: [i18n.t("ui.health"), i18n.t("nav.healthRecords")] });
+  usePageChrome({ crumbs: [t('nav.healthSection', 'Sức khỏe'), t('healthRecordsPage.title', 'Hồ sơ khám bệnh')] });
 
   const loadHorses = useCallback(async () => {
     setHorsesLoading(true);
@@ -107,41 +107,40 @@ export function HealthRecordsPage() {
     setModalOpen(true);
   };
 
-  // A new horses array re-runs the records effect, so reloading horses refreshes both lists.
   const handleCreated = () => { void loadHorses(); };
 
-  const lockedNote = lockedCount ? i18n.t('mergeUi.lockedSummary', { count: lockedCount }) : '';
+  const lockedNote = lockedCount ? ` · ${t('horsesPage.countLocked', { count: lockedCount })}` : '';
   const sub = loading
-    ? i18n.t("mergeUi.loadingHealth")
+    ? t('healthRecordsPage.loading', 'Đang tải dữ liệu sức khỏe…')
     : horses.length === 0
-      ? i18n.t("mergeUi.noHorsesSystem")
+      ? t('horsesPage.emptyNone', 'Chưa có ngựa nào trong hệ thống.')
       : sick + watch === 0
-        ? i18n.t('mergeUi.allHealthy', { count: horses.length, locked: lockedNote })
-        : i18n.t('mergeUi.needsMonitoring', { count: sick + watch, total: horses.length, locked: lockedNote });
+        ? `${t('horsesPage.countSummary', { count: horses.length })} (${t('horseStatusBadge.FIT', 'Khỏe mạnh')})${lockedNote}.`
+        : `${sick + watch} / ${horses.length} ${t('horseStatusBadge.MONITORING', 'cần theo dõi')}${lockedNote}.`;
 
   const filters: [HealthStatus | 'ALL', string, number][] = [
-    ['ALL', i18n.t("races.filters.ALL"), horses.length],
-    ['FIT', i18n.t("ui.fit"), fit],
-    ['MONITORING', i18n.t("horseFlow.health.MONITORING"), watch],
-    ['INJURED', i18n.t("horseFlow.health.INJURED"), healthCounts.INJURED ?? 0],
-    ['QUARANTINED', i18n.t("horseFlow.health.QUARANTINED"), healthCounts.QUARANTINED ?? 0],
+    ['ALL', t('healthRecordsPage.all', 'Tất cả'), horses.length],
+    ['FIT', t('horseStatusBadge.FIT', 'Khỏe mạnh'), fit],
+    ['MONITORING', t('horseStatusBadge.MONITORING', 'Cần theo dõi'), watch],
+    ['INJURED', t('horseStatusBadge.INJURED', 'Chấn thương'), healthCounts.INJURED ?? 0],
+    ['QUARANTINED', t('horseStatusBadge.QUARANTINED', 'Cách ly'), healthCounts.QUARANTINED ?? 0],
   ];
   const th = 'h-10 px-4 text-[12px] font-medium text-muted border-b border-line';
 
   return (
     <>
       <PageHeader
-        title={i18n.t("nav.healthRecords")}
+        title={t('healthRecordsPage.title', 'Hồ sơ khám bệnh')}
         sub={sub}
-        search={{ placeholder: i18n.t("horseFlow.searchPlaceholder"), value: search, onChange: setSearch }}
+        search={{ placeholder: t('horsesPage.searchPlaceholder', 'Tìm theo tên ngựa'), value: search, onChange: setSearch }}
       />
 
       <KpiStrip items={[
-        { label: i18n.t("ui.loadedHorses2"), value: horses.length },
-        { label: i18n.t("ui.fit"), value: fit, tone: fit > 0 ? 'ok' : undefined },
-        { label: i18n.t("horseFlow.health.MONITORING"), value: watch, tone: watch > 0 ? 'warn' : undefined },
-        { label: i18n.t("mergeUi.injuredOrQuarantined"), value: sick, tone: sick > 0 ? 'bad' : undefined, lead: sick > 0 },
-        { label: i18n.t("mergeUi.locked"), value: lockedCount, tone: lockedCount > 0 ? 'bad' : undefined },
+        { label: t('horsesPage.kpiTotal', 'Tổng đàn'), value: horses.length },
+        { label: t('horseStatusBadge.FIT', 'Khỏe mạnh'), value: fit, tone: fit > 0 ? 'ok' : undefined },
+        { label: t('horseStatusBadge.MONITORING', 'Cần theo dõi'), value: watch, tone: watch > 0 ? 'warn' : undefined },
+        { label: t('horsesPage.filterInjured', 'Chấn thương / cách ly'), value: sick, tone: sick > 0 ? 'bad' : undefined, lead: sick > 0 },
+        { label: t('horsesPage.kpiLocked', 'Đang khóa tập'), value: lockedCount, tone: lockedCount > 0 ? 'bad' : undefined },
       ]} />
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -155,25 +154,31 @@ export function HealthRecordsPage() {
       {!!(err || (healthCurrent && healthResult?.err)) && <Btn onClick={() => void loadHorses()}>{i18n.t('healthView.retry')}</Btn>}
 
       {loading || horsesLoading || healthLoading ? (
-        <p className="text-muted">{i18n.t("mergeUi.loadingData")}</p>
+        <p className="text-muted">{t('healthRecordsPage.loading', 'Đang tải dữ liệu…')}</p>
       ) : (
         <div className="grid gap-5 items-start xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
           <Card className="min-w-0">
-            <CardHeader title={i18n.t("mergeUi.horseHealth")}><span className="num text-[13px] text-muted">{filteredHorses.length} {i18n.t("ui.horses2")}</span></CardHeader>
+            <CardHeader title={t('horsesPage.thHealth', 'Tình trạng từng ngựa')}>
+              <span className="num text-[13px] text-muted">{t('horsesPage.countSummary', { count: filteredHorses.length })}</span>
+            </CardHeader>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[600px] border-collapse">
                 <thead>
                   <tr className="text-left">
-                    <th className={`${th} pl-5`}>{i18n.t("incidents.horse")}</th>
-                    <th className={th}>{i18n.t("horse.breed")}</th>
-                    <th className={th}>{i18n.t("ui.health")}</th>
-                    <th className={`${th} ${isVet ? '' : 'pr-5'}`}>{i18n.t("ui.trainingLocked2")}</th>
-                    {isVet && <th className={`${th} pr-5`} aria-label={i18n.t("incidents.actions")} />}
+                    <th className={`${th} pl-5`}>{t('healthRecordsPage.colHorse', 'Ngựa')}</th>
+                    <th className={th}>{t('horsesPage.thBreed', 'Giống')}</th>
+                    <th className={th}>{t('horsesPage.thHealth', 'Sức khỏe')}</th>
+                    <th className={`${th} ${isVet ? '' : 'pr-5'}`}>{t('horsesPage.thLock', 'Khóa tập')}</th>
+                    {isVet && <th className={`${th} pr-5`} aria-label={t('horsesPage.thActions', 'Thao tác')} />}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredHorses.length === 0 ? (
-                    <tr><td colSpan={isVet ? 5 : 4} className="px-5 py-6 text-center text-muted">{i18n.t("mergeUi.noHealthMatches")}</td></tr>
+                    <tr>
+                      <td colSpan={isVet ? 5 : 4} className="px-5 py-6 text-center text-muted">
+                        {t('healthRecordsPage.emptyFilter', 'Không có ngựa nào khớp với bộ lọc.')}
+                      </td>
+                    </tr>
                   ) : filteredHorses.map((h) => (
                     <tr key={h.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
                       <td className="pl-5 pr-4 py-2.5">
@@ -181,10 +186,18 @@ export function HealthRecordsPage() {
                           <HorseAvatar src={h.photoUrl} name={h.name} size={28} />{h.name}
                         </button>
                       </td>
-                      <td className="px-4 py-2.5">{h.breed ?? <span className="text-muted">{i18n.t("horse.genderUnknown")}</span>}</td>
+                      <td className="px-4 py-2.5">{h.breed ?? <span className="text-muted">—</span>}</td>
                       <td className="px-4 py-2.5"><HealthBadge status={h.healthStatus} /></td>
-                      <td className={`px-4 py-2.5 ${isVet ? '' : 'pr-5'}`}>{h.locked ? <LockBadge /> : <span className="text-muted">{i18n.t("mergeUi.no")}</span>}</td>
-                      {isVet && <td className="pl-4 pr-5 py-2.5 text-right"><Btn sm onClick={() => openModalForHorse(h)}><Icon name="plus" className="w-3.5 h-3.5" />{i18n.t("mergeUi.recordExam")}</Btn></td>}
+                      <td className={`px-4 py-2.5 ${isVet ? '' : 'pr-5'}`}>
+                        {h.locked ? <LockBadge /> : <span className="text-muted">—</span>}
+                      </td>
+                      {isVet && (
+                        <td className="pl-4 pr-5 py-2.5 text-right">
+                          <Btn sm onClick={() => openModalForHorse(h)}>
+                            <Icon name="plus" className="w-3.5 h-3.5" />{t('healthRecordsPage.newRecord', 'Ghi khám')}
+                          </Btn>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -193,9 +206,11 @@ export function HealthRecordsPage() {
           </Card>
 
           <Card className="min-w-0">
-            <CardHeader title={i18n.t("mergeUi.recentExams")}><span className="num text-[13px] text-muted">{records.length}</span></CardHeader>
+            <CardHeader title={t('healthRecordsPage.title', 'Lần khám gần đây')}>
+              <span className="num text-[13px] text-muted">{records.length}</span>
+            </CardHeader>
             {records.length === 0 ? (
-              <div className="p-4"><EmptyState>{i18n.t("ui.noMedicalExaminationsRecordedYet")}</EmptyState></div>
+              <div className="p-4"><EmptyState>{t('healthRecordsPage.empty', 'Chưa có hồ sơ khám nào trong hệ thống.')}</EmptyState></div>
             ) : (
               <ul className="list-none p-0 m-0">
                 {records.slice(0, 20).map((r) => (
@@ -205,8 +220,9 @@ export function HealthRecordsPage() {
                         <span className="font-medium truncate">{r.horse.name}</span>
                         <span className="num text-[12.5px] text-muted flex-none">{formatDate(r.examDate)}</span>
                       </div>
+                      {/* Doctor-entered diagnosis is kept as-is */}
                       <p className="text-[13px] text-muted mt-0.5 line-clamp-2">{r.diagnosis}</p>
-                      <p className="text-[12px] text-muted mt-1">{i18n.t('role.VET')}: {r.vet.name}</p>
+                      <p className="text-[12px] text-muted mt-1">{t('healthRecordsPage.colVet', 'Bác sĩ')} {r.vet.name}</p>
                     </button>
                   </li>
                 ))}

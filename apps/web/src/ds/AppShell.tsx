@@ -1,4 +1,3 @@
-import i18n, { setLanguage } from '../i18n';
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
 } from 'react';
@@ -8,27 +7,29 @@ import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
 import type { Notification, Paginated, Role } from '../lib/types';
 import { HORSE_LOGO, Icon } from './ui';
+import { setLanguage } from '../i18n';
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: string;
+  defaultLabel: string;
   icon: string;
   roles?: Role[];
 }
 
-const NAV = (): NavItem[] => [
-  { to: '/dashboard', label: i18n.t("horseFlow.overview"), icon: 'dashboard' },
-  { to: '/horses', label: i18n.t("mergeUi.mainNavHorses"), icon: 'horse' },
-  { to: '/plans', label: i18n.t("nav.plansTrainer"), icon: 'plans' },
-  { to: '/races', label: i18n.t("races.title"), icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
+const NAV: NavItem[] = [
+  { to: '/dashboard', labelKey: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: 'dashboard' },
+  { to: '/horses', labelKey: 'nav.horses', defaultLabel: 'Ngựa đua', icon: 'horse' },
+  { to: '/plans', labelKey: 'nav.plansTrainer', defaultLabel: 'Giáo án huấn luyện', icon: 'plans' },
+  { to: '/races', labelKey: 'nav.races', defaultLabel: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
 ];
-const HEALTH_NAV = (): NavItem[] => [
-  { to: '/health-records', label: i18n.t("mergeUi.mainNavExams"), icon: 'steth', roles: ['VET'] },
-  { to: '/vaccinations', label: i18n.t("mergeUi.mainNavCare"), icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
-  { to: '/incidents', label: i18n.t("incidents.title"), icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
+const HEALTH_NAV: NavItem[] = [
+  { to: '/health-records', labelKey: 'nav.healthRecords', defaultLabel: 'Hồ sơ khám bệnh', icon: 'steth', roles: ['VET'] },
+  { to: '/vaccinations', labelKey: 'nav.vaccinations', defaultLabel: 'Tiêm phòng & tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
+  { to: '/incidents', labelKey: 'nav.incidents', defaultLabel: 'Sự cố y tế', icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
 ];
-const ADMIN_NAV = (): NavItem[] => [
-  { to: '/admin/users', label: i18n.t("mergeUi.mainNavAdmin"), icon: 'user', roles: ['MANAGER'] },
+const ADMIN_NAV: NavItem[] = [
+  { to: '/admin/users', labelKey: 'nav.users', defaultLabel: 'Phân quyền tài khoản', icon: 'user', roles: ['MANAGER'] },
 ];
 
 const POLL_MS = 20_000;
@@ -66,6 +67,7 @@ const navRow = ({ isActive }: { isActive: boolean }) =>
   `relative flex items-center gap-3 h-9 px-3 rounded-btn no-underline text-[14px] transition-colors [&_svg]:transition-transform [&_svg]:duration-300 hover:[&_svg]:scale-[1.18] ${isActive ? 'bg-navy-track text-white font-medium before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-[#5b9bd5] [&_svg]:text-[#8fb8e0]' : 'text-[#c3cbd6] hover:bg-white/[.06] hover:text-white'}`;
 
 function NavGroup({ title, items, rail }: { title?: string; items: NavItem[]; rail: boolean }) {
+  const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
     <div className="flex flex-col gap-0.5">
@@ -76,17 +78,20 @@ function NavGroup({ title, items, rail }: { title?: string; items: NavItem[]; ra
           <span className={rail ? RAIL_FADE : ''}>{title}</span>
         </div>
       )}
-      {items.map(({ to, label, icon }) => (
-        <NavLink key={to} to={to} className={navRow} title={rail ? label : undefined}>
-          <Icon name={icon} className="w-4 h-4 flex-none text-[#93a3b8]" /><span className={rail ? RAIL_FADE : ''}>{label}</span>
-        </NavLink>
-      ))}
+      {items.map(({ to, labelKey, defaultLabel, icon }) => {
+        const label = t(labelKey, defaultLabel);
+        return (
+          <NavLink key={to} to={to} className={navRow} title={rail ? label : undefined}>
+            <Icon name={icon} className="w-4 h-4 flex-none text-[#93a3b8]" /><span className={rail ? RAIL_FADE : ''}>{label}</span>
+          </NavLink>
+        );
+      })}
     </div>
   );
 }
 
 function Brand({ rail }: { rail: boolean }) {
-  useTranslation();
+  const { t } = useTranslation();
   return (
     <Link to="/dashboard" className="flex items-center gap-3 no-underline">
       <span className="w-9 h-9 rounded-full bg-white flex-none overflow-hidden flex items-center justify-center">
@@ -94,7 +99,7 @@ function Brand({ rail }: { rail: boolean }) {
       </span>
       <span className={`min-w-0 ${rail ? RAIL_FADE : ''}`}>
         <span className="block text-[14px] font-semibold leading-[18px] text-white">Racehorse Club</span>
-        <span className="block text-[12px] leading-4 text-[#b7c0cc]">{i18n.t("mergeUi.clubSubtitle")}</span>
+        <span className="block text-[12px] leading-4 text-[#b7c0cc]">{t('app.subtitle', 'Huấn luyện & quản lý')}</span>
       </span>
     </Link>
   );
@@ -115,8 +120,14 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
   const role = user?.role ?? null;
   const visible = (item: NavItem) => !item.roles || (role !== null && item.roles.includes(role));
 
+  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
+  const toggleLang = () => {
+    const next = isVi ? 'en' : 'vi';
+    setLanguage(next);
+  };
+
   const handleLogout = async () => {
-    if (!window.confirm(t('nav.logoutConfirm'))) return;
+    if (!window.confirm(t('nav.logoutConfirm', 'Bạn chắc chắn muốn đăng xuất?'))) return;
     await logout();
     navigate('/login');
   };
@@ -126,23 +137,26 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
       <div className="px-0.5 pb-4"><Brand rail={rail} /></div>
       <nav aria-label={i18n.t("dashboard.navigation")} className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex flex-col gap-0.5">
-          {NAV().filter(visible).map(({ to, label, icon }) => (
-            <NavLink key={to} to={to} className={navRow} title={rail ? label : undefined}>
-              <Icon name={icon} className="w-4 h-4 flex-none text-[#93a3b8]" /><span className={fade}>{label}</span>
-            </NavLink>
-          ))}
-          <NavLink to="/notifications" className={navRow} title={rail ? i18n.t("notificationsPage.title") : undefined}>
+          {NAV.filter(visible).map(({ to, labelKey, defaultLabel, icon }) => {
+            const label = t(labelKey, defaultLabel);
+            return (
+              <NavLink key={to} to={to} className={navRow} title={rail ? label : undefined}>
+                <Icon name={icon} className="w-4 h-4 flex-none text-[#93a3b8]" /><span className={fade}>{label}</span>
+              </NavLink>
+            );
+          })}
+          <NavLink to="/notifications" className={navRow} title={rail ? t('nav.notifications', 'Thông báo') : undefined}>
             <span className="relative flex-none">
               <Icon name="bell" className="w-4 h-4 text-[#93a3b8]" />
               {/* Closed rail: the count shrinks to a dot on the bell. */}
               {rail && unread > 0 && <span aria-hidden className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-bad ring-2 ring-navy transition-opacity duration-150 group-hover/rail:opacity-0 group-focus-within/rail:opacity-0" />}
             </span>
-            <span className={`flex-1 ${fade}`}>{i18n.t("notificationsPage.title")}</span>
-            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={`${unread} chưa đọc`}>{unread}</span>}
+            <span className={`flex-1 ${fade}`}>{t('nav.notifications', 'Thông báo')}</span>
+            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={t('mergeUi.unreadCount', { count: unread })}>{unread}</span>}
           </NavLink>
         </div>
-        <NavGroup title={i18n.t("ui.health")} items={HEALTH_NAV().filter(visible)} rail={rail} />
-        <NavGroup title={i18n.t("ui.administration")} items={ADMIN_NAV().filter(visible)} rail={rail} />
+        <NavGroup title={t('nav.healthSection', 'Sức khỏe')} items={HEALTH_NAV.filter(visible)} rail={rail} />
+        <NavGroup title={t('nav.adminSection', 'Quản trị')} items={ADMIN_NAV.filter(visible)} rail={rail} />
       </nav>
       <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2.5 px-1">
         <span className="w-8 h-8 rounded-full bg-[#1a4b8a] text-white flex-none inline-flex items-center justify-center text-[12px] font-semibold">{initials(user?.name)}</span>
@@ -150,12 +164,24 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
           <span className="block text-[13.5px] font-medium leading-[18px] truncate text-white">{user?.name}</span>
           <span className="block text-[12px] leading-4 text-[#b7c0cc] truncate">{user?.role ? t(`role.${user.role}`) : ''}</span>
         </span>
-        <button type="button" onClick={() => setLanguage(i18n.language === 'vi' ? 'en' : 'vi')}
-          className={`h-8 px-2 rounded-btn text-[12px] font-medium text-[#b7c0cc] hover:bg-white/[.08] hover:text-white ${fade}`} aria-label="Đổi ngôn ngữ">
-          {i18n.language === 'vi' ? 'VI' : 'EN'}
+        <button
+          type="button"
+          onClick={toggleLang}
+          className={`h-8 px-2 rounded-btn text-[12px] font-medium border border-white/15 text-[#b7c0cc] hover:bg-white/[.08] hover:text-white transition-colors inline-flex items-center gap-1 ${fade}`}
+          aria-label={isVi ? 'Chuyển sang tiếng Anh' : 'Switch to Vietnamese'}
+          title={isVi ? 'Switch to English' : 'Chuyển sang tiếng Việt'}
+        >
+          <span className={isVi ? 'text-white font-bold' : 'opacity-60'}>VI</span>
+          <span className="opacity-30">/</span>
+          <span className={!isVi ? 'text-white font-bold' : 'opacity-60'}>EN</span>
         </button>
-        <button type="button" onClick={() => void handleLogout()} aria-label={t('nav.logout')} title={t('nav.logout')}
-          className={`w-8 h-8 flex-none rounded-btn inline-flex items-center justify-center text-[#b7c0cc] hover:bg-white/[.08] hover:text-white ${fade}`}>
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          aria-label={t('nav.logout', 'Đăng xuất')}
+          title={t('nav.logout', 'Đăng xuất')}
+          className={`w-8 h-8 flex-none rounded-btn inline-flex items-center justify-center text-[#b7c0cc] hover:bg-white/[.08] hover:text-white ${fade}`}
+        >
           <Icon name="logout" />
         </button>
       </div>
@@ -190,8 +216,8 @@ export function usePageChrome(chrome: Partial<Chrome>) {
  * previous page's name, and the menu sheet closes — without effects or refs.
  */
 export function AppShell({ children }: { children: ReactNode }) {
-  useTranslation();
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const [chromeState, setChromeState] = useState<{ path: string; chrome: Chrome }>({ path: pathname, chrome: DEFAULT_CHROME });
   const chrome = chromeState.path === pathname ? chromeState.chrome : DEFAULT_CHROME;
   const setChrome = useCallback((patch: Partial<Chrome>) => {
@@ -238,19 +264,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <span className="flex-1 min-w-0 truncate text-[15px] font-semibold">{pageName || 'Racehorse Club'}</span>
           {unread > 0 && (
-            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={`Thông báo, ${unread} chưa đọc`}>
+            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={t('mergeUi.notificationCount', { count: unread })}>
               <Icon name="bell" className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-bad" />
             </Link>
           )}
-          <button type="button" onClick={() => setMenuOpen(true)} aria-label={i18n.t("mergeUi.openMenu")} aria-expanded={menuOpen}
+          <button type="button" onClick={() => setMenuOpen(true)} aria-label={t('nav.menu', 'Menu')} aria-expanded={menuOpen}
             className="w-10 h-10 inline-flex items-center justify-center rounded-btn text-white hover:bg-white/[.08]">
             <Icon name="menu" className="w-5 h-5" />
           </button>
         </div>
         {menuOpen && (
-          <div className="md:hidden fixed inset-0 z-40 bg-navy animate-sheet flex flex-col px-3 pt-4 pb-4" role="dialog" aria-modal="true" aria-label={i18n.t("mergeUi.navigation")}>
-            <button type="button" onClick={() => setMenuOpen(false)} aria-label={i18n.t("mergeUi.closeMenu")}
+          <div className="md:hidden fixed inset-0 z-40 bg-navy animate-sheet flex flex-col px-3 pt-4 pb-4" role="dialog" aria-modal="true" aria-label={t('nav.menu', 'Điều hướng')}>
+            <button type="button" onClick={() => setMenuOpen(false)} aria-label={t('common.cancel', 'Đóng menu')}
               className="absolute top-3 right-3 w-10 h-10 inline-flex items-center justify-center rounded-btn text-white hover:bg-white/[.08]">
               <Icon name="x" className="w-5 h-5" />
             </button>
