@@ -5,6 +5,44 @@ nhóm). Mới nhất lên đầu.
 
 ---
 
+## 2026-10-31 — Rà soát: khóa tập có căn cứ, đóng sự cố cần hồ sơ khám, phân trang, trang giới thiệu, vật tư
+
+**Nguồn:** danh sách lỗi người dùng gửi + Claude Code.
+**Quyết định:**
+- **Mở khóa tập cần căn cứ khám:** hồ sơ khám của chính ngựa đó, kết luận `FIT`, và
+  **ghi sau thời điểm bị khóa** (một lần khám "khỏe" từ trước khi gặp chuyện không chứng
+  minh được gì). Thêm `HealthRecord.healthStatus` để lưu kết luận của từng lần khám
+  (trước đây kết luận chỉ ghi đè vào `Horse.healthStatus` rồi mất).
+- **Khóa bắt buộc có lý do** — kiểm tra ở service để thông báo lỗi nói rõ lý do.
+- **Lịch sử khóa = bảng `HorseLockEvent`, không bao giờ xóa**; `Horse.lockReason` vẫn giữ
+  lý do hiện tại để các màn cũ không phải đổi.
+- **"Sự cố nào đã khóa ngựa" = `Horse.lockIncidentId`.** Sự cố Nặng chỉ khóa ngựa đang
+  không bị khóa; nếu ngựa đã khóa vì lý do khác thì giữ nguyên khóa đó. Đóng sự cố chỉ
+  tự mở khóa khi đúng sự cố đó đã khóa **và** hồ sơ kèm theo kết luận `FIT`; nếu chưa
+  khỏe thì sự cố vẫn đóng nhưng ngựa giữ khóa. Migration gắn ngựa đang khóa với lý do
+  "Incident: …" vào sự cố Nặng chưa xử lý mới nhất của nó, và tạo dòng lịch sử đầu tiên.
+- **HLV nhận thông báo khóa/mở** = HLV có giáo án còn hiệu lực hoặc buổi tập sắp tới cho
+  ngựa đó; chưa ai phụ trách thì gửi mọi HLV đang hoạt động.
+- **`GET /incidents`** (toàn CLB) thay cho việc web gọi từng ngựa: lọc trạng thái/mức độ/từ
+  khóa, `sort=severity` (enum Postgres xếp theo thứ tự khai báo LOW<MEDIUM<HIGH nên `desc`
+  đưa HIGH lên đầu), trả kèm `counts` cho các nút lọc. OWNER chỉ thấy ngựa của mình.
+- **`GET /users`** thêm `q` (tên/email) + `counts`; **`POST /users/approve`** duyệt nhiều
+  tài khoản một lần, mỗi người một vai trò; tài khoản không còn chờ duyệt thì bỏ qua chứ
+  không làm hỏng cả lô.
+- **Vật tư:** duyệt yêu cầu = coi như đã mua về, cộng thẳng vào kho (một bước, đủ cho MVP;
+  không tách "đã đặt / đã nhận"). Bữa ăn chọn thức ăn từ kho thì trừ tồn trong cùng
+  transaction và bị từ chối nếu kho không đủ. Groom chỉ xem yêu cầu của mình.
+- **`/` là trang giới thiệu cho khách**, người đã đăng nhập vào thẳng `/dashboard`;
+  `/about` luôn xem được. Thêm `apps/web/vercel.json` rewrite để vào thẳng đường dẫn con
+  (vd `/login`) không bị 404 trên Vercel.
+- **`Modal` render qua portal** vào `<body>` — mở hộp thoại từ dòng bảng hay thẻ có hiệu
+  ứng `transform` không bị ẩn/lệch.
+- **e2e không gọi AI thật** (`test/setup-env.ts` đặt `GROQ_API_KEY=''`) — trước đây mỗi lần
+  tạo hồ sơ khám trong test chờ mạng và có lúc vượt 5 giây.
+**Trạng thái:** ✅ e2e 196/196; web typecheck/build; thử trên giao diện: đóng sự cố qua
+hộp thoại, mở khóa cần hồ sơ khám, Groom gửi yêu cầu → Manager duyệt (kho 35 → 120 kg),
+duyệt hàng loạt tài khoản.
+
 ## 2026-10-24 — Hoàn thiện EX-01 (trùng lịch tập) và UC-19 (ảnh sự cố)
 
 **Nguồn:** yêu cầu người dùng (Bình — 2 việc "In progress" trong sheet) + Claude Code.

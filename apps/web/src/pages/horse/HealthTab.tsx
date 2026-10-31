@@ -14,11 +14,12 @@ import { CreateHealthRecordModal } from '../../components/health/CreateHealthRec
 import { TreatmentPlansSection } from '../../components/health/TreatmentPlansSection';
 import { InjuryLocationsSection } from '../../components/health/InjuryLocationsSection';
 import { AiInsightCard } from '../../components/horse/AiInsightCard';
+import { LockHistory } from '../../components/horse/LockHorseModal';
 import { formatDate } from '../../lib/format';
 import { Btn, Card, EmptyState, Field, Icon, Textarea } from '../../ds/ui';
 
 /* ========== Main component ========== */
-export function HealthTab({ horse }: { horse: Horse }) {
+export function HealthTab({ horse, lockVersion }: { horse: Horse; lockVersion?: number }) {
   const { t, i18n } = useTranslation();
   const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
   const { user } = useAuth();
@@ -81,6 +82,8 @@ export function HealthTab({ horse }: { horse: Horse }) {
           {records.map((r) => <RecordItem key={r.id} record={r} isVet={isVet} onChanged={load} />)}
         </ul>
       )}
+
+      <LockHistory horseId={horse.id} refreshKey={`${lockVersion ?? 0}-${horse.locked}`} />
 
       <CreateHealthRecordModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onCreated={() => void load()} horseId={horse.id} horseName={horse.name} />
     </div>
