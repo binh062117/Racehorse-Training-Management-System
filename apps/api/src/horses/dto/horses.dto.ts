@@ -104,10 +104,16 @@ export class LockHorseDto {
   @IsBoolean()
   locked!: boolean;
 
+  // Required when locking (checked in the service so the message can say why).
   @IsOptional()
   @IsString()
   @MaxLength(500)
   reason?: string;
+
+  // Required when unlocking: a FIT health record written after the lock began.
+  @IsOptional()
+  @IsUUID()
+  healthRecordId?: string;
 }
 
 export class ListHorsesQueryDto {

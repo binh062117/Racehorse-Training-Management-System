@@ -66,6 +66,11 @@ export class HorseIncidentsController {
 export class IncidentsController {
   constructor(private readonly incidents: IncidentsService) {}
 
+  @Get()
+  listAll(@Query() q: ListIncidentsQueryDto, @CurrentUser() user: AuthUser) {
+    return this.incidents.listAll(q, user);
+  }
+
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     return this.incidents.get(id, user);
@@ -76,8 +81,9 @@ export class IncidentsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateIncidentDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.incidents.update(id, dto);
+    return this.incidents.update(id, dto, user);
   }
 
   @Post(':id/photo')

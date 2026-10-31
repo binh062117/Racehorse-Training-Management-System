@@ -71,10 +71,30 @@ async function main(): Promise<void> {
     `Seeded OWNERs: ${owners.map((o) => o.email).join(', ')} / Owner123!`,
   );
 
-  const staffSpecs: { name: string; email: string; role: Role; password: string }[] = [
-    { name: 'Trainer One', email: 'trainer@racehorse.local', role: Role.TRAINER, password: 'Trainer123!' },
-    { name: 'Vet One', email: 'vet@racehorse.local', role: Role.VET, password: 'Vet123!' },
-    { name: 'Groom One', email: 'groom@racehorse.local', role: Role.GROOM, password: 'Groom123!' },
+  const staffSpecs: {
+    name: string;
+    email: string;
+    role: Role;
+    password: string;
+  }[] = [
+    {
+      name: 'Trainer One',
+      email: 'trainer@racehorse.local',
+      role: Role.TRAINER,
+      password: 'Trainer123!',
+    },
+    {
+      name: 'Vet One',
+      email: 'vet@racehorse.local',
+      role: Role.VET,
+      password: 'Vet123!',
+    },
+    {
+      name: 'Groom One',
+      email: 'groom@racehorse.local',
+      role: Role.GROOM,
+      password: 'Groom123!',
+    },
   ];
   const staff: Record<string, string> = {};
   for (const s of staffSpecs) {
@@ -111,13 +131,30 @@ async function main(): Promise<void> {
   console.log('Seeded PENDING user: newbie@racehorse.local / Newbie123!');
 
   const horseSpecs = [
-    { name: 'Thunderbolt', breed: 'Thoroughbred', ownerEmail: 'owner1@racehorse.local', status: HorseStatus.ACTIVE },
-    { name: 'Sea Breeze', breed: 'Arabian', ownerEmail: 'owner1@racehorse.local', status: HorseStatus.RESTING },
-    { name: 'Midnight', breed: 'Quarter Horse', ownerEmail: 'owner2@racehorse.local', status: HorseStatus.ACTIVE },
+    {
+      name: 'Thunderbolt',
+      breed: 'Thoroughbred',
+      ownerEmail: 'owner1@racehorse.local',
+      status: HorseStatus.ACTIVE,
+    },
+    {
+      name: 'Sea Breeze',
+      breed: 'Arabian',
+      ownerEmail: 'owner1@racehorse.local',
+      status: HorseStatus.RESTING,
+    },
+    {
+      name: 'Midnight',
+      breed: 'Quarter Horse',
+      ownerEmail: 'owner2@racehorse.local',
+      status: HorseStatus.ACTIVE,
+    },
   ];
 
   for (const spec of horseSpecs) {
-    const existing = await prisma.horse.findFirst({ where: { name: spec.name } });
+    const existing = await prisma.horse.findFirst({
+      where: { name: spec.name },
+    });
     if (existing) continue;
     const owner = owners.find((o) => o.email === spec.ownerEmail)!;
     await prisma.horse.create({
@@ -227,11 +264,21 @@ async function main(): Promise<void> {
 
   // Phase 6: pedigree (two retired ancestors) + fitnessScore on a couple of horses.
   const ancestorSpecs = [
-    { name: 'Northern Star', breed: 'Thoroughbred', ownerEmail: 'owner1@racehorse.local' },
-    { name: 'Silver Mist', breed: 'Thoroughbred', ownerEmail: 'owner1@racehorse.local' },
+    {
+      name: 'Northern Star',
+      breed: 'Thoroughbred',
+      ownerEmail: 'owner1@racehorse.local',
+    },
+    {
+      name: 'Silver Mist',
+      breed: 'Thoroughbred',
+      ownerEmail: 'owner1@racehorse.local',
+    },
   ];
   for (const spec of ancestorSpecs) {
-    const existing = await prisma.horse.findFirst({ where: { name: spec.name } });
+    const existing = await prisma.horse.findFirst({
+      where: { name: spec.name },
+    });
     if (existing) continue;
     const owner = owners.find((o) => o.email === spec.ownerEmail)!;
     await prisma.horse.create({
@@ -252,7 +299,11 @@ async function main(): Promise<void> {
     ).map((h) => [h.name, h.id]),
   );
   const thunderboltId = horsesByName['Thunderbolt'];
-  if (thunderboltId && ancestorsByName['Northern Star'] && ancestorsByName['Silver Mist']) {
+  if (
+    thunderboltId &&
+    ancestorsByName['Northern Star'] &&
+    ancestorsByName['Silver Mist']
+  ) {
     await prisma.horse.update({
       where: { id: thunderboltId },
       data: {
@@ -269,11 +320,15 @@ async function main(): Promise<void> {
       data: { fitnessScore: 65 },
     });
   }
-  console.log('Seeded pedigree: Thunderbolt ← Northern Star (sire) + Silver Mist (dam)');
+  console.log(
+    'Seeded pedigree: Thunderbolt ← Northern Star (sire) + Silver Mist (dam)',
+  );
 
   // Phase 6: one race + entries for Thunderbolt / Midnight (registered, no result yet).
   // No natural unique key on Race — guard idempotency by name (unique in the seed set).
-  let race = await prisma.race.findFirst({ where: { name: 'Spring Derby 2026' } });
+  let race = await prisma.race.findFirst({
+    where: { name: 'Spring Derby 2026' },
+  });
   if (!race) {
     race = await prisma.race.create({
       data: {
@@ -285,20 +340,27 @@ async function main(): Promise<void> {
       },
     });
   }
-  for (const horseId of [thunderboltId, midnightId].filter((v): v is string => !!v)) {
+  for (const horseId of [thunderboltId, midnightId].filter(
+    (v): v is string => !!v,
+  )) {
     const exists = await prisma.raceEntry.findUnique({
       where: { raceId_horseId: { raceId: race.id, horseId } },
     });
     if (exists) continue;
     await prisma.raceEntry.create({ data: { raceId: race.id, horseId } });
   }
-  const raceEntryCount = await prisma.raceEntry.count({ where: { raceId: race.id } });
+  const raceEntryCount = await prisma.raceEntry.count({
+    where: { raceId: race.id },
+  });
   console.log(`Seeded race "${race.name}" with ${raceEntryCount} entries`);
 
   // Phase 7: one training plan (Thunderbolt) + Training Lock on Sea Breeze.
   if (thunderboltId) {
     const existingPlan = await prisma.trainingPlan.findFirst({
-      where: { horseId: thunderboltId, goal: 'Build stamina for Spring Derby 2026' },
+      where: {
+        horseId: thunderboltId,
+        goal: 'Build stamina for Spring Derby 2026',
+      },
     });
     if (!existingPlan) {
       await prisma.trainingPlan.create({
@@ -389,7 +451,10 @@ async function main(): Promise<void> {
     });
     if (!existingLow) {
       const linkedRecord = await prisma.healthRecord.findFirst({
-        where: { horseId: thunderboltId, diagnosis: 'Routine checkup — healthy' },
+        where: {
+          horseId: thunderboltId,
+          diagnosis: 'Routine checkup — healthy',
+        },
       });
       await prisma.incidentReport.create({
         data: {
@@ -509,7 +574,9 @@ async function main(): Promise<void> {
 
   // Thêm 1 giải đã diễn ra (có kết quả) để HorseRaceHistoryPage có KPI
   // (số lần thi, podium, vị trí tốt nhất) thay vì toàn số 0.
-  let pastRace = await prisma.race.findFirst({ where: { name: 'Autumn Classic 2025' } });
+  let pastRace = await prisma.race.findFirst({
+    where: { name: 'Autumn Classic 2025' },
+  });
   if (!pastRace) {
     pastRace = await prisma.race.create({
       data: {
@@ -522,7 +589,11 @@ async function main(): Promise<void> {
       },
     });
   }
-  const pastResults: { horseId: string | undefined; position: number; time: string }[] = [
+  const pastResults: {
+    horseId: string | undefined;
+    position: number;
+    time: string;
+  }[] = [
     { horseId: thunderboltId, position: 1, time: '2:04.10' },
     { horseId: midnightId, position: 3, time: '2:07.55' },
   ];
@@ -533,10 +604,17 @@ async function main(): Promise<void> {
     });
     if (exists) continue;
     await prisma.raceEntry.create({
-      data: { raceId: pastRace.id, horseId: r.horseId, position: r.position, time: r.time },
+      data: {
+        raceId: pastRace.id,
+        horseId: r.horseId,
+        position: r.position,
+        time: r.time,
+      },
     });
   }
-  console.log(`Seeded past race "${pastRace.name}" with results (Thunderbolt #1, Midnight #3)`);
+  console.log(
+    `Seeded past race "${pastRace.name}" with results (Thunderbolt #1, Midnight #3)`,
+  );
 
   // Thêm giáo án cho Midnight (còn hiệu lực) và Sea Breeze (đã kết thúc) để
   // TrainingPlansPage có cả 2 trạng thái ACTIVE/COMPLETED (suy ra từ endDate
@@ -572,7 +650,9 @@ async function main(): Promise<void> {
       },
     });
   }
-  console.log('Seeded 2 more training plans (Midnight active, Sea Breeze completed)');
+  console.log(
+    'Seeded 2 more training plans (Midnight active, Sea Breeze completed)',
+  );
 
   // Thêm lịch tiêm phòng/tẩy giun đa dạng (careType, nhiều ngựa, nhiều
   // trạng thái hạn) cho HealthSchedulePage.
@@ -616,7 +696,11 @@ async function main(): Promise<void> {
     const horseId = horsesByName[spec.horse];
     if (!horseId) continue;
     const exists = await prisma.vaccination.findFirst({
-      where: { horseId, vaccineName: spec.vaccineName, careType: spec.careType },
+      where: {
+        horseId,
+        vaccineName: spec.vaccineName,
+        careType: spec.careType,
+      },
     });
     if (exists) continue;
     await prisma.vaccination.create({
@@ -629,7 +713,9 @@ async function main(): Promise<void> {
       },
     });
   }
-  console.log('Seeded 4 more vaccination/deworming records across Thunderbolt/Sea Breeze/Midnight');
+  console.log(
+    'Seeded 4 more vaccination/deworming records across Thunderbolt/Sea Breeze/Midnight',
+  );
 
   // Phả hệ cho ngựa thứ 2 (Sea Breeze) — HorsePedigreePage không chỉ có
   // đúng 1 ví dụ (Thunderbolt).
@@ -655,6 +741,92 @@ async function main(): Promise<void> {
   });
   console.log('Seeded 2nd PENDING user: newbie2@racehorse.local / Newbie123!');
 
+  // Stable supplies — only the first time, so a re-seed never resets real stock counts.
+  if ((await prisma.supplyItem.count()) === 0) {
+    await prisma.supplyItem.createMany({
+      data: [
+        {
+          name: 'Yến mạch cán',
+          category: 'FEED',
+          unit: 'kg',
+          quantity: 180,
+          minQuantity: 100,
+        },
+        {
+          name: 'Cỏ khô Timothy',
+          category: 'FEED',
+          unit: 'kg',
+          quantity: 420,
+          minQuantity: 200,
+        },
+        {
+          name: 'Cám hỗn hợp giàu đạm',
+          category: 'FEED',
+          unit: 'kg',
+          quantity: 35,
+          minQuantity: 60,
+        },
+        {
+          name: 'Cà rốt',
+          category: 'FEED',
+          unit: 'kg',
+          quantity: 24,
+          minQuantity: 20,
+        },
+        {
+          name: 'Muối khoáng liếm',
+          category: 'FEED',
+          unit: 'tảng',
+          quantity: 6,
+          minQuantity: 4,
+        },
+        {
+          name: 'Ivermectin 1.87% (gel uống)',
+          category: 'MEDICINE',
+          unit: 'ống',
+          quantity: 3,
+          minQuantity: 10,
+        },
+        {
+          name: 'Vắc xin cúm ngựa',
+          category: 'MEDICINE',
+          unit: 'liều',
+          quantity: 12,
+          minQuantity: 8,
+        },
+        {
+          name: 'Povidone-iodine 10%',
+          category: 'MEDICINE',
+          unit: 'chai',
+          quantity: 5,
+          minQuantity: 4,
+        },
+        {
+          name: 'Băng quấn chân',
+          category: 'EQUIPMENT',
+          unit: 'cuộn',
+          quantity: 40,
+          minQuantity: 20,
+        },
+        {
+          name: 'Móng sắt',
+          category: 'EQUIPMENT',
+          unit: 'bộ',
+          quantity: 6,
+          minQuantity: 8,
+        },
+        {
+          name: 'Bàn chải lông',
+          category: 'EQUIPMENT',
+          unit: 'cái',
+          quantity: 9,
+          minQuantity: 4,
+        },
+      ],
+    });
+    console.log('Seeded stable supplies');
+  }
+
   console.log('\nDemo accounts (all password "<Role>123!"):');
   console.log('  manager@racehorse.local  / Manager123!  (MANAGER)');
   console.log('  trainer@racehorse.local  / Trainer123!  (TRAINER)');
@@ -662,7 +834,9 @@ async function main(): Promise<void> {
   console.log('  groom@racehorse.local    / Groom123!    (GROOM)');
   console.log('  owner1@racehorse.local   / Owner123!    (OWNER)');
   console.log('  owner2@racehorse.local   / Owner123!    (OWNER)');
-  console.log('  newbie@racehorse.local   / Newbie123!   (PENDING — approve me)');
+  console.log(
+    '  newbie@racehorse.local   / Newbie123!   (PENDING — approve me)',
+  );
 }
 
 main()

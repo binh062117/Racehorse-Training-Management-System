@@ -87,8 +87,19 @@ export class HorsesController {
   @Patch(':id/lock')
   @Roles(Role.VET)
   @UseGuards(HorseOwnershipGuard)
-  lock(@Param('id', ParseUUIDPipe) id: string, @Body() dto: LockHorseDto) {
-    return this.horses.lock(id, dto);
+  lock(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: LockHorseDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.lock(id, dto, user);
+  }
+
+  /** Every lock / unlock of this horse, newest first — the reason survives the unlock. */
+  @Get(':id/lock-events')
+  @UseGuards(HorseOwnershipGuard)
+  lockHistory(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horses.lockHistory(id);
   }
 
   @Post(':id/photo')

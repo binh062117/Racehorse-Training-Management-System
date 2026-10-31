@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -36,6 +37,20 @@ export class ListIncidentsQueryDto {
   @IsOptional()
   @IsEnum(IncidentStatus)
   status?: IncidentStatus;
+
+  @IsOptional()
+  @IsEnum(IncidentSeverity)
+  severity?: IncidentSeverity;
+
+  /** newest (default) | severity — most severe first, then newest. */
+  @IsOptional()
+  @IsIn(['newest', 'severity'])
+  sort?: 'newest' | 'severity';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
 
   @IsOptional()
   @Type(() => Number)
