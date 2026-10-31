@@ -38,6 +38,8 @@ export function Icon({ name, className = 'w-4 h-4', label }: { name: string; cla
   );
 }
 
+export const HORSE_LOGO = '/favicon.svg';
+
 /* ---------- badges ---------- */
 export type Tone = 'ok' | 'warn' | 'bad' | 'info' | 'neu' | 'lock';
 const tones: Record<Tone, string> = {
@@ -52,6 +54,47 @@ export const careerTone: Record<string, Tone> = { ACTIVE: 'ok', RESTING: 'warn',
 export const fitColor = (v: number | null | undefined) => (v == null ? '#9ca3af' : v >= 80 ? '#3a6b4a' : v >= 60 ? '#8a6218' : '#8a2020');
 export function LockBadge({ children = 'Locked', className = '' }: { children?: ReactNode; className?: string }) {
   return <Badge tone="lock" className={className}><Icon name="lock" className="w-3.5 h-3.5" />{children}</Badge>;
+}
+export function HealthBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
+  return <Badge tone={healthTone[status] ?? 'neu'}>{t(`horseStatusBadge.${status}`, status)}</Badge>;
+}
+export function CareerBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
+  return <Badge tone={careerTone[status] ?? 'neu'}>{t(`horseStatusBadge.${status}`, status)}</Badge>;
+}
+export function lockReasonText(reason: string | null | undefined): string {
+  return reason?.trim() || 'Không có lý do cụ thể.';
+}
+export function CountUp({ value }: { value: number }) {
+  return <span className="num">{value}</span>;
+}
+export function HorseAvatar({ src, name, size = 40, onClick }: { src?: string | null; name: string; size?: number; onClick?: () => void }) {
+  const content = src
+    ? <img src={src} alt={name} className="w-full h-full object-cover" />
+    : <span aria-hidden="true" className="font-semibold text-muted">{name.trim().slice(0, 1).toUpperCase() || '?'}</span>;
+  const className = `rounded-full bg-cream border border-line overflow-hidden inline-flex items-center justify-center flex-none ${onClick ? 'cursor-zoom-in' : ''}`;
+  if (onClick) {
+    return <button type="button" onClick={onClick} aria-label={name} className={className} style={{ width: size, height: size }}>{content}</button>;
+  }
+  return <span className={className} style={{ width: size, height: size }}>{content}</span>;
+}
+export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: string; open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div role="dialog" aria-modal="true" aria-label={alt} className="fixed inset-0 z-50 flex items-center justify-center bg-navy/85 p-5" onClick={onClose}>
+      <button type="button" aria-label="Close image" className="absolute right-4 top-4 text-white text-3xl" onClick={onClose}>×</button>
+      <img src={src} alt={alt} className="max-h-full max-w-full object-contain" onClick={(event) => event.stopPropagation()} />
+    </div>
+  );
 }
 
 /* ---------- buttons ---------- */
@@ -187,6 +230,16 @@ export function Select({ options, className = '', ...rest }: SelectHTMLAttribute
   return (
     <div className={`relative flex items-center ${className}`}>
       <select className={`${inputCls()} appearance-none pr-9`} {...rest}>{options.map((o) => <option key={o}>{o}</option>)}</select>
+      <Icon name="chevDown" className="w-4 h-4 absolute right-3 text-muted pointer-events-none" />
+    </div>
+  );
+}
+export function NativeSelect({ className = '', children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div className={`relative flex items-center ${className}`}>
+      <select className={`${inputCls()} appearance-none pr-9`} {...rest}>
+        {children}
+      </select>
       <Icon name="chevDown" className="w-4 h-4 absolute right-3 text-muted pointer-events-none" />
     </div>
   );
@@ -391,5 +444,62 @@ export function Pagination({
         </Btn>
       </div>
     </div>
+  );
+}
+
+export const thCls = 'h-10 px-4 text-left text-[12px] font-medium text-muted border-b border-line bg-cream';
+
+export function EmptyState({ children }: { children: ReactNode }) {
+  return <div className="rounded-card border border-dashed border-line bg-white px-5 py-10 text-center text-[13px] text-muted">{children}</div>;
+}
+
+export function KpiStrip({ items }: { items: { label: string; value: ReactNode; lead?: boolean; unit?: ReactNode; sub?: ReactNode }[] }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 border border-line rounded-card bg-white overflow-hidden">
+      {items.map((item, index) => (
+        <div key={`${item.label}-${index}`} className={`min-w-0 px-5 py-4 ${index > 0 ? 'border-l border-line-soft' : ''}`}>
+          <div className="lbl">{item.label}</div>
+          <div className={`mt-1 font-display font-bold text-[30px] leading-9 num ${item.lead ? 'text-info' : 'text-ink'}`}>
+            {item.value}{item.unit && <span className="ml-1 text-[13px] font-medium text-muted">{item.unit}</span>}
+          </div>
+          {item.sub && <div className="cap mt-1">{item.sub}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function PageHeader({ title, sub, actions, search, crumbs }: {
+  title: ReactNode;
+  sub?: ReactNode;
+  actions?: ReactNode;
+  search?: { placeholder: string; value: string; onChange: (value: string) => void };
+  crumbs?: (string | [string, string])[];
+}) {
+  return (
+    <header className="flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        {crumbs && crumbs.length > 0 && (
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-[12px] text-muted mb-1">
+            {crumbs.map((crumb, index) => {
+              const label = Array.isArray(crumb) ? crumb[0] : crumb;
+              const href = Array.isArray(crumb) ? crumb[1] : undefined;
+              return (
+                <span key={`${label}-${index}`} className="inline-flex items-center gap-2">
+                  {index > 0 && <Icon name="chevRight" className="w-3 h-3" />}
+                  {href ? <Link to={href} className="text-muted no-underline hover:text-ink">{label}</Link> : label}
+                </span>
+              );
+            })}
+          </nav>
+        )}
+        <h1 className="text-[26px] leading-8 font-semibold">{title}</h1>
+        {sub && <p className="mt-1 text-[13px] text-muted">{sub}</p>}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        {search && <SearchInput placeholder={search.placeholder} value={search.value} onChange={search.onChange} />}
+        {actions}
+      </div>
+    </header>
   );
 }

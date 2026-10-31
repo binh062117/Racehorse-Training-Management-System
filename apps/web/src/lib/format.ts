@@ -90,3 +90,12 @@ export function toDateInput(iso: string | null | undefined): string {
 export function fromDateTimeLocal(value: string): string {
   return new Date(value).toISOString();
 }
+
+/** Format an ISO date for <input type="datetime-local"> in the browser's local timezone. */
+export function toDateTimeLocal(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+}

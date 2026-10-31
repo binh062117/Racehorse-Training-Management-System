@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
 import type { Notification, Paginated, Role } from '../lib/types';
-import { HORSE_LOGO, Icon } from './ui';
+import { HORSE_LOGO, Icon, SearchInput } from './ui';
 import { setLanguage } from '../i18n';
 
 interface NavItem {
@@ -195,6 +195,8 @@ export type Crumb = string | [string, string];
 interface Chrome {
   crumbs: Crumb[];
   wide: boolean;
+  search?: string;
+  onSearch?: (value: string) => void;
 }
 const DEFAULT_CHROME: Chrome = { crumbs: [], wide: true };
 const ChromeContext = createContext<{ setChrome: (c: Partial<Chrome>) => void } | null>(null);
@@ -286,6 +288,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
 
         <main className={`flex-1 min-w-0 flex flex-col gap-5 px-4 sm:px-6 lg:px-8 pt-5 md:pt-8 pb-14 w-full mx-auto ${chrome.wide ? 'max-w-[1320px]' : 'max-w-[1120px]'}`}>
+          {chrome.search && chrome.onSearch && (
+            <SearchInput
+              placeholder={chrome.search}
+              onChange={chrome.onSearch}
+              className="w-full sm:w-[280px] self-end"
+            />
+          )}
           {children}
         </main>
       </div>
