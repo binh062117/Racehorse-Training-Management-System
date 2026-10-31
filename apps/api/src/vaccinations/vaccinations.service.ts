@@ -74,7 +74,7 @@ export class VaccinationsService {
       this.prisma.vaccination.findMany({
         where,
         include: { horse: { select: UPCOMING_HORSE_SELECT } },
-        orderBy: { nextDueDate: 'asc' },
+        orderBy: [{ nextDueDate: 'asc' }, { id: 'asc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),

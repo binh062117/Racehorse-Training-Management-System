@@ -1,3 +1,4 @@
+import { CreateTrialVideoDto } from './dto/trial-video.dto';
 import {
   Body,
   Controller,
@@ -110,5 +111,31 @@ export class HorsesController {
       throw new AppException('VALIDATION_ERROR', 'A "file" field is required');
     }
     return this.horses.setPhoto(id, `${HORSE_PHOTO_KIND}/${file.filename}`);
+  }
+
+  @Post(':id/trial-videos')
+  @Roles(Role.MANAGER, Role.TRAINER)
+  @UseGuards(HorseOwnershipGuard)
+  createTrialVideo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateTrialVideoDto,
+  ) {
+    return this.horses.createTrialVideo(id, dto);
+  }
+
+  @Get(':id/trial-videos')
+  @UseGuards(HorseOwnershipGuard)
+  listTrialVideos(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horses.listTrialVideos(id);
+  }
+
+  @Delete(':id/trial-videos/:videoId')
+  @Roles(Role.MANAGER, Role.TRAINER)
+  @UseGuards(HorseOwnershipGuard)
+  removeTrialVideo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('videoId', ParseUUIDPipe) videoId: string,
+  ) {
+    return this.horses.removeTrialVideo(id, videoId);
   }
 }

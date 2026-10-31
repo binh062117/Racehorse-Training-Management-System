@@ -331,3 +331,65 @@ export function Sparkline({ values, w = 120, h = 30, color = '#2f62a8', dot = tr
     </svg>
   );
 }
+
+
+/* ---------- pagination ---------- */
+export function Pagination({
+  page,
+  total,
+  limit,
+  onChange,
+  className = '',
+}: {
+  page: number;
+  total: number;
+  limit: number;
+  onChange: (newPage: number) => void;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  if (totalPages <= 1 && total <= limit) return null;
+
+  const start = (page - 1) * limit + 1;
+  const end = Math.min(total, page * limit);
+
+  return (
+    <div className={`flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-line-soft text-[13px] ${className}`}>
+      <span className="cap">
+        {t('raceFeatures.pagination', { start, end, total, page, pages: totalPages })}
+      </span>
+      <div className="flex items-center gap-1.5">
+        <Btn sm disabled={page <= 1} onClick={() => onChange(page - 1)}>
+          ‹ {t('raceFeatures.previous')}
+        </Btn>
+        <div className="flex items-center gap-1 px-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
+            let p = idx + 1;
+            if (totalPages > 5 && page > 3) {
+              p = Math.min(totalPages - 4 + idx, page - 2 + idx);
+            }
+            return (
+              <button
+                key={p}
+                type="button"
+                aria-current={p === page ? 'page' : undefined}
+                onClick={() => onChange(p)}
+                className={`w-7 h-7 rounded-btn text-xs font-semibold num transition-colors ${
+                  p === page
+                    ? 'bg-navy text-white'
+                    : 'bg-white border border-line text-ink hover:bg-subtle'
+                }`}
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+        <Btn sm disabled={page >= totalPages} onClick={() => onChange(page + 1)}>
+          {t('raceFeatures.next')} ›
+        </Btn>
+      </div>
+    </div>
+  );
+}

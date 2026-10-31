@@ -10,6 +10,7 @@ import {
 } from '../ai/ai.service';
 import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { CreateTrialVideoDto } from './dto/trial-video.dto';
 import {
   CreateHorseDto,
   ListHorsesQueryDto,
@@ -517,6 +518,41 @@ export class HorsesService {
           )
         : null;
     return { id, name, fitnessScore, sire, dam };
+  }
+
+  async createTrialVideo(horseId: string, dto: CreateTrialVideoDto) {
+    const horse = await this.prisma.horse.findFirst({
+      where: { id: horseId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
+    return this.prisma.trialVideo.create({
+      data: {
+        horseId,
+        title: dto.title.trim(),
+        videoUrl: dto.videoUrl.trim(),
+        recordedAt: new Date(dto.recordedAt),
+        notes: dto.notes?.trim() ?? null,
+        duration: dto.duration?.trim() ?? null,
+      },
+    });
+  }
+
+  async listTrialVideos(horseId: string) {
+    return this.prisma.trialVideo.findMany({
+      where: { horseId },
+      orderBy: { recordedAt: 'desc' },
+    });
+  }
+
+  async removeTrialVideo(horseId: string, videoId: string) {
+    const video = await this.prisma.trialVideo.findFirst({
+      where: { id: videoId, horseId },
+      select: { id: true },
+    });
+    if (!video) throw new AppException('NOT_FOUND', 'Trial video not found');
+    await this.prisma.trialVideo.delete({ where: { id: videoId } });
+    return { success: true };
   }
 }
 

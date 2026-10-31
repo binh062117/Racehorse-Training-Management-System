@@ -5,6 +5,7 @@ import {
   IsISO8601,
   IsNotEmpty,
   IsNumber,
+  IsBoolean,
   IsOptional,
   IsString,
   IsUUID,
@@ -63,6 +64,10 @@ export class UpdateSessionDto {
   @IsOptional()
   @IsNumber({ allowInfinity: false, allowNaN: false })
   resultValue?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  resultConfirmed?: boolean;
 }
 
 export class ListSessionsQueryDto {

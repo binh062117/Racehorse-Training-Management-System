@@ -18,6 +18,7 @@ const ENTRY_RACE_SELECT = {
   name: true,
   date: true,
   venue: true,
+  prizePool: true,
 } as const;
 
 @Injectable()
@@ -41,6 +42,14 @@ export class RacesService {
     q: ListRacesQueryDto,
   ): Promise<Paginated<Prisma.RaceGetPayload<object>>> {
     const where: Prisma.RaceWhereInput = {
+      ...(q.search?.trim()
+        ? {
+            OR: [
+              { name: { contains: q.search.trim(), mode: 'insensitive' } },
+              { venue: { contains: q.search.trim(), mode: 'insensitive' } },
+            ],
+          }
+        : {}),
       ...(q.from || q.to
         ? {
             date: {
@@ -53,7 +62,7 @@ export class RacesService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.race.findMany({
         where,
-        orderBy: { date: 'desc' },
+        orderBy: [{ date: 'desc' }, { id: 'asc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),
@@ -97,9 +106,30 @@ export class RacesService {
   async addEntry(raceId: string, dto: CreateRaceEntryDto) {
     const race = await this.prisma.race.findUnique({
       where: { id: raceId },
-      select: { id: true },
+      select: { id: true, date: true, prizePool: true },
     });
     if (!race) throw new AppException('NOT_FOUND', 'Race not found');
+
+    const now = new Date();
+    const raceDate = new Date(race.date);
+    if (raceDate.getTime() <= now.getTime()) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Giải đua đã diễn ra hoặc đã kết thúc, không thể đăng ký mới.',
+      );
+    }
+
+    // Chỉ cho phép đăng ký trước ngày đua ít nhất 3 ngày
+    const minNoticeDays = 3;
+    const registrationDeadline = new Date(
+      raceDate.getTime() - minNoticeDays * 24 * 60 * 60 * 1000,
+    );
+    if (now.getTime() > registrationDeadline.getTime()) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Thời hạn đăng ký đã kết thúc. Chỉ có thể đăng ký trước ngày thi đấu ít nhất 3 ngày.',
+      );
+    }
 
     const horse = await this.prisma.horse.findFirst({
       where: { id: dto.horseId, deletedAt: null },
@@ -135,6 +165,13 @@ export class RacesService {
       );
     }
 
+    if (horse.healthStatus === 'INJURED') {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `Chiến mã ${horse.name} đang bị chấn thương (INJURED), không thể đăng ký giải đua.`,
+      );
+    }
+
     const dupe = await this.prisma.raceEntry.findUnique({
       where: { raceId_horseId: { raceId, horseId: dto.horseId } },
       select: { id: true },
@@ -146,13 +183,14 @@ export class RacesService {
       );
     }
 
+    const result = this.entryResult(dto);
+
     try {
       return await this.prisma.raceEntry.create({
         data: {
           raceId,
           horseId: dto.horseId,
-          position: dto.position ?? null,
-          time: dto.time ?? null,
+          ...result,
         },
         include: { horse: { select: ENTRY_HORSE_SELECT } },
       });
@@ -198,18 +236,60 @@ export class RacesService {
   async updateEntry(id: string, dto: UpdateRaceEntryDto) {
     const existing = await this.prisma.raceEntry.findUnique({
       where: { id },
-      select: { id: true },
+      select: {
+        id: true,
+        status: true,
+        position: true,
+        time: true,
+        prizeWon: true,
+      },
     });
     if (!existing) throw new AppException('NOT_FOUND', 'Race entry not found');
 
-    const data: Prisma.RaceEntryUpdateInput = {};
-    if (dto.position !== undefined) data.position = dto.position;
-    if (dto.time !== undefined) data.time = dto.time;
+    const data = this.entryResult(dto, existing);
 
     return this.prisma.raceEntry.update({
       where: { id },
       data,
       include: { horse: { select: ENTRY_HORSE_SELECT } },
     });
+  }
+  private entryResult(
+    dto: UpdateRaceEntryDto,
+    existing?: {
+      status: string;
+      position: number | null;
+      time: string | null;
+      prizeWon: number | null;
+    },
+  ) {
+    const status =
+      dto.status ??
+      (dto.position != null || dto.time != null
+        ? 'COMPLETED'
+        : (existing?.status ?? 'PENDING'));
+    if (status !== 'COMPLETED') {
+      return {
+        status: status as 'PENDING' | 'WITHDRAWN' | 'DID_NOT_START',
+        position: null,
+        time: null,
+        prizeWon: null,
+      };
+    }
+    const position =
+      dto.position !== undefined ? dto.position : (existing?.position ?? null);
+    const time =
+      dto.time !== undefined
+        ? dto.time?.trim() || null
+        : (existing?.time ?? null);
+    const prizeWon =
+      dto.prizeWon !== undefined ? dto.prizeWon : (existing?.prizeWon ?? null);
+    if (position == null && !time) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'A completed entry requires a position or time',
+      );
+    }
+    return { status: 'COMPLETED' as const, position, time, prizeWon };
   }
 }

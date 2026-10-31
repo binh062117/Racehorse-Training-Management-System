@@ -16,6 +16,7 @@ import { IncidentsModule } from './incidents/incidents.module';
 import { InjuriesModule } from './injuries/injuries.module';
 import { VaccinationsModule } from './vaccinations/vaccinations.module';
 import { FeedingModule } from './feeding/feeding.module';
+import { ReportsModule } from './reports/reports.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -40,6 +41,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     InjuriesModule,
     VaccinationsModule,
     FeedingModule,
+    ReportsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

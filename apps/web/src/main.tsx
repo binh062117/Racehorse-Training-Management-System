@@ -20,6 +20,7 @@ import { TrainingPlansPage } from './pages/TrainingPlansPage';
 import { HealthSchedulePage } from './pages/HealthSchedulePage';
 import { HealthRecordsPage } from './pages/HealthRecordsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
+import { FinanceReportPage } from './pages/FinanceReportPage';
 import { RacesPage } from './pages/RacesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import {
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
+      { path: '/reports/finances', element: <RequireAuth roles={['MANAGER', 'OWNER']}><FinanceReportPage /></RequireAuth> },
       { path: '/horses', element: <HorsesPage /> },
       {
         path: '/health-records',

@@ -77,7 +77,7 @@ describe('Races (e2e)', () => {
   it('MANAGER creates a race (201)', async () => {
     const res = await api().post('/api/v1/races').set(auth('manager')).send({
       name: 'E2E Cup',
-      date: new Date().toISOString(),
+      date: new Date(Date.now() + 7 * 86400000).toISOString(),
       venue: 'Test Track',
     });
     expect(res.status).toBe(201);

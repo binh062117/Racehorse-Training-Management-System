@@ -54,6 +54,14 @@ enum HealthStatus {
 enum PreventiveCareType {
   VACCINATION
   DEWORMING
+  FARRIER
+}
+
+enum RaceEntryStatus {
+  PENDING
+  COMPLETED
+  WITHDRAWN
+  DID_NOT_START
 }
 
 enum TreatmentPlanStatus {
@@ -107,6 +115,7 @@ model User {
   vetRecords        HealthRecord[]
   reportedIncidents IncidentReport[]  @relation("IncidentReporter")
   feedingRecords    FeedingRecord[]   @relation("FeedingRecorder")
+  recordedSessions  TrainingSession[] @relation("SessionResultRecorder")
   notifications     Notification[]
   refreshTokens     RefreshToken[]
   authTokens        AuthToken[]
@@ -183,6 +192,8 @@ model Horse {
   incidents      IncidentReport[]
   vaccinations   Vaccination[]
   feedingRecords FeedingRecord[]
+  expenses       HorseExpense[]
+  trialVideos    TrialVideo[]
   siredFoals     Horse[]           @relation("HorsePedigree_Sire")
   damFoals       Horse[]           @relation("HorsePedigree_Dam")
 
@@ -206,8 +217,11 @@ model TrainingSession {
   status       SessionStatus @default(PLANNED)
   resultMetric String?
   resultValue  Float?
-  notes        String?
-  createdAt    DateTime      @default(now())
+  notes              String?
+  resultRecordedById String?
+  resultRecordedBy   User?         @relation("SessionResultRecorder", fields: [resultRecordedById], references: [id])
+  resultConfirmed    Boolean       @default(false)
+  createdAt          DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   @@index([horseId, scheduledAt])
@@ -276,6 +290,8 @@ model RaceEntry {
   horse     Horse    @relation(fields: [horseId], references: [id])
   position  Int? // null = no result yet
   time      String? // free text, e.g. "1:38.20"
+  status    RaceEntryStatus @default(PENDING)
+  prizeWon  Float?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -392,6 +408,34 @@ model FeedingRecord {
   quantityKg   Float
   notes        String?
   createdAt    DateTime @default(now())
+
+  @@index([horseId, date])
+}
+
+
+model TrialVideo {
+  id         String   @id @default(uuid())
+  horseId    String
+  horse      Horse    @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  title      String
+  videoUrl   String
+  recordedAt DateTime
+  notes      String?
+  duration   String?
+  createdAt  DateTime @default(now())
+
+  @@index([horseId])
+}
+
+model HorseExpense {
+  id          String   @id @default(uuid())
+  horseId     String
+  horse       Horse    @relation(fields: [horseId], references: [id])
+  date        DateTime
+  category    String
+  description String
+  amount      Float
+  createdAt   DateTime @default(now())
 
   @@index([horseId, date])
 }

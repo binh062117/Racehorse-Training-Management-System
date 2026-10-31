@@ -1,49 +1,22 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
+import { fetchAll } from '../lib/pagination';
 import { api } from '../lib/api';
 import { formatDate, toDateInput } from '../lib/format';
 import { useCachedResource } from '../lib/useCachedResource';
-import type { Horse, Paginated, Race, RaceDetail, RaceEntry } from '../lib/types';
+import type { Horse, Paginated, Race, RaceDetail, RaceEntry, RaceEntryStatus } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Chip, Field, HeroStats, Icon, Input } from '../ds/ui';
+import { Badge, Btn, Card, Chip, EmptyState, Field, Icon, Input, NativeSelect, PageHeader, Pagination } from '../ds/ui';
 
 type RaceFilter = 'ALL' | 'UPCOMING' | 'PAST';
 const EMPTY_RACES: Race[] = [];
 const EMPTY_HORSES: Horse[] = [];
 
-function isUpcomingRace(race: Pick<Race, 'date'>, today: string): boolean {
-  return toDateInput(race.date) >= today;
-}
-
-function summarizeRaces(races: Race[], today: string) {
-  return races.reduce(
-    (summary, race) => {
-      if (isUpcomingRace(race, today)) summary.upcoming += 1;
-      else summary.past += 1;
-      if (race.venue) summary.withVenue += 1;
-      return summary;
-    },
-    { upcoming: 0, past: 0, withVenue: 0 },
-  );
-}
-
-function getVisibleRaces(races: Race[], filter: RaceFilter, search: string, today: string): Race[] {
-  const query = search.trim().toLocaleLowerCase();
-  return races
-    .filter((race) => {
-      const isUpcoming = isUpcomingRace(race, today);
-      if (filter === 'UPCOMING' && !isUpcoming) return false;
-      if (filter === 'PAST' && isUpcoming) return false;
-      return !query || `${race.name} ${race.venue ?? ''}`.toLocaleLowerCase().includes(query);
-    })
-    .sort((left, right) => (
-      filter === 'PAST'
-        ? new Date(right.date).getTime() - new Date(left.date).getTime()
-        : new Date(left.date).getTime() - new Date(right.date).getTime()
-    ));
+function isUpcomingRace(race: Pick<Race, 'date'>): boolean {
+  return new Date(race.date).getTime() > new Date().getTime();
 }
 
 export function RacesPage() {
@@ -51,31 +24,37 @@ export function RacesPage() {
   const { user } = useAuth();
   const canManage = user?.role === 'MANAGER';
   const [selectedRace, setSelectedRace] = useState<RaceDetail | null>(null);
-  const [filter, setFilter] = useState<RaceFilter>('UPCOMING');
+  const [chosenFilter, setFilter] = useState<RaceFilter>('ALL');
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<unknown>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingRace, setEditingRace] = useState<Race | null>(null);
 
-  usePageChrome({ crumbs: [t('nav.races'), t('races.title')], search: t('races.search'), onSearch: setSearch });
+  usePageChrome({ crumbs: [t('races.title')] });
 
   const { data: raceData, loading, error, reload: loadRaces } = useCachedResource(
-    `race-management-${user?.id ?? 'anonymous'}-${canManage}`,
+    `race-management-${user?.id ?? 'anonymous'}-${canManage}-${page}-${chosenFilter}-${search}`,
     async () => {
-      const [raceResponse, horseResponse] = await Promise.all([
-        api.get<Paginated<Race>>('/races', { params: { limit: 100 } }),
-        canManage ? api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } }) : Promise.resolve(null),
-      ]);
-      return { races: raceResponse.data.data, horses: horseResponse?.data.data ?? [] };
+      const raceResponse = await api.get<Paginated<Race>>('/races', {
+        params: { page, limit: 20, search,
+          ...(chosenFilter === 'UPCOMING' ? { from: new Date().toISOString() }
+            : chosenFilter === 'PAST' ? { to: new Date().toISOString() } : {}),
+        },
+      });
+      return { races: raceResponse.data.data, total: raceResponse.data.meta.total };
     },
   );
   const races = raceData?.races ?? EMPTY_RACES;
-  const horses = raceData?.horses ?? EMPTY_HORSES;
+  const { data: horseData } = useCachedResource(
+    `race-horse-options-${user?.id ?? 'anonymous'}-${canManage}`,
+    () => canManage ? fetchAll<Horse>('/horses') : Promise.resolve([]),
+  );
+  const horses = horseData ?? EMPTY_HORSES;
 
-  const today = toDateInput(new Date().toISOString());
-  const summary = useMemo(() => summarizeRaces(races, today), [races, today]);
-  const visibleRaces = useMemo(() => getVisibleRaces(races, filter, search, today), [filter, races, search, today]);
+  const filter = chosenFilter;
+  const visibleRaces = races;
 
   const openRace = async (race: Race) => {
     setSelectedRace(null);
@@ -108,28 +87,20 @@ export function RacesPage() {
     if (selectedRace) await openRace(selectedRace);
   };
 
+  const sub = loading ? t('races.loading') : `${raceData?.total ?? 0} ${t('races.title')}`;
+
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div className="flex flex-wrap gap-6 items-end justify-between">
-          <div>
-            <div className="lbl">{t('common.season', { year: 2026 })} · {t('nav.brandName')}</div>
-            <h1 className="disp text-[56px] mt-2">{t('races.title')}</h1>
-            <p className="text-hero-muted mt-2 max-w-[560px]">{t('races.description')}</p>
-          </div>
-          {canManage && (
-            <Btn v="light" onClick={() => { setEditingRace(null); setFormOpen((open) => !open); }}>
-              <Icon name={formOpen && !editingRace ? 'x' : 'plus'} />{formOpen && !editingRace ? t('races.closeForm') : t('races.createRace')}
-            </Btn>
-          )}
-        </div>
-        <HeroStats items={[
-          { label: t('races.total'), value: loading ? '…' : races.length },
-          { label: t('races.upcoming'), value: loading ? '…' : summary.upcoming, color: '#9fd9b1' },
-          { label: t('races.completed'), value: loading ? '…' : summary.past },
-          { label: t('races.withVenue'), value: loading ? '…' : summary.withVenue },
-        ]} />
-      </section>
+      <PageHeader
+        title={t('races.title')}
+        sub={sub}
+        search={{ placeholder: t('races.search'), value: search, onChange: (value) => { setSearch(value); setPage(1); } }}
+        actions={canManage ? (
+          <Btn v="p" onClick={() => { setEditingRace(null); setFormOpen((open) => !open); }}>
+            <Icon name={formOpen && !editingRace ? 'x' : 'plus'} />{formOpen && !editingRace ? t('races.closeForm') : t('races.createRace')}
+          </Btn>
+        ) : undefined}
+      />
 
       {formOpen && canManage && (
         <RaceForm key={editingRace?.id ?? 'new-race'} race={editingRace} onCancel={() => { setFormOpen(false); setEditingRace(null); }} onSaved={onRaceSaved} />
@@ -137,52 +108,47 @@ export function RacesPage() {
 
       <ErrorText err={error} />
 
-      <div className="flex flex-wrap gap-5 items-start">
-        <Card className="flex-[1.3_1_460px] min-w-0 p-5">
-          <div className="flex flex-wrap justify-between items-start gap-3">
-            <div>
-              <h2 className="text-[15px] font-semibold">{t('races.schedule')}</h2>
-              <p className="cap mt-1">{t('races.scheduleDescription')}</p>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(340px,1fr)] items-start">
+        <Card className="min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
+            <h2 className="text-[15px] font-semibold">{t('races.schedule')}</h2>
+            <div className="flex gap-1.5" role="group" aria-label={t('races.filter')}>
+              {(['UPCOMING', 'ALL', 'PAST'] as const).map((value) => (
+                <Chip key={value} on={filter === value} onClick={() => { setFilter(value); setPage(1); }}>{t(`races.filters.${value}`)}</Chip>
+              ))}
             </div>
-          </div>
-          <div className="flex gap-2 mt-4" role="group" aria-label={t('races.filter')}>
-            {(['UPCOMING', 'ALL', 'PAST'] as const).map((value) => (
-              <Chip key={value} on={filter === value} onClick={() => setFilter(value)}>{t(`races.filters.${value}`)}</Chip>
-            ))}
           </div>
 
           {loading ? (
-            <p className="cap mt-4">{t('races.loading')}</p>
+            <p className="text-muted px-5 py-4">{t('races.loading')}</p>
           ) : visibleRaces.length === 0 ? (
-            <div className="text-center py-10">
-              <strong className="block">{t('races.emptyTitle')}</strong>
-              <span className="cap">{races.length === 0 ? t('races.emptyDescription') : t('races.noMatch')}</span>
-            </div>
+            <div className="p-5"><EmptyState>{races.length === 0 ? t('races.emptyDescription') : t('races.noMatch')}</EmptyState></div>
           ) : (
-            <div className="overflow-x-auto mt-4">
-              <table className="w-full min-w-[640px] border-collapse">
+            <div className="overflow-x-auto mt-3">
+              <table className="w-full min-w-[600px] border-collapse">
                 <thead>
-                  <tr className="text-left">
-                    {[t('races.race'), t('races.date'), t('races.venue'), t('races.distance'), t('races.statusLabel'), ''].map((th) => (
-                      <th key={th} className="h-[40px] px-3 bg-cream lbl border-b border-line">{th}</th>
-                    ))}
+                  <tr className="text-left text-[12px] text-muted">
+                    <th className="h-10 px-5 font-medium border-b border-line">{t('races.race')}</th>
+                    <th className="h-10 px-3 font-medium border-b border-line">{t('races.date')}</th>
+                    <th className="h-10 px-3 font-medium border-b border-line">{t('races.venue')}</th>
+                    <th className="h-10 px-3 font-medium border-b border-line text-right">{t('races.distance')}</th>
+                    <th className="h-10 px-5 font-medium border-b border-line">{t('races.statusLabel')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleRaces.map((race) => {
-                    const isUpcoming = isUpcomingRace(race, today);
+                    const isUpcoming = isUpcomingRace(race);
                     const isSelected = selectedRace?.id === race.id;
                     return (
-                      <tr key={race.id} className={`border-b border-line-soft hover:bg-subtle ${isSelected ? 'bg-info-bg' : ''}`}>
-                        <td className="px-3 py-2.5">
-                          <button type="button" onClick={() => void openRace(race)} className="font-semibold text-navy">{race.name}</button>
-                          <div className="cap">{race.surface || t('races.surfaceNotSet')}</div>
+                      <tr key={race.id} onClick={() => void openRace(race)} className={`border-b border-line-soft last:border-0 cursor-pointer ${isSelected ? 'bg-cream' : 'hover:bg-subtle'}`}>
+                        <td className="px-5 py-3">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); void openRace(race); }} className="font-medium text-ink text-left hover:text-info">{race.name}</button>
+                          <div className="text-[12.5px] text-muted">{race.surface || t('races.surfaceNotSet')}</div>
                         </td>
-                        <td className="px-3 py-2.5 num">{formatDate(race.date)}</td>
-                        <td className="px-3 py-2.5">{race.venue || '—'}</td>
-                        <td className="px-3 py-2.5 num">{race.distance ? `${race.distance} ${t('races.meters')}` : '—'}</td>
-                        <td className="px-3 py-2.5"><Badge tone={isUpcoming ? 'ok' : 'neu'}>{isUpcoming ? t('races.filters.UPCOMING') : t('races.filters.PAST')}</Badge></td>
-                        <td className="px-3 py-2.5"><Btn sm onClick={() => void openRace(race)}>{t('races.viewDetails')}</Btn></td>
+                        <td className="px-3 py-3 num whitespace-nowrap">{formatDate(race.date)}</td>
+                        <td className="px-3 py-3">{race.venue || <span className="text-muted">—</span>}</td>
+                        <td className="px-3 py-3 num text-right whitespace-nowrap">{race.distance ? <>{race.distance.toLocaleString('vi-VN')}<span className="text-muted"> m</span></> : <span className="text-muted">—</span>}</td>
+                        <td className="px-5 py-3"><Badge tone={isUpcoming ? 'ok' : 'neu'}>{isUpcoming ? t('races.filters.UPCOMING') : t('races.filters.PAST')}</Badge></td>
                       </tr>
                     );
                   })}
@@ -190,9 +156,10 @@ export function RacesPage() {
               </table>
             </div>
           )}
+          <Pagination page={page} limit={20} total={raceData?.total ?? 0} onChange={setPage} className="p-4" />
         </Card>
 
-        <Card className="flex-[1_1_380px] min-w-0 p-5" aria-live="polite">
+        <Card className="min-w-0 p-5" aria-live="polite">
           {detailLoading ? (
             <p className="cap">{t('races.loadingDetails')}</p>
           ) : detailError ? (
@@ -200,21 +167,22 @@ export function RacesPage() {
           ) : selectedRace ? (
             <>
               <div className="flex justify-between items-start gap-3">
-                <div><p className="lbl">{t('races.raceDetails')}</p><h2 className="disp text-[32px] mt-1">{selectedRace.name}</h2></div>
+                <div className="min-w-0"><p className="lbl">{t('races.raceDetails')}</p><h2 className="text-[18px] leading-6 font-semibold mt-0.5">{selectedRace.name}</h2></div>
                 {canManage && <Btn sm onClick={editRace}><Icon name="edit" className="w-3.5 h-3.5" />{t('races.editRace')}</Btn>}
               </div>
-              <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 mt-4 text-[13px]">
-                <dt className="text-muted">{t('races.date')}</dt><dd className="m-0">{formatDate(selectedRace.date)}</dd>
-                <dt className="text-muted">{t('races.venue')}</dt><dd className="m-0">{selectedRace.venue || '—'}</dd>
-                <dt className="text-muted">{t('races.distance')}</dt><dd className="m-0">{selectedRace.distance ? `${selectedRace.distance} ${t('races.meters')}` : '—'}</dd>
-                <dt className="text-muted">{t('races.surface')}</dt><dd className="m-0">{selectedRace.surface || '—'}</dd>
-                <dt className="text-muted">{t('races.prizePool')}</dt><dd className="m-0">{selectedRace.prizePool == null ? '—' : selectedRace.prizePool.toLocaleString()}</dd>
+              <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 mt-4">
+                <dt className="text-muted">{t('races.date')}</dt><dd className="m-0 num">{formatDate(selectedRace.date)}</dd>
+                <dt className="text-muted">{t('races.venue')}</dt><dd className="m-0">{selectedRace.venue || <span className="text-muted">—</span>}</dd>
+                <dt className="text-muted">{t('races.distance')}</dt><dd className="m-0 num">{selectedRace.distance ? `${selectedRace.distance.toLocaleString('vi-VN')} m` : <span className="text-muted">—</span>}</dd>
+                <dt className="text-muted">{t('races.surface')}</dt><dd className="m-0">{selectedRace.surface || <span className="text-muted">—</span>}</dd>
+                <dt className="text-muted">{t('races.prizePool')}</dt><dd className="m-0 num">{selectedRace.prizePool == null ? <span className="text-muted">—</span> : `${selectedRace.prizePool.toLocaleString('vi-VN')} ₫`}</dd>
               </dl>
 
-              {canManage && (
+              {canManage && new Date(selectedRace.date).getTime() - new Date().getTime() >= 3 * 86400000 && (
                 <AddEntryForm horses={horses} enteredHorseIds={selectedRace.entries.map((entry) => entry.horseId)} onAdded={onEntrySaved} raceId={selectedRace.id} />
               )}
 
+              {canManage && <p className="cap mt-3">{t('raceFeatures.deadline')}</p>}
               <div className="flex items-center gap-2 mt-5 mb-2">
                 <h3 className="text-[14px] font-semibold">{t('races.entries')}</h3>
                 <span className="cap num">{selectedRace.entries.length}</span>
@@ -236,10 +204,9 @@ export function RacesPage() {
               )}
             </>
           ) : (
-            <div className="text-center py-10">
-              <p className="lbl">{t('races.raceDetails')}</p>
-              <h2 className="disp text-[28px] mt-1">{t('races.selectRace')}</h2>
-              <p className="cap mt-2">{t('races.selectRaceDescription')}</p>
+            <div>
+              <h2 className="text-[15px] font-semibold">{t('races.selectRace')}</h2>
+              <p className="text-muted mt-1">{t('races.selectRaceDescription')}</p>
             </div>
           )}
         </Card>
@@ -265,7 +232,7 @@ function RaceForm({ race, onCancel, onSaved }: { race: Race | null; onCancel: ()
     setSaving(true);
     const body = {
       name: name.trim(),
-      date: new Date(`${date}T00:00:00.000Z`).toISOString(),
+      date: new Date(`${date}T00:00:00+07:00`).toISOString(),
       venue: venue.trim() || null,
       distance: distance ? Number(distance) : null,
       surface: surface.trim() || null,
@@ -312,7 +279,7 @@ function AddEntryForm({ horses, enteredHorseIds, onAdded, raceId }: { horses: Ho
   const { t } = useTranslation();
   const enteredHorseIdSet = new Set(enteredHorseIds);
   const eligibleHorses = horses.filter((horse) => (
-    horse.status !== 'RETIRED' && horse.healthStatus !== 'QUARANTINED' && !horse.locked && !enteredHorseIdSet.has(horse.id)
+    horse.status !== 'RETIRED' && horse.healthStatus !== 'QUARANTINED' && horse.healthStatus !== 'INJURED' && !horse.locked && !enteredHorseIdSet.has(horse.id)
   ));
   const [horseId, setHorseId] = useState('');
   const [error, setError] = useState<unknown>(null);
@@ -337,13 +304,10 @@ function AddEntryForm({ horses, enteredHorseIds, onAdded, raceId }: { horses: Ho
     <form onSubmit={submit} className="mt-5 pt-5 border-t border-line-soft">
       <h3 className="text-[13.5px] font-semibold mb-2">{t('races.registerHorse')}</h3>
       <div className="flex gap-2">
-        <select
-          className="h-10 flex-1 rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-          value={horseId} onChange={(event) => setHorseId(event.target.value)} required
-        >
+        <NativeSelect className="flex-1" value={horseId} onChange={(event) => setHorseId(event.target.value)} required>
           <option value="">{t('races.chooseHorse')}</option>
           {eligibleHorses.map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
-        </select>
+        </NativeSelect>
         <Btn v="p" type="submit" disabled={saving || !horseId}>{saving ? t('races.saving') : t('races.register')}</Btn>
       </div>
       {eligibleHorses.length === 0 && <p className="cap mt-2">{t('races.noEligibleHorses')}</p>}
@@ -356,6 +320,8 @@ function EntryResult({ entry, canManage, canViewHorse, onSaved }: {
   entry: RaceDetail['entries'][number]; canManage: boolean; canViewHorse: boolean; onSaved: () => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const [status, setStatus] = useState<RaceEntryStatus>(entry.status);
+  const [prizeWon, setPrizeWon] = useState(entry.prizeWon?.toString() ?? '');
   const [position, setPosition] = useState(entry.position?.toString() ?? '');
   const [time, setTime] = useState(entry.time ?? '');
   const [error, setError] = useState<unknown>(null);
@@ -366,7 +332,7 @@ function EntryResult({ entry, canManage, canViewHorse, onSaved }: {
     setError(null);
     setSaving(true);
     try {
-      await api.patch(`/race-entries/${entry.id}`, { position: position ? Number(position) : null, time: time.trim() || null });
+      await api.patch(`/race-entries/${entry.id}`, { status, position: status === 'COMPLETED' && position ? Number(position) : null, time: status === 'COMPLETED' ? time.trim() || null : null, prizeWon: status === 'COMPLETED' && prizeWon ? Number(prizeWon) : null });
       await onSaved();
     } catch (reason) {
       setError(reason);
@@ -378,20 +344,22 @@ function EntryResult({ entry, canManage, canViewHorse, onSaved }: {
   return (
     <article className="rounded-btn border border-line p-3">
       <div className="flex items-center gap-3">
-        <span className="disp text-2xl w-10 flex-none text-center">{entry.position ? `#${entry.position}` : '—'}</span>
+        <span className={`num w-10 flex-none text-center text-[18px] font-semibold ${entry.position ? 'text-ink' : 'text-muted'}`}>{entry.position ? `#${entry.position}` : '—'}</span>
         <div className="min-w-0 flex-1">
           {canViewHorse ? (
             <Link to={`/horses/${entry.horse.id}/performance`} className="font-semibold text-navy no-underline">{entry.horse.name}</Link>
           ) : (
             <span className="font-semibold">{entry.horse.name}</span>
           )}
-          <div className="cap">{entry.time || t('races.resultPending')}</div>
+          <div className="cap">{t(`raceFeatures.status.${entry.status}`)}{entry.time ? ` \u00b7 ${entry.time}` : ''}</div>
         </div>
       </div>
       {canManage && (
         <form onSubmit={save} className="flex flex-wrap items-end gap-2 mt-2.5">
-          <Field label={t('races.position')} className="w-20"><Input type="number" min="1" step="1" value={position} onChange={(event) => setPosition(event.target.value)} /></Field>
-          <Field label={t('races.time')} className="w-28"><Input value={time} onChange={(event) => setTime(event.target.value)} maxLength={40} placeholder="mm:ss" /></Field>
+          <Field label={t('races.statusLabel')}><NativeSelect value={status} onChange={(e) => setStatus(e.target.value as RaceEntryStatus)}>{(['PENDING', 'COMPLETED', 'WITHDRAWN', 'DID_NOT_START'] as const).map((value) => <option key={value} value={value}>{t(`raceFeatures.status.${value}`)}</option>)}</NativeSelect></Field>
+          <Field label={t('raceFeatures.prize')}><Input type="number" min="0" step="0.01" disabled={status !== 'COMPLETED'} value={prizeWon} onChange={(e) => setPrizeWon(e.target.value)} /></Field>
+          <Field label={t('races.position')} className="w-20"><Input type="number" min="1" step="1" disabled={status !== 'COMPLETED'} value={position} onChange={(event) => setPosition(event.target.value)} /></Field>
+          <Field label={t('races.time')} className="w-28"><Input disabled={status !== 'COMPLETED'} value={time} onChange={(event) => setTime(event.target.value)} maxLength={40} placeholder="mm:ss" /></Field>
           <Btn sm type="submit" disabled={saving}>{saving ? '…' : t('common.save')}</Btn>
           <ErrorText err={error} />
         </form>
