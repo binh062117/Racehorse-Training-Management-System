@@ -25,17 +25,59 @@ export class FeedingService {
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
 
-    return this.prisma.feedingRecord.create({
-      data: {
-        horseId,
-        recordedById: recordedBy.id,
-        feedType: dto.feedType.trim(),
-        quantityKg: dto.quantityKg,
-        date: new Date(dto.date),
-        notes: dto.notes?.trim() || null,
+    const data = {
+      horseId,
+      recordedById: recordedBy.id,
+      feedType: dto.feedType.trim(),
+      quantityKg: dto.quantityKg,
+      date: new Date(dto.date),
+      notes: dto.notes?.trim() || null,
+    };
+    const include = {
+      recordedBy: { select: RECORDED_BY_SELECT },
+      supplyItem: {
+        select: { id: true, name: true, unit: true, quantity: true },
       },
-      include: { recordedBy: { select: RECORDED_BY_SELECT } },
+    };
+    if (!dto.supplyItemId) {
+      return this.prisma.feedingRecord.create({ data, include });
+    }
+
+    // Feed from the store: check it is feed and there is enough, then record
+    // the meal and take it out of stock together.
+    const item = await this.prisma.supplyItem.findFirst({
+      where: { id: dto.supplyItemId, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        unit: true,
+        category: true,
+        quantity: true,
+      },
     });
+    if (!item || item.category !== 'FEED') {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'supplyItemId must reference a feed item in the store',
+      );
+    }
+    if (item.quantity < dto.quantityKg) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `Kho chỉ còn ${item.quantity} ${item.unit} ${item.name} — không đủ ${dto.quantityKg} ${item.unit}. Hãy gửi yêu cầu mua thêm.`,
+      );
+    }
+    const [record] = await this.prisma.$transaction([
+      this.prisma.feedingRecord.create({
+        data: { ...data, supplyItemId: item.id },
+        include,
+      }),
+      this.prisma.supplyItem.update({
+        where: { id: item.id },
+        data: { quantity: { decrement: dto.quantityKg } },
+      }),
+    ]);
+    return record;
   }
 
   async listByHorse(horseId: string, q: ListFeedingRecordsQueryDto) {
@@ -43,7 +85,10 @@ export class FeedingService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.feedingRecord.findMany({
         where,
-        include: { recordedBy: { select: RECORDED_BY_SELECT } },
+        include: {
+          recordedBy: { select: RECORDED_BY_SELECT },
+          supplyItem: { select: { id: true, name: true, unit: true } },
+        },
         orderBy: { date: 'desc' },
         skip: (q.page - 1) * q.limit,
         take: q.limit,

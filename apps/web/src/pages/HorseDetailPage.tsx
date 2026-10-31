@@ -15,6 +15,7 @@ import { EditHorseModal } from '../components/horse/EditHorseModal';
 import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
 import { PhotoUploadModal } from '../components/horse/PhotoUploadModal';
 import { PedigreeTab } from './horse/PedigreeTab';
+import { LockHorseModal } from '../components/horse/LockHorseModal';
 import { usePageChrome } from '../ds/AppShell';
 import {
   Alert, Btn, Card, CountUp, Cloth, HealthBadge, CareerBadge, HorseAvatar, Icon, ImageLightbox, KpiStrip, LockBadge,
@@ -110,23 +111,8 @@ export function HorseDetailPage() {
       .catch(() => setRaceEntries([]));
   }, [id, loadHorse]);
 
-  const handleToggleLock = async () => {
-    if (!horse) return;
-    const willLock = !horse.locked;
-    const promptText = willLock
-      ? (t('horsesPage.lockPrompt', 'Nhập lý do khóa tập luyện (tuỳ chọn):'))
-      : '';
-    const reason = willLock ? window.prompt(promptText) ?? '' : '';
-    try {
-      await api.patch(`/horses/${horse.id}/lock`, {
-        locked: willLock,
-        ...(willLock && reason.trim() ? { reason: reason.trim() } : {}),
-      });
-      await loadHorse();
-    } catch (e) {
-      alert(t('horsesPage.lockUpdateFailed', 'Không thể cập nhật trạng thái khóa tập luyện: ') + String(e));
-    }
-  };
+  const [lockOpen, setLockOpen] = useState(false);
+  const [lockVersion, setLockVersion] = useState(0);
 
   usePageChrome({ crumbs: [[t('horsesPage.title', 'Ngựa đua'), '/horses'], horse?.name ?? '…'] });
 
@@ -182,9 +168,9 @@ export function HorseDetailPage() {
         {(isVet || isManager) && (
           <div className="flex flex-wrap gap-2">
             {isVet && (
-              <Btn v={horse.locked ? 'p' : 's'} onClick={() => void handleToggleLock()}>
+              <Btn v={horse.locked ? 'p' : 's'} onClick={() => setLockOpen(true)}>
                 <Icon name={horse.locked ? 'unlock' : 'lock'} />
-                {horse.locked ? t('horseFlow.unlocked', 'Mở khóa tập') : t('horseFlow.locked', 'Khóa tập')}
+                {horse.locked ? t('lock.unlockConfirm') : t('lock.lockConfirm')}
               </Btn>
             )}
             {isManager && (
@@ -273,12 +259,13 @@ export function HorseDetailPage() {
         <div hidden={tab !== 'progress'}><TrainingProgressTab horseId={horse.id} /></div>
       )}
       {visitedTabs.has('health') && (
-        <div hidden={tab !== 'health'}><HealthTab horse={horse} /></div>
+        <div hidden={tab !== 'health'}><HealthTab horse={horse} lockVersion={lockVersion} /></div>
       )}
       {visitedTabs.has('feeding') && (
         <div hidden={tab !== 'feeding'}><FeedingTab horse={horse} /></div>
       )}
 
+      {isVet && <LockHorseModal horse={horse} open={lockOpen} onClose={() => setLockOpen(false)} onDone={() => { setLockVersion((v) => v + 1); void loadHorse(); }} />}
       <EditHorseModal
         horse={horse}
         isOpen={editOpen}

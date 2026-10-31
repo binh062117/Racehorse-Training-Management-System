@@ -144,7 +144,7 @@ export function DashboardPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] items-start">
         <Card>
-          <CardHeader title={t('dashboard.boardTitle', 'Bảng chuồng hôm nay')}>
+          <CardHeader title={role === 'OWNER' ? t('dashboard.boardTitleOwner', 'Ngựa của tôi') : t('dashboard.boardTitle', 'Bảng chuồng hôm nay')}>
             <Link to={role === 'OWNER' ? '/my-horses' : '/horses'} className="text-[13px] font-medium text-info no-underline flex items-center gap-1">
               {t('dashboard.viewAllHorses', 'Xem tất cả {{count}} ngựa', { count: horses.length })}
               <Icon name="chevRight" className="w-3.5 h-3.5 nudge" />

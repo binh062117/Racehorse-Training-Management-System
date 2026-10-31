@@ -82,6 +82,7 @@ describe('Notifications (e2e)', () => {
     await prisma.notification.deleteMany({
       where: { message: { contains: 'E2E Notification Horse' } },
     });
+    await prisma.horseLockEvent.deleteMany({ where: { horseId: horseId } });
     await prisma.horse.deleteMany({ where: { id: horseId } });
     await app.close();
   });

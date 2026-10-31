@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Horse, NotificationType, Prisma, Role } from '@prisma/client';
+import {
+  HealthStatus,
+  Horse,
+  NotificationType,
+  Prisma,
+  Role,
+} from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileStorageService } from '../files/file-storage.service';
@@ -237,42 +243,210 @@ export class HorsesService {
     return this.toView(horse);
   }
 
-  /** Training Lock (Phase 7) — VET-only, checked by HorseOwnershipGuard on the route. */
-  async lock(id: string, dto: LockHorseDto): Promise<HorseView> {
-    const existing = await this.prisma.horse.findFirst({
+  /**
+   * Training Lock — VET-only route (PATCH /horses/:id/lock).
+   * - Locking needs a reason.
+   * - Unlocking needs a health record of this horse, written after the lock
+   *   began, whose conclusion is FIT — the vet's evidence the horse is well.
+   * Every change is kept in HorseLockEvent, so an unlock never erases why the
+   * horse was locked.
+   */
+  async lock(
+    id: string,
+    dto: LockHorseDto,
+    actor?: AuthUser,
+  ): Promise<HorseView> {
+    const horse = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true, name: true, ownerId: true, locked: true },
+      select: { id: true, locked: true },
     });
-    if (!existing) throw new AppException('NOT_FOUND', 'Horse not found');
+    if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
 
-    const horse = await this.prisma.horse.update({
-      where: { id },
-      data: {
-        locked: dto.locked,
-        // Unlocking always clears the reason — no lock-history table in this phase.
-        lockReason: dto.locked ? (dto.reason?.trim() ?? null) : null,
-      },
-      include: { owner: { select: OWNER_SELECT } },
-    });
-
-    // Notify (Phase 8) — only when the value actually changed, so repeat
-    // calls with the same `locked` don't spam. Shared by the manual VET
-    // route (Phase 7) and the auto-lock/unlock triggered by IncidentReport.
-    if (existing.locked !== dto.locked) {
-      const managerIds = await this.notifications.managerIds();
-      const recipients = [existing.ownerId, ...managerIds];
-      const message = dto.locked
-        ? `${existing.name} đã bị khóa tập luyện${horse.lockReason ? `: ${horse.lockReason}` : ''}`
-        : `${existing.name} đã được mở khóa tập luyện`;
-      await this.notifications.notifyUsers(
-        recipients,
-        dto.locked
-          ? NotificationType.TRAINING_LOCKED
-          : NotificationType.TRAINING_UNLOCKED,
-        message,
-      );
+    if (dto.locked) {
+      const reason = dto.reason?.trim();
+      if (!reason) {
+        throw new AppException(
+          'VALIDATION_ERROR',
+          'Cần ghi lý do khi khóa tập ngựa.',
+        );
+      }
+      if (horse.locked) {
+        throw new AppException(
+          'VALIDATION_ERROR',
+          'Ngựa đang bị khóa tập rồi.',
+        );
+      }
+      return this.applyLock(id, {
+        locked: true,
+        reason,
+        actorId: actor?.id ?? null,
+      });
     }
 
+    if (!horse.locked) {
+      throw new AppException('VALIDATION_ERROR', 'Ngựa không bị khóa tập.');
+    }
+    if (!dto.healthRecordId) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Cần chọn hồ sơ khám kết luận ngựa đã khỏe để mở khóa tập.',
+      );
+    }
+    await this.assertFitRecord(id, dto.healthRecordId);
+    return this.applyLock(id, {
+      locked: false,
+      reason: dto.reason?.trim() || 'Bác sĩ thú y mở khóa sau khi khám',
+      actorId: actor?.id ?? null,
+      healthRecordId: dto.healthRecordId,
+    });
+  }
+
+  /**
+   * The unlock evidence rule: the record belongs to this horse, concludes FIT
+   * and was written after the current lock began (an old "healthy" exam from
+   * before the problem proves nothing).
+   */
+  async assertFitRecord(
+    horseId: string,
+    healthRecordId: string,
+  ): Promise<void> {
+    const [record, lockedSince] = await Promise.all([
+      this.prisma.healthRecord.findUnique({
+        where: { id: healthRecordId },
+        select: { horseId: true, healthStatus: true, createdAt: true },
+      }),
+      this.prisma.horseLockEvent.findFirst({
+        where: { horseId, locked: true },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+    ]);
+    if (!record || record.horseId !== horseId) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Hồ sơ khám không thuộc ngựa này.',
+      );
+    }
+    if (record.healthStatus !== HealthStatus.FIT) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Hồ sơ khám chưa kết luận ngựa khỏe mạnh — chưa thể mở khóa tập.',
+      );
+    }
+    if (lockedSince && record.createdAt < lockedSince.createdAt) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Cần một lần khám mới, ghi sau thời điểm ngựa bị khóa tập.',
+      );
+    }
+  }
+
+  /** Lock triggered by a HIGH incident. A horse already locked keeps its own lock untouched. */
+  async lockForIncident(
+    horseId: string,
+    incidentId: string,
+    description: string,
+    actorId: string,
+  ): Promise<boolean> {
+    const horse = await this.prisma.horse.findUnique({
+      where: { id: horseId },
+      select: { locked: true },
+    });
+    if (!horse || horse.locked) return false;
+    await this.applyLock(horseId, {
+      locked: true,
+      reason: `Sự cố: ${description}`,
+      actorId,
+      incidentReportId: incidentId,
+    });
+    return true;
+  }
+
+  /** Unlock once the incident that locked the horse is resolved with a FIT exam. */
+  async unlockForIncident(
+    horseId: string,
+    incidentId: string,
+    healthRecordId: string,
+    actorId: string | null,
+  ): Promise<void> {
+    await this.applyLock(horseId, {
+      locked: false,
+      reason: 'Sự cố đã xử lý xong, hồ sơ khám kết luận khỏe mạnh',
+      actorId,
+      healthRecordId,
+      incidentReportId: incidentId,
+    });
+  }
+
+  async lockHistory(horseId: string) {
+    return this.prisma.horseLockEvent.findMany({
+      where: { horseId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        actor: { select: { id: true, name: true, role: true } },
+        healthRecord: {
+          select: {
+            id: true,
+            examDate: true,
+            diagnosis: true,
+            healthStatus: true,
+          },
+        },
+        incidentReport: {
+          select: { id: true, description: true, severity: true, status: true },
+        },
+      },
+    });
+  }
+
+  private async applyLock(
+    id: string,
+    e: {
+      locked: boolean;
+      reason: string;
+      actorId: string | null;
+      healthRecordId?: string;
+      incidentReportId?: string;
+    },
+  ): Promise<HorseView> {
+    const [horse] = await this.prisma.$transaction([
+      this.prisma.horse.update({
+        where: { id },
+        data: {
+          locked: e.locked,
+          lockReason: e.locked ? e.reason : null,
+          lockIncidentId: e.locked ? (e.incidentReportId ?? null) : null,
+        },
+        include: { owner: { select: OWNER_SELECT } },
+      }),
+      this.prisma.horseLockEvent.create({
+        data: {
+          horseId: id,
+          locked: e.locked,
+          reason: e.reason,
+          actorId: e.actorId,
+          healthRecordId: e.healthRecordId ?? null,
+          incidentReportId: e.incidentReportId ?? null,
+        },
+      }),
+    ]);
+
+    // Owner, managers and the trainers working with this horse all need to
+    // know training is (no longer) allowed.
+    const [managerIds, trainerIds] = await Promise.all([
+      this.notifications.managerIds(),
+      this.notifications.trainerIdsForHorse(id),
+    ]);
+    const message = e.locked
+      ? `${horse.name} đã bị khóa tập luyện: ${e.reason}`
+      : `${horse.name} đã được mở khóa tập luyện — ${e.reason}`;
+    await this.notifications.notifyUsers(
+      [horse.ownerId, ...managerIds, ...trainerIds],
+      e.locked
+        ? NotificationType.TRAINING_LOCKED
+        : NotificationType.TRAINING_UNLOCKED,
+      message,
+    );
     return this.toView(horse);
   }
 

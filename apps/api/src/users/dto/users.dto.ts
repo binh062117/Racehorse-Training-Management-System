@@ -1,5 +1,10 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsUUID,
+  ValidateNested,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -19,6 +24,12 @@ export class ListUsersQueryDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
+
+  /** Search by name or email. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -48,4 +59,21 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
+}
+
+export class ApproveUserItemDto {
+  @IsUUID()
+  id!: string;
+
+  @IsEnum(Role)
+  role!: Role;
+}
+
+export class ApproveUsersDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => ApproveUserItemDto)
+  users!: ApproveUserItemDto[];
 }

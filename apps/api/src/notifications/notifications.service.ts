@@ -49,6 +49,32 @@ export class NotificationsService {
     return grooms.map((g) => g.id);
   }
 
+  /**
+   * Trainers working with a horse: those with an ongoing plan or a planned
+   * session for it. When nobody is assigned yet, every active trainer — a
+   * lock must never go unnoticed by the people who schedule training.
+   */
+  async trainerIdsForHorse(horseId: string): Promise<string[]> {
+    const now = new Date();
+    const [plans, sessions] = await Promise.all([
+      this.prisma.trainingPlan.findMany({
+        where: { horseId, OR: [{ endDate: null }, { endDate: { gte: now } }] },
+        select: { trainerId: true },
+      }),
+      this.prisma.trainingSession.findMany({
+        where: { horseId, status: 'PLANNED' },
+        select: { trainerId: true },
+      }),
+    ]);
+    const ids = [...new Set([...plans, ...sessions].map((x) => x.trainerId))];
+    if (ids.length > 0) return ids;
+    const all = await this.prisma.user.findMany({
+      where: { role: 'TRAINER', status: 'ACTIVE', deletedAt: null },
+      select: { id: true },
+    });
+    return all.map((u) => u.id);
+  }
+
   async list(
     q: ListNotificationsQueryDto,
     currentUser: AuthUser,

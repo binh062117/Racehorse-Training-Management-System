@@ -15,7 +15,11 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
-import { ListUsersQueryDto, UpdateUserDto } from './dto/users.dto';
+import {
+  ListUsersQueryDto,
+  UpdateUserDto,
+  ApproveUsersDto,
+} from './dto/users.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -27,6 +31,11 @@ export class UsersController {
   @Get()
   list(@Query() q: ListUsersQueryDto) {
     return this.users.list(q);
+  }
+
+  @Post('approve')
+  approveMany(@Body() dto: ApproveUsersDto) {
+    return this.users.approveMany(dto);
   }
 
   @Get(':id')

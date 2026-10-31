@@ -87,6 +87,9 @@ describe('Pedigree (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.horseLockEvent.deleteMany({
+      where: { horseId: { in: horseIds } },
+    });
     await prisma.horse.deleteMany({ where: { id: { in: horseIds } } });
     await app.close();
   });

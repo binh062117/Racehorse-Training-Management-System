@@ -7,21 +7,24 @@ import { api, getFileUrl } from '../lib/api';
 import { formatDate, formatTime } from '../lib/format';
 import { useCachedResource } from '../lib/useCachedResource';
 import type {
+  CountedPage,
   Horse,
   Incident,
   IncidentSeverity,
   IncidentStatus,
   Paginated,
 } from '../lib/types';
+import { HealthRecordPicker } from '../components/health/HealthRecordPicker';
 import { usePageChrome } from '../ds/AppShell';
-import { Alert, Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, ImageLightbox, NativeSelect, PageHeader, Textarea, type Tone } from '../ds/ui';
+import { Alert, Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, ImageLightbox, Modal, ModalBody, ModalFoot, ModalHead, NativeSelect, PageHeader, Pager, Seg, Textarea, type Tone } from '../ds/ui';
 
-type IncidentFilter = 'ALL' | IncidentStatus;
-type IncidentData = { horses: Horse[]; incidents: Incident[]; errors: unknown[] };
+type StatusFilter = 'ALL' | IncidentStatus;
+type SeverityFilter = 'ALL' | IncidentSeverity;
+type SortOrder = 'severity' | 'newest';
 
-const EMPTY_INCIDENT_DATA: IncidentData = { horses: [], incidents: [], errors: [] };
-const FILTERS: IncidentFilter[] = ['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'];
-const INCIDENTS_PAGE_SIZE = 100;
+const STATUS_FILTERS: StatusFilter[] = ['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'];
+const SEVERITY_FILTERS: SeverityFilter[] = ['ALL', 'HIGH', 'MEDIUM', 'LOW'];
+const PAGE_SIZE = 15;
 
 const NEXT_STATUS: Record<IncidentStatus, IncidentStatus | null> = {
   OPEN: 'IN_PROGRESS',
@@ -32,140 +35,121 @@ const NEXT_STATUS: Record<IncidentStatus, IncidentStatus | null> = {
 const SEVERITY_TONE: Record<IncidentSeverity, Tone> = { LOW: 'neu', MEDIUM: 'warn', HIGH: 'bad' };
 const STATUS_TONE: Record<IncidentStatus, Tone> = { OPEN: 'bad', IN_PROGRESS: 'warn', RESOLVED: 'ok' };
 
-async function loadIncidentsForHorse(horseId: string): Promise<Incident[]> {
-  const incidents: Incident[] = [];
-  let page = 1;
-  while (true) {
-    const response = await api.get<Paginated<Incident>>(
-      `/horses/${horseId}/incidents`,
-      { params: { page, limit: INCIDENTS_PAGE_SIZE } },
-    );
-    incidents.push(...response.data.data);
-    if (page * response.data.meta.limit >= response.data.meta.total) break;
-    page += 1;
-  }
-  return incidents;
-}
-
-async function loadIncidentData(): Promise<IncidentData> {
-  const horseResponse = await api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } });
-  const horses = horseResponse.data.data;
-  const results = await Promise.all(
-    horses.map(async (horse) => {
-      try {
-        return { incidents: await loadIncidentsForHorse(horse.id), error: null };
-      } catch (error) {
-        return { incidents: [], error };
-      }
-    }),
-  );
-  const incidents = results.flatMap((result) => result.incidents);
-  incidents.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
-  return {
-    horses,
-    incidents,
-    errors: results.flatMap((result) => result.error ? [result.error] : []),
-  };
-}
-
 export function IncidentsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isGroom = user?.role === 'GROOM';
   const isVet = user?.role === 'VET';
-  const [filter, setFilter] = useState<IncidentFilter>('ALL');
+  const [status, setStatus] = useState<StatusFilter>('ALL');
+  const [severity, setSeverity] = useState<SeverityFilter>('ALL');
+  const [sort, setSort] = useState<SortOrder>('severity');
   const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   usePageChrome({ crumbs: [t('incidents.title')] });
 
-  const { data, loading, error, reload } = useCachedResource(
-    `health-incidents-${user?.id ?? 'anonymous'}`,
-    loadIncidentData,
-  );
-  const incidentData = data ?? EMPTY_INCIDENT_DATA;
-  const filteredIncidents = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    return incidentData.incidents.filter((incident) => {
-      if (filter !== 'ALL' && incident.status !== filter) return false;
-      return !query ||
-        `${incident.horse.name} ${incident.description} ${incident.reportedBy.name}`
-          .toLocaleLowerCase()
-          .includes(query);
-    });
-  }, [filter, incidentData.incidents, search]);
+  // Search waits for a pause in typing, then starts again from page 1.
+  useEffect(() => {
+    const id = window.setTimeout(() => { setQuery(search.trim()); setPage(1); }, 300);
+    return () => window.clearTimeout(id);
+  }, [search]);
 
-  const { counts, highSeverityCount } = useMemo(() => {
-    const summary = {
-      counts: { ALL: incidentData.incidents.length, OPEN: 0, IN_PROGRESS: 0, RESOLVED: 0 } satisfies Record<IncidentFilter, number>,
-      highSeverityCount: 0,
-    };
-    for (const incident of incidentData.incidents) {
-      summary.counts[incident.status] += 1;
-      if (incident.severity === 'HIGH' && incident.status !== 'RESOLVED') summary.highSeverityCount += 1;
-    }
-    return summary;
-  }, [incidentData.incidents]);
+  const params = {
+    page,
+    limit: PAGE_SIZE,
+    sort,
+    ...(status !== 'ALL' ? { status } : {}),
+    ...(severity !== 'ALL' ? { severity } : {}),
+    ...(query ? { q: query } : {}),
+  };
+  const { data, loading, error, reload } = useCachedResource(
+    `incidents:${user?.id ?? 'anonymous'}:${JSON.stringify(params)}`,
+    () => api.get<CountedPage<Incident>>('/incidents', { params }).then((r) => r.data),
+  );
+  // Keep the previous page on screen while the next one loads, so paging doesn't flash.
+  const [kept, setKept] = useState<CountedPage<Incident> | null>(data);
+  if (data && data !== kept) setKept(data);
+  const shown = data ?? kept;
+
+  const { data: horses } = useCachedResource(`incident-horses:${user?.id ?? 'anonymous'}`, () =>
+    isGroom
+      ? api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } }).then((r) => r.data.data)
+      : Promise.resolve([] as Horse[]),
+  );
+
+  const counts = shown?.counts ?? {};
+  const statusCount = (s: StatusFilter) => (s === 'ALL' ? (counts.OPEN ?? 0) + (counts.IN_PROGRESS ?? 0) + (counts.RESOLVED ?? 0) : counts[s] ?? 0);
+  const severityCount = (s: SeverityFilter) => (s === 'ALL' ? (counts.HIGH ?? 0) + (counts.MEDIUM ?? 0) + (counts.LOW ?? 0) : counts[s] ?? 0);
+  const pick = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
 
   return (
     <>
       <PageHeader
         title={t('incidents.title')}
-        sub={loading && !data
+        sub={!shown
           ? t('incidents.loading')
-          : highSeverityCount > 0
-            ? t('incidents.subUnresolved', {
-                count: highSeverityCount,
-                open: counts.OPEN,
-                inProgress: counts.IN_PROGRESS,
-              })
-            : t('incidents.subAllResolved', {
-                resolved: counts.RESOLVED,
-                total: counts.ALL,
-              })}
+          : t('incidents.subServer', { high: counts.HIGH ?? 0, open: counts.OPEN ?? 0, inProgress: counts.IN_PROGRESS ?? 0 })}
         search={{ placeholder: t('incidents.search'), value: search, onChange: setSearch }}
       />
 
-      {isGroom && <CreateIncidentForm horses={incidentData.horses} onCreated={reload} />}
+      {isGroom && <CreateIncidentForm horses={horses ?? []} onCreated={reload} />}
 
-      <div className="flex flex-wrap gap-2 items-center" role="group" aria-label={t('incidents.filter')}>
-        {FILTERS.map((status) => (
-          <Chip key={status} on={filter === status} onClick={() => setFilter(status)}>{t(`incidents.filters.${status}`)} <ChipCount n={counts[status]} /></Chip>
-        ))}
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap gap-2 items-center" role="group" aria-label={t('incidents.filter')}>
+          <span className="text-[13px] text-muted w-[72px]">{t('incidents.statusLabel')}</span>
+          {STATUS_FILTERS.map((s) => (
+            <Chip key={s} on={status === s} onClick={() => pick(setStatus)(s)}>{t(`incidents.filters.${s}`)} <ChipCount n={statusCount(s)} /></Chip>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2 items-center" role="group" aria-label={t('incidents.severity')}>
+          <span className="text-[13px] text-muted w-[72px]">{t('incidents.severity')}</span>
+          {SEVERITY_FILTERS.map((s) => (
+            <Chip key={s} on={severity === s} onClick={() => pick(setSeverity)(s)}>
+              {s === 'ALL' ? t('incidents.filters.ALL') : t(`incidents.severities.${s}`)} <ChipCount n={severityCount(s)} />
+            </Chip>
+          ))}
+          <span className="flex-1" />
+          <Seg value={sort} onChange={(k) => pick(setSort)(k as SortOrder)}
+            options={[['severity', t('incidents.sortSeverity')], ['newest', t('incidents.sortNewest')]]} />
+        </div>
       </div>
 
       <ErrorText err={error} />
-      {incidentData.errors.map((loadError, index) => <ErrorText key={index} err={loadError} />)}
 
-      {loading && !data ? (
+      {!shown && loading ? (
         <p className="text-muted">{t('incidents.loading')}</p>
-      ) : filteredIncidents.length === 0 ? (
-        <EmptyState>{incidentData.incidents.length === 0 ? t('incidents.emptyDescription') : t('incidents.noMatch')}</EmptyState>
+      ) : !shown || shown.data.length === 0 ? (
+        <EmptyState>{statusCount('ALL') === 0 && !query ? t('incidents.emptyDescription') : t('incidents.noMatch')}</EmptyState>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse">
-              <thead>
-                <tr className="text-left text-[12px] text-muted">
-                  <th className="h-10 px-5 font-medium border-b border-line">{t('incidents.reportedDate')}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.horse')}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.descriptionLabel')}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.severity')}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.statusLabel')}</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">Ảnh</th>
-                  <th className="h-10 px-4 font-medium border-b border-line">Chấn thương</th>
-                  <th className="h-10 px-5 font-medium border-b border-line" aria-label={t('incidents.actions')} />
-                </tr>
-              </thead>
-              <tbody>
-                {filteredIncidents.map((incident) => (
-                  <IncidentRow key={incident.id} incident={incident} canAdvance={isVet} isVet={isVet} isGroom={isGroom} onChanged={reload} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <>
+          <Card className={loading ? 'opacity-70 transition-opacity' : 'transition-opacity'}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] border-collapse">
+                <thead>
+                  <tr className="text-left text-[12px] text-muted">
+                    <th className="h-10 px-5 font-medium border-b border-line">{t('incidents.reportedDate')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.horse')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.descriptionLabel')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.severity')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.statusLabel')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.photoCol')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.detailCol')}</th>
+                    <th className="h-10 px-5 font-medium border-b border-line" aria-label={t('incidents.actions')} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.data.map((incident) => (
+                    <IncidentRow key={incident.id} incident={incident} canAdvance={isVet} isVet={isVet} isGroom={isGroom} onChanged={reload} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+          <Pager page={page} total={shown.meta.total} limit={PAGE_SIZE} onPage={setPage}
+            label={t('incidents.pageLabel', { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, shown.meta.total), total: shown.meta.total })} />
+        </>
       )}
-      {loading && data && <p className="text-[13px] text-muted">{t('incidents.refreshing')}</p>}
     </>
   );
 }
@@ -364,11 +348,13 @@ function IncidentRow({ incident, canAdvance, isVet, isGroom, onChanged }: { inci
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [injuriesOpen, setInjuriesOpen] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const next = NEXT_STATUS[incident.status];
   const photoUrl = getFileUrl(incident.photoUrl);
 
   const advance = async () => {
     if (!next) return;
+    if (next === 'RESOLVED') { setResolving(true); return; }
     setError(null);
     setBusy(true);
     try {
@@ -399,24 +385,81 @@ function IncidentRow({ incident, canAdvance, isVet, isGroom, onChanged }: { inci
           <IncidentPhotoCell incident={incident} photoUrl={photoUrl} canUpload={isGroom && incident.status !== 'RESOLVED'} onChanged={onChanged} />
         </td>
         <td className="px-4 py-3">
-          <Btn sm v="g" onClick={() => setInjuriesOpen((v) => !v)}><Icon name={injuriesOpen ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />Chi tiết</Btn>
+          <Btn sm v="g" onClick={() => setInjuriesOpen((v) => !v)}><Icon name={injuriesOpen ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />{t('incidents.details')}</Btn>
+          {incident.horse.locked && incident.horse.lockIncidentId === incident.id && (
+            <div className="mt-1"><Badge tone="lock"><Icon name="lock" className="w-3 h-3" />{t('incidents.lockingHorse')}</Badge></div>
+          )}
         </td>
         <td className="pl-4 pr-5 py-3 text-right">
           {canAdvance && next ? (
             <Btn sm disabled={busy} onClick={() => void advance()}>
               {busy ? t('incidents.updating') : t('incidents.moveTo', { status: t(`incidents.status.${next}`) })}
             </Btn>
-          ) : <span className="num text-[12.5px] text-muted whitespace-nowrap">Cập nhật {formatDate(incident.updatedAt)}</span>}
+          ) : <span className="num text-[12.5px] text-muted whitespace-nowrap">{t('incidents.updatedOn', { date: formatDate(incident.updatedAt) })}</span>}
         </td>
       </tr>
       {injuriesOpen && (
         <tr className="border-b border-line-soft bg-subtle">
           <td colSpan={8} className="px-4 py-3">
+            {incident.healthRecord && (
+              <p className="text-[13px] mb-3">
+                <span className="text-muted">{t('incidents.linkedExam')}: </span>
+                <span className="num">{formatDate(incident.healthRecord.examDate)}</span> — {incident.healthRecord.diagnosis}
+              </p>
+            )}
             <InjuryLocationsSection basePath={`/incidents/${incident.id}`} isVet={isVet} />
           </td>
         </tr>
       )}
       {error && <tr><td colSpan={8} className="px-4 pb-3"><ErrorText err={error} /></td></tr>}
+      {resolving && <tr className="hidden"><td><ResolveIncidentModal incident={incident} onClose={() => setResolving(false)} onDone={onChanged} /></td></tr>}
     </>
+  );
+}
+
+/**
+ * Closing an incident: the vet picks the exam that goes with it. If this
+ * incident is what locked the horse, an exam concluding "healthy" also lifts
+ * the lock; any other lock on the horse is left alone.
+ */
+function ResolveIncidentModal({ incident, onClose, onDone }: { incident: Incident; onClose: () => void; onDone: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const [recordId, setRecordId] = useState(incident.healthRecord?.id ?? '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<unknown>(null);
+  const lockedByThis = !!incident.horse.locked && incident.horse.lockIncidentId === incident.id;
+  const lockedOther = !!incident.horse.locked && !lockedByThis;
+
+  const submit = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.patch(`/incidents/${incident.id}`, { status: 'RESOLVED', healthRecordId: recordId });
+      await onDone();
+      onClose();
+    } catch (e) {
+      setErr(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={() => !busy && onClose()} labelledBy={`resolve-${incident.id}`} width={600}>
+      <ModalHead id={`resolve-${incident.id}`} title={t('incidents.resolveTitle')} sub={`${incident.horse.name} — ${incident.description}`} onClose={() => !busy && onClose()} />
+      <ModalBody>
+        {lockedByThis && <Alert tone="warn" icon="lock">{t('incidents.resolveUnlocksHint')}</Alert>}
+        {lockedOther && <Alert tone="info" icon="info">{t('incidents.resolveOtherLockHint')}</Alert>}
+        <div>
+          <div className="text-[13px] font-medium mb-1.5">{t('incidents.resolveExam')} <span className="text-bad">*</span></div>
+          <HealthRecordPicker horseId={incident.horseId} horseName={incident.horse.name} value={recordId} onChange={setRecordId} canCreate />
+        </div>
+        <ErrorText err={err} />
+      </ModalBody>
+      <ModalFoot>
+        <Btn onClick={onClose} disabled={busy}>{t('common.cancel')}</Btn>
+        <Btn v="p" onClick={() => void submit()} disabled={busy || !recordId}>{busy ? t('incidents.updating') : t('incidents.resolveConfirm')}</Btn>
+      </ModalFoot>
+    </Modal>
   );
 }
