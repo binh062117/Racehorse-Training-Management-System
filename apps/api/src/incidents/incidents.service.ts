@@ -24,7 +24,18 @@ import {
 
 const INCIDENT_INCLUDE = {
   reportedBy: { select: { id: true, name: true, email: true } },
-  horse: { select: { id: true, name: true, ownerId: true } },
+  horse: {
+    select: {
+      id: true,
+      name: true,
+      ownerId: true,
+      locked: true,
+      lockIncidentId: true,
+    },
+  },
+  healthRecord: {
+    select: { id: true, examDate: true, diagnosis: true, healthStatus: true },
+  },
 } satisfies Prisma.IncidentReportInclude;
 
 type IncidentWithRelations = Prisma.IncidentReportGetPayload<{
@@ -101,11 +112,15 @@ export class IncidentsService {
       include: INCIDENT_INCLUDE,
     });
 
+    // A HIGH incident locks the horse — unless it is already locked for
+    // another reason, whose lock (and the right to lift it) stays as it was.
     if (dto.severity === IncidentSeverity.HIGH) {
-      await this.horses.lock(horseId, {
-        locked: true,
-        reason: `Incident: ${incident.description}`,
-      });
+      await this.horses.lockForIncident(
+        horseId,
+        incident.id,
+        incident.description,
+        reporter.id,
+      );
     }
 
     const managerIds = await this.notifications.managerIds();
@@ -148,6 +163,74 @@ export class IncidentsService {
     };
   }
 
+  /**
+   * Club-wide list for the Incidents screen: filter by status / severity /
+   * free text, sort newest first or most severe first, paginated. An owner
+   * only ever sees incidents on their own horses.
+   */
+  async listAll(
+    q: ListIncidentsQueryDto,
+    user: AuthUser,
+  ): Promise<Paginated<IncidentView> & { counts: Record<string, number> }> {
+    const scope: Prisma.IncidentReportWhereInput = {
+      horse: {
+        deletedAt: null,
+        ...(user.role === Role.OWNER ? { ownerId: user.id } : {}),
+      },
+    };
+    const text = q.q?.trim();
+    if (text) {
+      scope.OR = [
+        { description: { contains: text, mode: 'insensitive' } },
+        { horse: { name: { contains: text, mode: 'insensitive' } } },
+        { reportedBy: { name: { contains: text, mode: 'insensitive' } } },
+      ];
+    }
+    const where: Prisma.IncidentReportWhereInput = {
+      ...scope,
+      ...(q.status ? { status: q.status } : {}),
+      ...(q.severity ? { severity: q.severity } : {}),
+    };
+    // Enum columns sort in declaration order (LOW < MEDIUM < HIGH), so desc puts HIGH first.
+    const orderBy: Prisma.IncidentReportOrderByWithRelationInput[] =
+      q.sort === 'severity'
+        ? [{ severity: 'desc' }, { createdAt: 'desc' }]
+        : [{ createdAt: 'desc' }];
+    const [data, total, byStatus, bySeverity] = await this.prisma.$transaction([
+      this.prisma.incidentReport.findMany({
+        where,
+        include: INCIDENT_INCLUDE,
+        orderBy,
+        skip: (q.page - 1) * q.limit,
+        take: q.limit,
+      }),
+      this.prisma.incidentReport.count({ where }),
+      this.prisma.incidentReport.groupBy({
+        by: ['status'],
+        where: { ...scope, ...(q.severity ? { severity: q.severity } : {}) },
+        orderBy: { status: 'asc' },
+        _count: { _all: true },
+      }),
+      this.prisma.incidentReport.groupBy({
+        by: ['severity'],
+        where: { ...scope, ...(q.status ? { status: q.status } : {}) },
+        orderBy: { severity: 'asc' },
+        _count: { _all: true },
+      }),
+    ]);
+    // Counts for the filter chips: each axis is counted under the other axis' filter.
+    const counts: Record<string, number> = {};
+    for (const r of byStatus)
+      counts[r.status] = (r._count as { _all: number })._all;
+    for (const r of bySeverity)
+      counts[r.severity] = (r._count as { _all: number })._all;
+    return {
+      data: data.map((i) => this.toView(i)),
+      meta: { page: q.page, limit: q.limit, total },
+      counts,
+    };
+  }
+
   async get(id: string, user: AuthUser): Promise<IncidentView> {
     const incident = await this.prisma.incidentReport.findUnique({
       where: { id },
@@ -158,10 +241,14 @@ export class IncidentsService {
     return this.toView(incident);
   }
 
-  async update(id: string, dto: UpdateIncidentDto): Promise<IncidentView> {
+  async update(
+    id: string,
+    dto: UpdateIncidentDto,
+    user?: AuthUser,
+  ): Promise<IncidentView & { horseUnlocked: boolean }> {
     const existing = await this.prisma.incidentReport.findUnique({
       where: { id },
-      select: { status: true, horseId: true },
+      select: { status: true, horseId: true, healthRecordId: true },
     });
     if (!existing) throw new AppException('NOT_FOUND', 'Incident not found');
 
@@ -183,17 +270,28 @@ export class IncidentsService {
       }
     }
 
-    if (dto.healthRecordId !== undefined) {
-      const record = await this.prisma.healthRecord.findUnique({
-        where: { id: dto.healthRecordId },
-        select: { horseId: true },
+    // Closing an incident needs the vet's exam that goes with it.
+    const recordId = dto.healthRecordId ?? existing.healthRecordId;
+    if (dto.status === IncidentStatus.RESOLVED && !recordId) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Cần chọn hồ sơ khám của bác sĩ đi kèm để đóng sự cố.',
+      );
+    }
+
+    let record: { healthStatus: string | null } | null = null;
+    if (recordId) {
+      const found = await this.prisma.healthRecord.findUnique({
+        where: { id: recordId },
+        select: { horseId: true, healthStatus: true },
       });
-      if (!record || record.horseId !== existing.horseId) {
+      if (!found || found.horseId !== existing.horseId) {
         throw new AppException(
           'VALIDATION_ERROR',
           'healthRecordId must reference a health record for this horse',
         );
       }
+      record = found;
     }
 
     const data: Prisma.IncidentReportUpdateInput = {};
@@ -201,23 +299,36 @@ export class IncidentsService {
     if (dto.healthRecordId !== undefined)
       data.healthRecord = { connect: { id: dto.healthRecordId } };
 
-    const incident = await this.prisma.incidentReport.update({
-      where: { id },
-      data,
-      include: INCIDENT_INCLUDE,
-    });
+    await this.prisma.incidentReport.update({ where: { id }, data });
 
-    if (dto.status === IncidentStatus.RESOLVED) {
+    // Resolving lifts the lock only when this very incident set it, and only
+    // on an exam that concludes the horse is fit; any other lock stays.
+    let horseUnlocked = false;
+    if (dto.status === IncidentStatus.RESOLVED && recordId) {
       const horse = await this.prisma.horse.findUnique({
         where: { id: existing.horseId },
-        select: { locked: true },
+        select: { locked: true, lockIncidentId: true },
       });
-      if (horse?.locked) {
-        await this.horses.lock(existing.horseId, { locked: false });
+      if (
+        horse?.locked &&
+        horse.lockIncidentId === id &&
+        record?.healthStatus === 'FIT'
+      ) {
+        await this.horses.unlockForIncident(
+          existing.horseId,
+          id,
+          recordId,
+          user?.id ?? null,
+        );
+        horseUnlocked = true;
       }
     }
 
-    return this.toView(incident);
+    const incident = await this.prisma.incidentReport.findUniqueOrThrow({
+      where: { id },
+      include: INCIDENT_INCLUDE,
+    });
+    return { ...this.toView(incident), horseUnlocked };
   }
 
   /**

@@ -86,6 +86,20 @@ enum NotificationType {
   INCIDENT_REPORTED
   FITNESS_WARNING
   AI_RISK_ALERT
+  SUPPLY_REQUESTED
+  SUPPLY_REVIEWED
+}
+
+enum SupplyCategory {
+  FEED
+  MEDICINE
+  EQUIPMENT
+}
+
+enum SupplyRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model User {
@@ -107,6 +121,9 @@ model User {
   vetRecords        HealthRecord[]
   reportedIncidents IncidentReport[]  @relation("IncidentReporter")
   feedingRecords    FeedingRecord[]   @relation("FeedingRecorder")
+  lockEvents        HorseLockEvent[]  @relation("LockActor")
+  supplyRequests    SupplyRequest[]   @relation("SupplyRequester")
+  supplyReviews     SupplyRequest[]   @relation("SupplyReviewer")
   notifications     Notification[]
   refreshTokens     RefreshToken[]
   authTokens        AuthToken[]
@@ -154,27 +171,29 @@ model OtpCode {
 }
 
 model Horse {
-  id           String      @id @default(uuid())
-  name         String
-  gender       HorseGender?
-  breed        String?
-  birthDate    DateTime?
-  ownerId      String
-  owner        User        @relation("HorseOwner", fields: [ownerId], references: [id])
-  status       HorseStatus @default(ACTIVE)
-  photoPath    String?
-  sireId       String?
-  sire         Horse?      @relation("HorsePedigree_Sire", fields: [sireId], references: [id])
-  damId        String?
-  dam          Horse?      @relation("HorsePedigree_Dam", fields: [damId], references: [id])
-  fitnessScore Int? // 0..100, nullable — chưa đánh giá
-  saddleNumber Int? // Số áo đua (saddle cloth) — hiển thị trên UI, không bắt buộc duy nhất
-  locked       Boolean      @default(false) // Training Lock — VET ban hành
-  lockReason   String? // chỉ có ý nghĩa khi locked=true
-  healthStatus HealthStatus @default(FIT) // Phase 10 — độc lập với `status` (career)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  deletedAt    DateTime?
+  id             String       @id @default(uuid())
+  name           String
+  gender         HorseGender?
+  breed          String?
+  birthDate      DateTime?
+  ownerId        String
+  owner          User         @relation("HorseOwner", fields: [ownerId], references: [id])
+  status         HorseStatus  @default(ACTIVE)
+  photoPath      String?
+  sireId         String?
+  sire           Horse?       @relation("HorsePedigree_Sire", fields: [sireId], references: [id])
+  damId          String?
+  dam            Horse?       @relation("HorsePedigree_Dam", fields: [damId], references: [id])
+  fitnessScore   Int? // 0..100, nullable — chưa đánh giá
+  saddleNumber   Int? // Số áo đua (saddle cloth) — hiển thị trên UI, không bắt buộc duy nhất
+  locked         Boolean      @default(false) // Training Lock — VET ban hành
+  lockReason     String? // chỉ có ý nghĩa khi locked=true
+  // Sự cố đã khóa ngựa (nếu khóa do sự cố mức Nặng) — chỉ đóng đúng sự cố này mới tự mở khóa.
+  lockIncidentId String?
+  healthStatus   HealthStatus @default(FIT) // Phase 10 — độc lập với `status` (career)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
 
   sessions       TrainingSession[]
   trainingPlans  TrainingPlan[]
@@ -183,6 +202,7 @@ model Horse {
   incidents      IncidentReport[]
   vaccinations   Vaccination[]
   feedingRecords FeedingRecord[]
+  lockEvents     HorseLockEvent[]
   siredFoals     Horse[]           @relation("HorsePedigree_Sire")
   damFoals       Horse[]           @relation("HorsePedigree_Dam")
 
@@ -233,18 +253,21 @@ model TrainingPlan {
 }
 
 model HealthRecord {
-  id             String   @id @default(uuid())
+  id             String        @id @default(uuid())
   horseId        String
-  horse          Horse    @relation(fields: [horseId], references: [id])
+  horse          Horse         @relation(fields: [horseId], references: [id])
   vetId          String
-  vet            User     @relation(fields: [vetId], references: [id])
+  vet            User          @relation(fields: [vetId], references: [id])
   examDate       DateTime
   diagnosis      String
   treatment      String?
+  // Kết luận tình trạng sức khỏe của lần khám — mở khóa tập cần một lần khám kết luận FIT.
+  healthStatus   HealthStatus?
   attachmentPath String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime      @default(now())
 
   incidents       IncidentReport[]
+  lockEvents      HorseLockEvent[]
   injuryLocations InjuryLocation[]
   treatmentPlans  TreatmentPlan[]
   medications     Medication[]
@@ -299,6 +322,7 @@ model IncidentReport {
   updatedAt      DateTime         @updatedAt
 
   injuryLocations InjuryLocation[]
+  lockEvents      HorseLockEvent[]
 
   @@index([horseId])
   @@index([status])
@@ -366,9 +390,9 @@ model Medication {
 }
 
 model Vaccination {
-  id          String    @id @default(uuid())
+  id          String             @id @default(uuid())
   horseId     String
-  horse       Horse     @relation(fields: [horseId], references: [id])
+  horse       Horse              @relation(fields: [horseId], references: [id])
   careType    PreventiveCareType @default(VACCINATION)
   vaccineName String
   date        DateTime
@@ -382,16 +406,73 @@ model Vaccination {
 // Khẩu phần ăn — GROOM ghi lại hàng ngày, dùng cho AI phân tích dinh dưỡng
 // cùng với lịch sử tập luyện (xem ai.service.ts).
 model FeedingRecord {
-  id           String   @id @default(uuid())
+  id           String      @id @default(uuid())
   horseId      String
-  horse        Horse    @relation(fields: [horseId], references: [id])
+  horse        Horse       @relation(fields: [horseId], references: [id])
   recordedById String
-  recordedBy   User     @relation("FeedingRecorder", fields: [recordedById], references: [id])
+  recordedBy   User        @relation("FeedingRecorder", fields: [recordedById], references: [id])
   date         DateTime
   feedType     String // vd "Cỏ khô Alfalfa", "Cám hỗn hợp", "Yến mạch"
   quantityKg   Float
   notes        String?
-  createdAt    DateTime @default(now())
+  // Thức ăn lấy từ kho vật tư — khi có, khối lượng được trừ khỏi tồn kho.
+  supplyItemId String?
+  supplyItem   SupplyItem? @relation(fields: [supplyItemId], references: [id])
+  createdAt    DateTime    @default(now())
 
   @@index([horseId, date])
+}
+
+// Lịch sử khóa / mở khóa tập — mỗi lần đổi trạng thái là một dòng, không bao giờ xóa.
+model HorseLockEvent {
+  id               String          @id @default(uuid())
+  horseId          String
+  horse            Horse           @relation(fields: [horseId], references: [id])
+  locked           Boolean
+  reason           String
+  actorId          String?
+  actor            User?           @relation("LockActor", fields: [actorId], references: [id])
+  healthRecordId   String? // lần khám làm căn cứ mở khóa
+  healthRecord     HealthRecord?   @relation(fields: [healthRecordId], references: [id])
+  incidentReportId String? // sự cố gây khóa / được đóng khi mở khóa
+  incidentReport   IncidentReport? @relation(fields: [incidentReportId], references: [id])
+  createdAt        DateTime        @default(now())
+
+  @@index([horseId, createdAt])
+}
+
+model SupplyItem {
+  id          String         @id @default(uuid())
+  name        String
+  category    SupplyCategory
+  unit        String // kg, hộp, lọ, cái…
+  quantity    Float          @default(0)
+  minQuantity Float          @default(0) // dưới mức này là "sắp hết"
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  requests       SupplyRequest[]
+  feedingRecords FeedingRecord[]
+
+  @@index([category])
+}
+
+model SupplyRequest {
+  id            String              @id @default(uuid())
+  itemId        String
+  item          SupplyItem          @relation(fields: [itemId], references: [id])
+  quantity      Float
+  note          String?
+  status        SupplyRequestStatus @default(PENDING)
+  requestedById String
+  requestedBy   User                @relation("SupplyRequester", fields: [requestedById], references: [id])
+  reviewedById  String?
+  reviewedBy    User?               @relation("SupplyReviewer", fields: [reviewedById], references: [id])
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime            @default(now())
+
+  @@index([status, createdAt])
 }

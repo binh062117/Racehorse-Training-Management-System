@@ -32,7 +32,8 @@
     "logout": "Đăng xuất",
     "logoutConfirm": "Bạn chắc chắn muốn đăng xuất?",
     "healthSection": "Sức khỏe",
-    "adminSection": "Quản trị"
+    "adminSection": "Quản trị",
+    "supplies": "Vật tư"
   },
   "dashboard": {
     "title": "Tổng quan Hệ thống",
@@ -77,7 +78,8 @@
     "boardTitle": "Bảng chuồng hôm nay",
     "viewAllHorses": "Xem tất cả {{count}} ngựa",
     "moreHorses": "Còn {{count}} ngựa khác",
-    "waitingApproval": "Tài khoản đang chờ quản lý câu lạc bộ duyệt vai trò."
+    "waitingApproval": "Tài khoản đang chờ quản lý câu lạc bộ duyệt vai trò.",
+    "boardTitleOwner": "Ngựa của tôi"
   },
   "notificationsPage": {
     "title": "Thông báo",
@@ -415,7 +417,22 @@
     "moveTo": "Chuyển sang {{status}}",
     "subUnresolved": "{{count}} sự cố mức nặng chưa xử lý xong · {{open}} đang chờ, {{inProgress}} đang xử lý.",
     "subAllResolved": "Không có sự cố mức nặng nào đang mở · {{resolved}} trong {{total}} sự cố đã xử lý.",
-    "highSeverityHint": "Mức nặng sẽ tự khóa tập ngựa cho đến khi sự cố được xử lý xong."
+    "highSeverityHint": "Mức nặng sẽ tự khóa tập ngựa cho đến khi sự cố được xử lý xong.",
+    "subServer": "{{high}} sự cố mức Cao · {{open}} chưa xử lý · {{inProgress}} đang xử lý.",
+    "sortSeverity": "Mức Cao trước",
+    "sortNewest": "Mới nhất",
+    "photoCol": "Ảnh",
+    "detailCol": "Chấn thương",
+    "details": "Chi tiết",
+    "lockingHorse": "Đang khóa ngựa",
+    "updatedOn": "Cập nhật {{date}}",
+    "linkedExam": "Hồ sơ khám đi kèm",
+    "pageLabel": "{{from}}–{{to}} trong {{total}} sự cố",
+    "resolveTitle": "Đóng sự cố",
+    "resolveExam": "Hồ sơ khám đi kèm",
+    "resolveConfirm": "Đóng sự cố",
+    "resolveUnlocksHint": "Sự cố này đang khóa tập ngựa. Ngựa chỉ được mở khóa khi hồ sơ khám kết luận Khỏe mạnh; nếu chưa khỏe, sự cố vẫn đóng nhưng ngựa giữ nguyên khóa.",
+    "resolveOtherLockHint": "Ngựa đang bị khóa tập vì lý do khác — đóng sự cố này sẽ không mở khóa."
   },
   "races": {
     "eyebrow": "LỊCH THI ĐẤU",
@@ -501,7 +518,20 @@
     "you": "(bạn)",
     "unassigned": "Chưa gán",
     "subPending": "{{count}} tài khoản đang chờ duyệt — chọn vai trò rồi bấm duyệt.",
-    "subActive": "Không có tài khoản nào chờ duyệt · {{count}} đang hoạt động."
+    "subActive": "Không có tài khoản nào chờ duyệt · {{count}} đang hoạt động.",
+    "searchPlaceholder": "Tìm theo tên hoặc email",
+    "filterAll": "Tất cả",
+    "noMatch": "Không có tài khoản nào khớp với bộ lọc.",
+    "selectAllPending": "Chọn tất cả tài khoản chờ duyệt trên trang này",
+    "selectOne": "Chọn {{name}}",
+    "selectedCount": "Đã chọn {{count}} tài khoản",
+    "sameRole": "Gán cùng vai trò:",
+    "keepEach": "Giữ vai trò từng dòng",
+    "clearSelection": "Bỏ chọn",
+    "approveSelected": "Duyệt {{count}} tài khoản",
+    "approving": "Đang duyệt…",
+    "bulkDone": "Đã duyệt {{count}} tài khoản và gửi email báo cho từng người.",
+    "pageLabel": "{{from}}–{{to}} trong {{total}} tài khoản"
   },
   "error": {
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",
@@ -641,6 +671,171 @@
     "thNotes": "Ghi chú",
     "thRecordedBy": "Người ghi",
     "saveBtn": "Lưu khẩu phần",
-    "saving": "Đang lưu..."
+    "saving": "Đang lưu...",
+    "fromStore": "Lấy từ kho",
+    "fromStoreHint": "Chọn thức ăn trong kho để tự trừ tồn kho.",
+    "notFromStore": "Không lấy từ kho",
+    "stockLeft": "còn {{n}} {{unit}}",
+    "notEnough": "Kho chỉ còn {{n}} {{unit}} — không đủ cho bữa này.",
+    "goRequest": "Gửi yêu cầu mua thêm"
+  },
+  "lock": {
+    "lockTitle": "Khóa tập {{horse}}",
+    "lockSub": "Ngựa sẽ không được xếp buổi tập mới hay ghi danh giải đua cho đến khi bác sĩ mở khóa.",
+    "unlockTitle": "Mở khóa tập {{horse}}",
+    "unlockSub": "Chọn lần khám, ghi sau khi ngựa bị khóa, kết luận ngựa đã khỏe.",
+    "reason": "Lý do khóa",
+    "reasonHint": "Bắt buộc — chủ ngựa, quản lý và huấn luyện viên sẽ nhận được lý do này.",
+    "reasonPlaceholder": "Ví dụ: Viêm gân chân trước trái, nghỉ tập chờ tái khám",
+    "currentReason": "Đang khóa vì",
+    "evidence": "Hồ sơ khám làm căn cứ",
+    "unlockNote": "Ghi chú khi mở khóa (tuỳ chọn)",
+    "unlockNotePlaceholder": "Ví dụ: Tập nhẹ 1 tuần trước khi chạy tốc độ",
+    "lockConfirm": "Khóa tập",
+    "unlockConfirm": "Mở khóa tập",
+    "saving": "Đang lưu…",
+    "historyTitle": "Lịch sử khóa tập",
+    "eventLocked": "Khóa tập",
+    "eventUnlocked": "Mở khóa",
+    "basedOnExam": "Căn cứ lần khám {{date}}: {{diagnosis}}"
+  },
+  "recordPicker": {
+    "label": "Chọn hồ sơ khám",
+    "loading": "Đang tải hồ sơ khám…",
+    "empty": "{{horse}} chưa có hồ sơ khám nào.",
+    "noConclusion": "Chưa ghi kết luận",
+    "notFit": "Chưa kết luận khỏe mạnh",
+    "beforeLock": "Khám trước khi ngựa bị khóa",
+    "createNew": "Ghi lần khám mới"
+  },
+  "supplies": {
+    "title": "Vật tư",
+    "loading": "Đang tải vật tư…",
+    "subLow": "{{low}} mặt hàng sắp hết · {{pending}} yêu cầu mua đang chờ duyệt.",
+    "subOk": "Kho đủ dùng · {{pending}} yêu cầu mua đang chờ duyệt.",
+    "search": "Tìm vật tư",
+    "addItem": "Thêm vật tư",
+    "addFirst": "Thêm vật tư đầu tiên",
+    "kpiItems": "Mặt hàng",
+    "kpiLow": "Sắp hết",
+    "kpiPending": "Yêu cầu chờ duyệt",
+    "all": "Tất cả",
+    "lowOnly": "Chỉ hàng sắp hết",
+    "category": {
+      "FEED": "Thức ăn",
+      "MEDICINE": "Thuốc",
+      "EQUIPMENT": "Dụng cụ"
+    },
+    "empty": "Kho chưa có vật tư nào.",
+    "noMatch": "Không có vật tư nào khớp với bộ lọc.",
+    "colName": "Tên vật tư",
+    "colCategory": "Loại",
+    "colStock": "Tồn kho",
+    "colLevel": "Mức tồn",
+    "colStatus": "Tình trạng",
+    "min": "tối thiểu {{n}} {{unit}}",
+    "low": "Sắp hết",
+    "enough": "Đủ dùng",
+    "pendingFor": "Đang chờ mua {{n}} {{unit}}",
+    "request": "Yêu cầu mua",
+    "edit": "Sửa / kiểm kho",
+    "requestsTitle": "Yêu cầu mua thêm",
+    "myRequestsTitle": "Yêu cầu của tôi",
+    "reqPending": "Chờ duyệt",
+    "reqAll": "Tất cả",
+    "noPendingRequests": "Không có yêu cầu nào đang chờ duyệt.",
+    "noRequests": "Chưa có yêu cầu mua nào.",
+    "reqStatus": {
+      "PENDING": "Chờ duyệt",
+      "APPROVED": "Đã duyệt",
+      "REJECTED": "Từ chối"
+    },
+    "requestedBy": "{{name}} gửi ngày {{date}}",
+    "reviewedBy": "{{name}} xử lý ngày {{date}}",
+    "stockNow": "Trong kho còn {{n}} {{unit}}",
+    "approve": "Duyệt",
+    "reject": "Từ chối",
+    "rejectReason": "Lý do từ chối (tuỳ chọn)",
+    "rejectPlaceholder": "Ví dụ: Còn đủ dùng đến cuối tháng",
+    "confirmReject": "Xác nhận từ chối",
+    "editTitle": "Sửa {{name}}",
+    "editSub": "Cập nhật số tồn sau khi kiểm kho, hoặc đổi mức tối thiểu.",
+    "unit": "Đơn vị",
+    "unitHint": "kg, hộp, lọ, cái…",
+    "stockStart": "Tồn kho ban đầu",
+    "stockCounted": "Tồn kho thực tế",
+    "minLabel": "Mức tối thiểu",
+    "minHint": "Dưới mức này sẽ báo sắp hết.",
+    "notes": "Ghi chú",
+    "delete": "Xóa",
+    "deleteConfirm": "Xóa {{name}} khỏi danh sách vật tư?",
+    "saving": "Đang lưu…",
+    "requestTitle": "Yêu cầu mua {{name}}",
+    "requestQty": "Số lượng cần mua ({{unit}})",
+    "requestQtyHint": "Gợi ý sẵn đủ để tồn kho về gấp đôi mức tối thiểu.",
+    "requestNote": "Ghi chú cho quản lý",
+    "requestNotePlaceholder": "Ví dụ: Tuần sau có 3 ngựa tăng khẩu phần trước giải",
+    "sendRequest": "Gửi yêu cầu"
+  },
+  "landing": {
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "heroA": "Mỗi chú ngựa đua,",
+    "heroB": "một hồ sơ trọn vẹn",
+    "heroSub": "Racehorse Club gom hồ sơ ngựa, giáo án huấn luyện, sức khỏe và giải đua của cả câu lạc bộ về một chỗ — để huấn luyện viên, bác sĩ thú y, người chăm sóc và chủ ngựa cùng nhìn một bảng.",
+    "ctaRegister": "Tạo tài khoản",
+    "ctaLogin": "Tôi đã có tài khoản",
+    "ctaNote": "Tài khoản mới được quản lý câu lạc bộ duyệt và gán vai trò.",
+    "sampleDate": "Sáng nay, 06:00",
+    "sampleLockReason": "Sự cố: viêm gân chân trước",
+    "figcaption": "Bảng chuồng mỗi sáng: ngựa nào tập được, ngựa nào đang bị khóa và vì sao.",
+    "flowsTitle": "Một câu lạc bộ, năm việc chạy trên cùng một hệ thống",
+    "flowsSub": "Mỗi việc ghi lại đúng người làm và lúc làm, nên ai mở hồ sơ ngựa cũng thấy cùng một sự thật.",
+    "flow": {
+      "horses": {
+        "title": "Hồ sơ & phả hệ",
+        "body": "Lý lịch, giống, cha mẹ, thể lực và thành tích của từng con — kèm ảnh và số áo đua."
+      },
+      "training": {
+        "title": "Giáo án & buổi tập",
+        "body": "Huấn luyện viên lập giáo án theo giai đoạn, xếp buổi tập không trùng giờ và ghi kết quả sau mỗi buổi."
+      },
+      "health": {
+        "title": "Sức khỏe & sự cố",
+        "body": "Bác sĩ ghi khám, phác đồ, vị trí chấn thương; người chăm sóc báo sự cố kèm ảnh ngay tại chuồng."
+      },
+      "races": {
+        "title": "Giải đua",
+        "body": "Lịch thi đấu, ghi danh ngựa đủ điều kiện, nhập thứ hạng và thời gian sau mỗi giải."
+      },
+      "supplies": {
+        "title": "Vật tư chuồng trại",
+        "body": "Thức ăn, thuốc, dụng cụ — tồn kho tự trừ theo bữa ăn, hết thì gửi yêu cầu mua để quản lý duyệt."
+      }
+    },
+    "flowSafety": "Ngựa có sự cố nặng tự động bị khóa tập, và chỉ được mở lại khi bác sĩ có lần khám kết luận ngựa đã khỏe.",
+    "rolesTitle": "Năm vai trò, mỗi người thấy đúng việc của mình",
+    "rolesSub": "Sau khi đăng ký, quản lý câu lạc bộ gán vai trò cho bạn.",
+    "roleDo": {
+      "MANAGER": "Quản lý đàn ngựa, giải đua, vật tư và duyệt tài khoản mới.",
+      "TRAINER": "Lập giáo án, xếp lịch tập và theo dõi tiến độ từng con.",
+      "VET": "Khám bệnh, xử lý sự cố, lịch tiêm phòng và quyết định khóa / mở khóa tập.",
+      "GROOM": "Chăm sóc hằng ngày, ghi khẩu phần ăn, báo sự cố và đề nghị mua vật tư.",
+      "OWNER": "Theo dõi sức khỏe, huấn luyện và thành tích của ngựa mình sở hữu."
+    },
+    "stepsTitle": "Bắt đầu trong ba bước",
+    "step1": {
+      "title": "Đăng ký",
+      "body": "Tạo tài khoản bằng email hoặc Google, xác nhận mã gửi về hộp thư."
+    },
+    "step2": {
+      "title": "Chờ duyệt",
+      "body": "Quản lý câu lạc bộ kiểm tra và gán vai trò phù hợp — bạn nhận email khi được duyệt."
+    },
+    "step3": {
+      "title": "Bắt tay vào việc",
+      "body": "Đăng nhập là thấy ngay bảng chuồng và những việc cần làm hôm nay."
+    },
+    "finalCta": "Câu lạc bộ của bạn đã dùng Racehorse Club? Đăng nhập để vào việc."
   }
 }

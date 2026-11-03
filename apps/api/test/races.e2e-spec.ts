@@ -69,6 +69,7 @@ describe('Races (e2e)', () => {
 
   afterAll(async () => {
     await prisma.raceEntry.deleteMany({ where: { horseId } });
+    await prisma.horseLockEvent.deleteMany({ where: { horseId: horseId } });
     await prisma.horse.deleteMany({ where: { id: horseId } });
     if (raceId) await prisma.race.deleteMany({ where: { id: raceId } });
     await app.close();

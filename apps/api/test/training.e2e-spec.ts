@@ -70,6 +70,7 @@ describe('Training sessions (e2e)', () => {
 
   afterAll(async () => {
     await prisma.trainingSession.deleteMany({ where: { horseId } });
+    await prisma.horseLockEvent.deleteMany({ where: { horseId: horseId } });
     await prisma.horse.deleteMany({ where: { id: horseId } });
     await app.close();
   });

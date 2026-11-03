@@ -82,6 +82,15 @@ describe('Training plans & lock (e2e)', () => {
     await prisma.trainingPlan.deleteMany({
       where: { horseId: { in: [horseAId, horseBId] } },
     });
+    await prisma.horseLockEvent.deleteMany({
+      where: { horseId: { in: [horseAId, horseBId] } },
+    });
+    await prisma.incidentReport.deleteMany({
+      where: { horseId: { in: [horseAId, horseBId] } },
+    });
+    await prisma.healthRecord.deleteMany({
+      where: { horseId: { in: [horseAId, horseBId] } },
+    });
     await prisma.horse.deleteMany({
       where: { id: { in: [horseAId, horseBId] } },
     });
@@ -222,9 +231,7 @@ describe('Training plans & lock (e2e)', () => {
   });
 
   it('GET /training-plans lists all visible plans for TRAINER', async () => {
-    const res = await api()
-      .get('/api/v1/training-plans')
-      .set(auth('trainer'));
+    const res = await api().get('/api/v1/training-plans').set(auth('trainer'));
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBeGreaterThan(0);
@@ -255,6 +262,15 @@ describe('Training plans & lock (e2e)', () => {
       .set(auth('vet'))
       .send({ goal: 'nope' });
     expect(res.status).toBe(403);
+  });
+
+  it('VET cannot lock a horse without a reason (400)', async () => {
+    const res = await api()
+      .patch(`/api/v1/horses/${horseBId}/lock`)
+      .set(auth('vet'))
+      .send({ locked: true, reason: '   ' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('VET locks horseB with a reason (200)', async () => {
@@ -318,14 +334,75 @@ describe('Training plans & lock (e2e)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('VET unlocks horseB and clears the reason (200)', async () => {
+  it('unlocking without a health record is refused (400)', async () => {
     const res = await api()
       .patch(`/api/v1/horses/${horseBId}/lock`)
       .set(auth('vet'))
       .send({ locked: false });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('unlocking with an exam that does not conclude FIT is refused (400)', async () => {
+    const exam = await api()
+      .post(`/api/v1/horses/${horseBId}/health-records`)
+      .set(auth('vet'))
+      .send({
+        examDate: new Date().toISOString(),
+        diagnosis: 'Still sore',
+        healthStatus: 'MONITORING',
+      });
+    expect(exam.status).toBe(201);
+    const res = await api()
+      .patch(`/api/v1/horses/${horseBId}/lock`)
+      .set(auth('vet'))
+      .send({ locked: false, healthRecordId: exam.body.id });
+    expect(res.status).toBe(400);
+  });
+
+  it('VET unlocks horseB with a FIT exam written after the lock (200)', async () => {
+    const exam = await api()
+      .post(`/api/v1/horses/${horseBId}/health-records`)
+      .set(auth('vet'))
+      .send({
+        examDate: new Date().toISOString(),
+        diagnosis: 'Recovered',
+        healthStatus: 'FIT',
+      });
+    expect(exam.status).toBe(201);
+    expect(exam.body.healthStatus).toBe('FIT');
+    const res = await api()
+      .patch(`/api/v1/horses/${horseBId}/lock`)
+      .set(auth('vet'))
+      .send({ locked: false, healthRecordId: exam.body.id });
     expect(res.status).toBe(200);
     expect(res.body.locked).toBe(false);
     expect(res.body.lockReason).toBeNull();
+  });
+
+  it('the lock history keeps both events and the original reason (200)', async () => {
+    const res = await api()
+      .get(`/api/v1/horses/${horseBId}/lock-events`)
+      .set(auth('manager'));
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    const [unlock, lock] = res.body;
+    expect(unlock.locked).toBe(false);
+    expect(unlock.healthRecord.healthStatus).toBe('FIT');
+    expect(unlock.actor.role).toBe('VET');
+    expect(lock.locked).toBe(true);
+    expect(lock.reason).toBe('Suspected tendon strain');
+  });
+
+  it('lock / unlock notifications reach the trainer working with the horse', async () => {
+    const trainer = await prisma.user.findUniqueOrThrow({
+      where: { email: 'trainer@racehorse.local' },
+    });
+    const notes = await prisma.notification.findMany({
+      where: { userId: trainer.id, message: { contains: 'E2E Plan Horse B' } },
+    });
+    expect(notes.some((n) => n.type === 'TRAINING_LOCKED')).toBe(true);
+    expect(notes.some((n) => n.type === 'TRAINING_UNLOCKED')).toBe(true);
   });
 
   it('TRAINER can create a session for horseB after unlocking', async () => {

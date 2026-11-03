@@ -102,6 +102,9 @@ describe('Horses (e2e)', () => {
       }
     }
     if (createdHorseIds.length) {
+      await prisma.horseLockEvent.deleteMany({
+        where: { horseId: { in: createdHorseIds } },
+      });
       await prisma.horse.deleteMany({ where: { id: { in: createdHorseIds } } });
     }
     await app.close();

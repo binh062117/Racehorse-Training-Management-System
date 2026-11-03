@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
-import type { FeedingRecord, Horse, Paginated } from '../../lib/types';
+import { Link } from 'react-router-dom';
+import type { FeedingRecord, Horse, Paginated, SupplyItem } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { FeedingSuggestionCard } from '../../components/horse/FeedingSuggestionCard';
 import { formatDate } from '../../lib/format';
-import { Btn, Card, EmptyState, Field, Icon, Input, thCls } from '../../ds/ui';
+import { Btn, Card, EmptyState, Field, Icon, Input, NativeSelect, thCls } from '../../ds/ui';
 
 interface FormPrefill {
   feedType: string;
@@ -117,6 +118,21 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
+  // Feed in the store: picking one fills the feed type and takes the amount out of stock.
+  const [feeds, setFeeds] = useState<SupplyItem[]>([]);
+  const [supplyItemId, setSupplyItemId] = useState('');
+  useEffect(() => {
+    api.get<SupplyItem[]>('/supplies', { params: { category: 'FEED' } })
+      .then((r) => {
+        setFeeds(r.data);
+        // A prefilled feed (e.g. from the AI suggestion) that exists in the store is picked for you.
+        const match = r.data.find((f) => f.name.toLowerCase() === (initial?.feedType ?? '').trim().toLowerCase());
+        if (match) setSupplyItemId(match.id);
+      })
+      .catch(() => setFeeds([]));
+  }, [initial?.feedType]);
+  const stock = feeds.find((f) => f.id === supplyItemId) ?? null;
+  const short = stock != null && Number(quantityKg) > stock.quantity;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -128,6 +144,7 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
         quantityKg: Number(quantityKg),
         date: new Date(`${date}T00:00:00`).toISOString(),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
+        ...(supplyItemId ? { supplyItemId } : {}),
       });
       onCreated();
     } catch (e) {
@@ -141,8 +158,21 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
     <form onSubmit={submit}>
       <Card className="p-5 flex flex-col gap-4">
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
+          {feeds.length > 0 && (
+            <Field label={t('feeding.fromStore')} hint={stock ? t('feeding.stockLeft', { n: stock.quantity, unit: stock.unit }) : t('feeding.fromStoreHint')}>
+              <NativeSelect value={supplyItemId} onChange={(e) => {
+                const id = e.target.value;
+                setSupplyItemId(id);
+                const f = feeds.find((x) => x.id === id);
+                if (f) setFeedType(f.name);
+              }}>
+                <option value="">{t('feeding.notFromStore')}</option>
+                {feeds.map((f) => <option key={f.id} value={f.id}>{f.name} — {t('feeding.stockLeft', { n: f.quantity, unit: f.unit })}</option>)}
+              </NativeSelect>
+            </Field>
+          )}
           <Field label={t('feeding.thFeedType', 'Loại thức ăn')}>
-            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required placeholder="Ví dụ: Cỏ khô Alfalfa, Cám hỗn hợp..." />
+            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required readOnly={!!stock} placeholder="Ví dụ: Cỏ khô Alfalfa, Cám hỗn hợp..." />
           </Field>
           <Field label={`${t('feeding.thQuantity', 'Khối lượng')} (kg)`}>
             <Input type="number" step="0.1" min="0.1" max="100" value={quantityKg} onChange={(e) => setQuantityKg(e.target.value)} required />
@@ -154,8 +184,13 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder="..." />
           </Field>
         </div>
+        {short && stock && (
+          <p className="text-[13px] text-bad font-medium" role="alert">
+            {t('feeding.notEnough', { n: stock.quantity, unit: stock.unit })} <Link to="/supplies" className="text-info">{t('feeding.goRequest')}</Link>
+          </p>
+        )}
         <ErrorText err={error} />
-        <Btn v="p" type="submit" disabled={saving} className="self-start">
+        <Btn v="p" type="submit" disabled={saving || short} className="self-start">
           {saving ? t('feeding.saving', 'Đang lưu...') : t('feeding.saveBtn', 'Lưu khẩu phần')}
         </Btn>
       </Card>

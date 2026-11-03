@@ -32,7 +32,8 @@
     "logout": "Log out",
     "logoutConfirm": "Are you sure you want to log out?",
     "healthSection": "Health",
-    "adminSection": "Administration"
+    "adminSection": "Administration",
+    "supplies": "Supplies"
   },
   "dashboard": {
     "title": "System Overview Dashboard",
@@ -77,7 +78,8 @@
     "boardTitle": "Today's Stable Board",
     "viewAllHorses": "View all {{count}} horses",
     "moreHorses": "{{count}} more horses",
-    "waitingApproval": "Your account is pending manager role approval."
+    "waitingApproval": "Your account is pending manager role approval.",
+    "boardTitleOwner": "My horses"
   },
   "notificationsPage": {
     "title": "Notifications",
@@ -415,7 +417,22 @@
     "moveTo": "Move to {{status}}",
     "subUnresolved": "{{count}} high-severity incident(s) unresolved · {{open}} pending, {{inProgress}} in progress.",
     "subAllResolved": "No open high-severity incidents · {{resolved}} of {{total}} incidents resolved.",
-    "highSeverityHint": "High severity will automatically lock horse training until resolved."
+    "highSeverityHint": "High severity will automatically lock horse training until resolved.",
+    "subServer": "{{high}} high-severity · {{open}} open · {{inProgress}} in progress.",
+    "sortSeverity": "High first",
+    "sortNewest": "Newest",
+    "photoCol": "Photo",
+    "detailCol": "Injuries",
+    "details": "Details",
+    "lockingHorse": "Locking the horse",
+    "updatedOn": "Updated {{date}}",
+    "linkedExam": "Linked exam",
+    "pageLabel": "{{from}}–{{to}} of {{total}} incidents",
+    "resolveTitle": "Resolve incident",
+    "resolveExam": "Vet exam for this incident",
+    "resolveConfirm": "Resolve",
+    "resolveUnlocksHint": "This incident is locking the horse. The lock lifts only if the exam concludes Fit; otherwise the incident closes and the horse stays locked.",
+    "resolveOtherLockHint": "The horse is locked for another reason — resolving this incident will not unlock it."
   },
   "races": {
     "eyebrow": "RACE CALENDAR",
@@ -501,7 +518,20 @@
     "you": "(you)",
     "unassigned": "Unassigned",
     "subPending": "{{count}} accounts pending approval — select a role and approve.",
-    "subActive": "No accounts pending approval · {{count}} active."
+    "subActive": "No accounts pending approval · {{count}} active.",
+    "searchPlaceholder": "Search name or email",
+    "filterAll": "All",
+    "noMatch": "No accounts match the filter.",
+    "selectAllPending": "Select all pending accounts on this page",
+    "selectOne": "Select {{name}}",
+    "selectedCount": "{{count}} selected",
+    "sameRole": "Same role for all:",
+    "keepEach": "Keep each row's role",
+    "clearSelection": "Clear",
+    "approveSelected": "Approve {{count}}",
+    "approving": "Approving…",
+    "bulkDone": "Approved {{count}} accounts and emailed each person.",
+    "pageLabel": "{{from}}–{{to}} of {{total}} accounts"
   },
   "error": {
     "VALIDATION_ERROR": "Invalid data",
@@ -641,6 +671,171 @@
     "thNotes": "Notes",
     "thRecordedBy": "Recorded By",
     "saveBtn": "Save Record",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "fromStore": "From the store",
+    "fromStoreHint": "Pick a feed from the store to deduct it from stock.",
+    "notFromStore": "Not from the store",
+    "stockLeft": "{{n}} {{unit}} left",
+    "notEnough": "Only {{n}} {{unit}} left in the store — not enough for this meal.",
+    "goRequest": "Request more"
+  },
+  "lock": {
+    "lockTitle": "Lock training for {{horse}}",
+    "lockSub": "No new sessions or race entries until a vet lifts the lock.",
+    "unlockTitle": "Unlock training for {{horse}}",
+    "unlockSub": "Pick an exam, written after the lock, that concludes the horse is fit.",
+    "reason": "Reason",
+    "reasonHint": "Required — the owner, managers and trainers receive it.",
+    "reasonPlaceholder": "e.g. Left fore tendon strain, rest until re-check",
+    "currentReason": "Locked because",
+    "evidence": "Supporting exam",
+    "unlockNote": "Note (optional)",
+    "unlockNotePlaceholder": "e.g. Light work for a week before speed work",
+    "lockConfirm": "Lock training",
+    "unlockConfirm": "Unlock training",
+    "saving": "Saving…",
+    "historyTitle": "Lock history",
+    "eventLocked": "Locked",
+    "eventUnlocked": "Unlocked",
+    "basedOnExam": "Based on the exam of {{date}}: {{diagnosis}}"
+  },
+  "recordPicker": {
+    "label": "Choose an exam",
+    "loading": "Loading exams…",
+    "empty": "{{horse}} has no exams yet.",
+    "noConclusion": "No conclusion",
+    "notFit": "Not concluded fit",
+    "beforeLock": "Exam before the lock",
+    "createNew": "Record a new exam"
+  },
+  "supplies": {
+    "title": "Supplies",
+    "loading": "Loading supplies…",
+    "subLow": "{{low}} items running low · {{pending}} purchase requests waiting.",
+    "subOk": "Stock is fine · {{pending}} purchase requests waiting.",
+    "search": "Search supplies",
+    "addItem": "Add item",
+    "addFirst": "Add the first item",
+    "kpiItems": "Items",
+    "kpiLow": "Running low",
+    "kpiPending": "Requests waiting",
+    "all": "All",
+    "lowOnly": "Low stock only",
+    "category": {
+      "FEED": "Feed",
+      "MEDICINE": "Medicine",
+      "EQUIPMENT": "Equipment"
+    },
+    "empty": "The store is empty.",
+    "noMatch": "No items match the filter.",
+    "colName": "Item",
+    "colCategory": "Type",
+    "colStock": "In stock",
+    "colLevel": "Level",
+    "colStatus": "Status",
+    "min": "min {{n}} {{unit}}",
+    "low": "Low",
+    "enough": "OK",
+    "pendingFor": "{{n}} {{unit}} requested",
+    "request": "Request",
+    "edit": "Edit / count",
+    "requestsTitle": "Purchase requests",
+    "myRequestsTitle": "My requests",
+    "reqPending": "Waiting",
+    "reqAll": "All",
+    "noPendingRequests": "No requests waiting.",
+    "noRequests": "No purchase requests yet.",
+    "reqStatus": {
+      "PENDING": "Waiting",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "requestedBy": "{{name}} on {{date}}",
+    "reviewedBy": "Decided by {{name}} on {{date}}",
+    "stockNow": "{{n}} {{unit}} in stock",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectReason": "Reason (optional)",
+    "rejectPlaceholder": "e.g. Enough until month end",
+    "confirmReject": "Reject",
+    "editTitle": "Edit {{name}}",
+    "editSub": "Update the count after a stock check, or change the minimum.",
+    "unit": "Unit",
+    "unitHint": "kg, box, bottle, piece…",
+    "stockStart": "Starting stock",
+    "stockCounted": "Counted stock",
+    "minLabel": "Minimum",
+    "minHint": "Below this it shows as running low.",
+    "notes": "Notes",
+    "delete": "Delete",
+    "deleteConfirm": "Remove {{name}} from supplies?",
+    "saving": "Saving…",
+    "requestTitle": "Request {{name}}",
+    "requestQty": "Quantity ({{unit}})",
+    "requestQtyHint": "Pre-filled to bring stock back to twice the minimum.",
+    "requestNote": "Note for the manager",
+    "requestNotePlaceholder": "e.g. Three horses on extra rations before the race",
+    "sendRequest": "Send request"
+  },
+  "landing": {
+    "login": "Sign in",
+    "register": "Sign up",
+    "heroA": "Every racehorse,",
+    "heroB": "one complete record",
+    "heroSub": "Racehorse Club brings the whole club's horse profiles, training plans, health and races into one place — so trainers, vets, grooms and owners all read the same board.",
+    "ctaRegister": "Create an account",
+    "ctaLogin": "I already have an account",
+    "ctaNote": "New accounts are approved and given a role by the club manager.",
+    "sampleDate": "This morning, 06:00",
+    "sampleLockReason": "Incident: fore tendon strain",
+    "figcaption": "The morning stable board: who can train, who is locked, and why.",
+    "flowsTitle": "One club, five jobs on one system",
+    "flowsSub": "Every entry records who did it and when, so anyone opening a horse's file sees the same truth.",
+    "flow": {
+      "horses": {
+        "title": "Profiles & pedigree",
+        "body": "Each horse's record, breed, sire and dam, fitness and results — with photo and saddle number."
+      },
+      "training": {
+        "title": "Plans & sessions",
+        "body": "Trainers plan in phases, schedule sessions without clashes and record results after each one."
+      },
+      "health": {
+        "title": "Health & incidents",
+        "body": "Vets record exams, treatment plans and injury sites; grooms report incidents with a photo from the stable."
+      },
+      "races": {
+        "title": "Races",
+        "body": "The race calendar, entries for eligible horses, and placings and times after each race."
+      },
+      "supplies": {
+        "title": "Stable supplies",
+        "body": "Feed, medicine, equipment — stock goes down with each meal, and low items go to the manager as purchase requests."
+      }
+    },
+    "flowSafety": "A horse with a serious incident is locked out of training automatically, and only a vet's exam concluding it is fit lifts the lock.",
+    "rolesTitle": "Five roles, each sees their own work",
+    "rolesSub": "After you sign up, the club manager assigns your role.",
+    "roleDo": {
+      "MANAGER": "Runs the stable, races, supplies and approves new accounts.",
+      "TRAINER": "Writes plans, schedules sessions and follows each horse's progress.",
+      "VET": "Examines, handles incidents and vaccinations, and decides training locks.",
+      "GROOM": "Daily care, feeding records, incident reports and supply requests.",
+      "OWNER": "Follows the health, training and results of the horses they own."
+    },
+    "stepsTitle": "Start in three steps",
+    "step1": {
+      "title": "Sign up",
+      "body": "Create an account with email or Google and confirm the code sent to your inbox."
+    },
+    "step2": {
+      "title": "Get approved",
+      "body": "The club manager checks and assigns your role — you get an email when it's done."
+    },
+    "step3": {
+      "title": "Get to work",
+      "body": "Sign in to see the stable board and today's tasks right away."
+    },
+    "finalCta": "Your club already uses Racehorse Club? Sign in to get to work."
   }
 }

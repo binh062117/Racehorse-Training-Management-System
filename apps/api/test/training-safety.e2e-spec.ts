@@ -82,6 +82,15 @@ describe('Training safety rules (e2e)', () => {
     await prisma.notification.deleteMany({
       where: { message: { contains: 'E2E Safety Horse A' } },
     });
+    await prisma.horseLockEvent.deleteMany({
+      where: { horseId: { in: [horseAId, horseBId] } },
+    });
+    await prisma.incidentReport.deleteMany({
+      where: { horseId: { in: [horseAId, horseBId] } },
+    });
+    await prisma.healthRecord.deleteMany({
+      where: { horseId: { in: [horseAId, horseBId] } },
+    });
     await prisma.horse.deleteMany({
       where: { id: { in: [horseAId, horseBId] } },
     });
@@ -182,10 +191,19 @@ describe('Training safety rules (e2e)', () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
 
-    await api()
+    const exam = await api()
+      .post(`/api/v1/horses/${horseBId}/health-records`)
+      .set(auth('vet'))
+      .send({
+        examDate: new Date().toISOString(),
+        diagnosis: 'Cleared',
+        healthStatus: 'FIT',
+      });
+    const unlock = await api()
       .patch(`/api/v1/horses/${horseBId}/lock`)
       .set(auth('vet'))
-      .send({ locked: false });
+      .send({ locked: false, healthRecordId: exam.body.id });
+    expect(unlock.status).toBe(200);
   });
 
   it('marking a session DONE with heart_rate_max > 195 notifies trainer + groom + owner', async () => {

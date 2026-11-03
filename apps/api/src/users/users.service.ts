@@ -5,7 +5,11 @@ import { AppException } from '../common/app-exception';
 import { PublicUser } from '../auth/auth.service';
 import { TokenService } from '../auth/token.service';
 import { MailService } from '../mail/mail.service';
-import { ListUsersQueryDto, UpdateUserDto } from './dto/users.dto';
+import {
+  ListUsersQueryDto,
+  UpdateUserDto,
+  ApproveUsersDto,
+} from './dto/users.dto';
 
 const PUBLIC_SELECT = {
   id: true,
@@ -30,23 +34,76 @@ export class UsersService {
     private readonly mail: MailService,
   ) {}
 
-  async list(q: ListUsersQueryDto): Promise<Paginated<PublicUser>> {
-    const where: Prisma.UserWhereInput = {
+  async list(
+    q: ListUsersQueryDto,
+  ): Promise<Paginated<PublicUser> & { counts: Record<string, number> }> {
+    const text = q.q?.trim();
+    const scope: Prisma.UserWhereInput = {
       deletedAt: null,
-      ...(q.status ? { status: q.status } : {}),
       ...(q.role ? { role: q.role } : {}),
+      ...(text
+        ? {
+            OR: [
+              { name: { contains: text, mode: 'insensitive' } },
+              { email: { contains: text, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
     };
-    const [data, total] = await this.prisma.$transaction([
+    const where: Prisma.UserWhereInput = {
+      ...scope,
+      ...(q.status ? { status: q.status } : {}),
+    };
+    const [data, total, byStatus] = await this.prisma.$transaction([
       this.prisma.user.findMany({
         where,
         select: PUBLIC_SELECT,
-        orderBy: { createdAt: 'desc' },
+        // Accounts waiting for a decision come first — that is why a manager opens this list.
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),
       this.prisma.user.count({ where }),
+      this.prisma.user.groupBy({
+        by: ['status'],
+        where: scope,
+        orderBy: { status: 'asc' },
+        _count: { _all: true },
+      }),
     ]);
-    return { data, meta: { page: q.page, limit: q.limit, total } };
+    const counts: Record<string, number> = {};
+    for (const r of byStatus)
+      counts[r.status] = (r._count as { _all: number })._all;
+    return { data, meta: { page: q.page, limit: q.limit, total }, counts };
+  }
+
+  /**
+   * Approve several PENDING registrations at once, each with its own role.
+   * Accounts that are no longer pending are skipped, not failed, so one
+   * stale row never blocks the rest.
+   */
+  async approveMany(
+    dto: ApproveUsersDto,
+  ): Promise<{ approved: PublicUser[]; skipped: string[] }> {
+    const ids = dto.users.map((u) => u.id);
+    const pending = await this.prisma.user.findMany({
+      where: { id: { in: ids }, deletedAt: null, status: UserStatus.PENDING },
+      select: { id: true },
+    });
+    const pendingIds = new Set(pending.map((u) => u.id));
+    const todo = dto.users.filter((u) => pendingIds.has(u.id));
+    const approved = await this.prisma.$transaction(
+      todo.map((u) =>
+        this.prisma.user.update({
+          where: { id: u.id },
+          data: { role: u.role, status: UserStatus.ACTIVE },
+          select: PUBLIC_SELECT,
+        }),
+      ),
+    );
+    for (const u of approved)
+      await this.mail.sendAccountApproved(u.email, u.name);
+    return { approved, skipped: ids.filter((id) => !pendingIds.has(id)) };
   }
 
   async get(id: string): Promise<PublicUser> {

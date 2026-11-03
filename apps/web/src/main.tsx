@@ -24,6 +24,8 @@ import { HealthRecordsPage } from './pages/HealthRecordsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
 import { RacesPage } from './pages/RacesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { SuppliesPage } from './pages/SuppliesPage';
+import { HomeGate, LandingPage } from './pages/LandingPage';
 import {
   HorseFormPage,
   HorseOwnershipPage,
@@ -32,6 +34,9 @@ import {
 } from './pages/HorseFlowPages';
 
 const router = createBrowserRouter([
+  // Visitors see what the club is before signing in; members go straight to the dashboard.
+  { path: '/', element: <HomeGate /> },
+  { path: '/about', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
@@ -43,7 +48,6 @@ const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
-      { path: '/', element: <Navigate to="/dashboard" replace /> },
       { path: '/dashboard', element: <DashboardPage /> },
       { path: '/notifications', element: <NotificationsPage /> },
       {
@@ -107,6 +111,14 @@ const router = createBrowserRouter([
       { path: '/horses/:id/performance', element: <HorseRaceHistoryPage /> },
       { path: '/horses/:id/ownership', element: <HorseOwnershipPage /> },
       { path: '/plans', element: <TrainingPlansPage /> },
+      {
+        path: '/supplies',
+        element: (
+          <RequireAuth roles={['MANAGER', 'GROOM', 'VET', 'TRAINER']}>
+            <SuppliesPage />
+          </RequireAuth>
+        ),
+      },
       {
         path: '/admin/users',
         element: (
