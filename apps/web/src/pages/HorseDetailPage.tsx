@@ -214,7 +214,7 @@ export function HorseDetailPage() {
           lead: true,
           value: horse.fitnessScore != null ? <span style={{ color: fitColor(horse.fitnessScore) }}><CountUp value={horse.fitnessScore} /></span> : <span className="text-muted text-[16px] font-normal">—</span>,
           unit: horse.fitnessScore != null ? '/100' : undefined,
-          sub: horse.fitnessScore == null ? undefined : horse.fitnessScore >= 80 ? 'Tốt (≥80)' : horse.fitnessScore >= 60 ? 'Cần theo dõi (60–79)' : 'Thấp (<60)',
+          sub: horse.fitnessScore == null ? undefined : horse.fitnessScore >= 80 ? t('horsePage.fitnessGood') : horse.fitnessScore >= 60 ? t('horsePage.fitnessMonitor') : t('horsePage.fitnessLow'),
         },
         {
           label: t('horseDetail.racesStarted', 'Số lần đua'),

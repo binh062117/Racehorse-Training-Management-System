@@ -46,7 +46,7 @@ export function HorseRaceHistoryPage() {
     return () => { active = false; };
   }, [id]);
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], horse?.name ?? '…', t('horseFlow.performanceTitle')] });
+  usePageChrome({ crumbs: [[t('nav.horses'), '/horses'], horse?.name ?? '…', t('horseFlow.performanceTitle')] });
 
   // Chỉ hiện các race còn diễn ra trong tương lai và chưa được ngựa này đăng ký.
   const enteredRaceIds = new Set(entries.map((entry) => entry.race.id));
@@ -127,14 +127,14 @@ export function HorseRaceHistoryPage() {
         { label: t('horseFlow.racesStarted'), value: entries.filter((entry) => entry.status === 'COMPLETED').length },
         { label: t('horseFlow.wins'), value: wins, lead: wins > 0 },
         { label: t('horseFlow.podiums'), value: podiums },
-        { label: t('horseFlow.bestFinish'), value: bestPlace == null ? <span className="text-muted text-[16px] font-normal">Chưa có</span> : `Hạng ${bestPlace}` },
+        { label: t('horseFlow.bestFinish'), value: bestPlace == null ? <span className="text-muted text-[16px] font-normal">{t('common.noData')}</span> : t('horseFlow.place', { place: bestPlace }) },
       ]} />}
 
       {entries.length === 0 ? (
         <EmptyState>{t('horseFlow.noRaceResults')}. {t('horseFlow.noRaceResultsDescription')}</EmptyState>
       ) : (
         <Card>
-          <CardHeader title="Các giải đã tham gia" />
+          <CardHeader title={t('horseFlow.enteredRaces')} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead>
@@ -152,7 +152,7 @@ export function HorseRaceHistoryPage() {
                   <tr key={entry.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
                     <td className="pl-5 pr-4 py-3 font-medium">{entry.race.name}</td>
                     <td className="px-4 py-3 num text-right whitespace-nowrap">{formatDate(entry.race.date)}</td>
-                    <td className="px-4 py-3 text-muted">{entry.race.venue ?? 'Chưa rõ'}</td>
+                    <td className="px-4 py-3 text-muted">{entry.race.venue ?? t('common.unknown')}</td>
                     <td className="px-4 py-3">{t(`raceFeatures.status.${entry.status}`)}</td>
                     <td className="px-4 py-3 text-right">
                       {entry.position == null

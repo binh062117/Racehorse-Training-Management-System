@@ -20,7 +20,7 @@ const dateTimeFmt = new Intl.DateTimeFormat('vi-VN', {
 
 const dateFormatters = {
   vi: dateFmt,
-  en: new Intl.DateTimeFormat('en-US', {
+  en: new Intl.DateTimeFormat('en-GB', {
     timeZone: TZ,
     day: '2-digit',
     month: '2-digit',
@@ -29,7 +29,7 @@ const dateFormatters = {
 };
 const dateTimeFormatters = {
   vi: dateTimeFmt,
-  en: new Intl.DateTimeFormat('en-US', {
+  en: new Intl.DateTimeFormat('en-GB', {
     timeZone: TZ,
     day: '2-digit',
     month: '2-digit',
@@ -45,7 +45,7 @@ const timeFormatters = {
     hour: '2-digit',
     minute: '2-digit',
   }),
-  en: new Intl.DateTimeFormat('en-US', {
+  en: new Intl.DateTimeFormat('en-GB', {
     timeZone: TZ,
     hour: '2-digit',
     minute: '2-digit',

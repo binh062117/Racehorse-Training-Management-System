@@ -1,6 +1,7 @@
 import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 
 /* ---------- icons (stroke, 24px grid) ---------- */
 const P: Record<string, string[]> = {
@@ -64,7 +65,7 @@ export function CareerBadge({ status }: { status: string }) {
   return <Badge tone={careerTone[status] ?? 'neu'}>{t(`horseStatusBadge.${status}`, status)}</Badge>;
 }
 export function lockReasonText(reason: string | null | undefined): string {
-  return reason?.trim() || 'Không có lý do cụ thể.';
+  return reason?.trim() || i18n.t('common.noReason');
 }
 export function CountUp({ value }: { value: number }) {
   return <span className="num">{value}</span>;
@@ -278,8 +279,9 @@ export function Bar({ pct, color = '#1a4b8a', className = 'w-16' }: { pct: numbe
   return <span className={`inline-block h-1.5 rounded bg-line-soft overflow-hidden flex-none ${className}`}><i className="block h-full rounded" style={{ width: pct + '%', background: color }} /></span>;
 }
 export function Sev({ level, dark }: { level: 0 | 1 | 2 | 3; dark?: boolean }) {
+  const { t } = useTranslation();
   const c = ['#3a6b4a', '#8a6218', '#8a2020', '#5e1414'][level];
-  const n = ['Thấp', 'Trung bình', 'Cao', 'Khẩn cấp'][level];
+  const n = t(`common.severity.${level}`);
   return (
     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.05em]" style={{ color: dark ? '#f3b4b4' : c }}>
       {n}<i className="inline-flex gap-0.5">{[0, 1, 2, 3].map((k) => <b key={k} className="w-[5px] h-3 rounded-[1px]" style={{ background: k <= level ? (dark ? '#f3b4b4' : c) : (dark ? 'rgba(255,255,255,.2)' : '#e2e0db') }} />)}</i>

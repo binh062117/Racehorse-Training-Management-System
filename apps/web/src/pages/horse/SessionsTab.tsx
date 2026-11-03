@@ -121,7 +121,7 @@ function SessionsContent({ horseId, isLocked }: Props) {
       <div className="flex justify-between items-center flex-wrap gap-2.5">
         <div>
           <h2 className="text-[15px] font-semibold">{t('session.heading')}</h2>
-          {isLocked && <p className="text-[13px] text-muted mt-0.5">Đang khóa tập — chưa thể lên lịch buổi mới.</p>}
+          {isLocked && <p className="text-[13px] text-muted mt-0.5">{t('session.lockedSchedule')}</p>}
         </div>
         {canCreate && !isLocked && (
           <Btn v="p" onClick={() => { setCreated(false); setCreating(true); }}><Icon name="plus" />{t('session.openSchedule')}</Btn>
@@ -186,11 +186,12 @@ function findClash(sessions: TrainingSession[], localValue: string, excludeId?: 
 }
 
 function ClashWarning({ clash }: { clash: TrainingSession | null }) {
+  const { t } = useTranslation();
   if (!clash) return null;
   return (
-    <Alert tone="warn" icon="alert" title="Trùng lịch tập">
-      Ngựa đã có buổi “{clash.type}” lúc <span className="num font-medium">{sessionTime.format(new Date(clash.scheduledAt))} {formatDate(clash.scheduledAt)}</span>.
-      {' '}Hai buổi tập phải cách nhau ít nhất {CONFLICT_WINDOW_MIN} phút — hãy chọn giờ khác.
+    <Alert tone="warn" icon="alert" title={t('session.clashTitle')}>
+      {t('session.clashDetails', { type: clash.type, time: `${sessionTime.format(new Date(clash.scheduledAt))} ${formatDate(clash.scheduledAt)}` })}
+      {' '}{t('session.clashHint', { minutes: CONFLICT_WINDOW_MIN })}
     </Alert>
   );
 }
@@ -275,7 +276,7 @@ function CreateSessionForm({
             </div>
           )}
           <Field label={t('session.type')}>
-            <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="Ví dụ: Chạy nước rút, Chạy sức bền…" maxLength={80} disabled={busy} required />
+            <Input value={type} onChange={(e) => setType(e.target.value)} placeholder={t('session.typePlaceholder')} maxLength={80} disabled={busy} required />
           </Field>
           <Field label={t('session.notes')}>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} disabled={busy} rows={2} />
@@ -357,7 +358,7 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
             <dd>{session.trainer.name}</dd>
             {session.notes && <><dt className="text-muted">{t('session.notes')}</dt><dd>{session.notes}</dd></>}
             {(session.resultMetric || session.resultValue != null) && (
-              <><dt className="text-muted">{t('session.result')}</dt><dd className="num">{session.resultMetric ?? 'Chỉ số'}: <strong>{session.resultValue ?? 'Chưa có'}</strong></dd></>
+              <><dt className="text-muted">{t('session.result')}</dt><dd className="num">{session.resultMetric ?? t('session.resultMetric')}: <strong>{session.resultValue ?? t('common.noData')}</strong></dd></>
             )}
           </dl>
 
@@ -383,14 +384,14 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
             </Field>
             {isTrainer && !status && (
               <>
-                <Field label="Giờ tập" hint="Dời giờ khi lịch thay đổi — buổi tập vẫn ở trạng thái đã lên lịch.">
+                <Field label={t('session.scheduledAt')} hint={t('session.rescheduleHint')}>
                   <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} err={!!clash} required />
                 </Field>
                 <ClashWarning clash={clash} />
               </>
             )}
             <Field label={t('session.resultMetric')}>
-              <Input value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} placeholder="Ví dụ: thời gian 1200m (giây)" />
+              <Input value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} placeholder={t('session.metricPlaceholder')} />
             </Field>
             <Field label={t('session.resultValue')}>
               <Input type="number" step="any" value={resultValue} onChange={(e) => setResultValue(e.target.value)} />

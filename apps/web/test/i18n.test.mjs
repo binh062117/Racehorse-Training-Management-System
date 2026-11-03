@@ -28,6 +28,13 @@ const { AuthLayout } = await load('ds/AuthLayout.tsx');
 const { AppShell } = await load('ds/AppShell.tsx');
 const { HorsesPage } = await load('pages/HorsesPage.tsx');
 const { DashboardPage } = await load('pages/DashboardPage.tsx');
+const { TrainingPlansPage } = await load('pages/TrainingPlansPage.tsx');
+const { HealthRecordsPage } = await load('pages/HealthRecordsPage.tsx');
+const { HealthSchedulePage } = await load('pages/HealthSchedulePage.tsx');
+const { IncidentsPage } = await load('pages/IncidentsPage.tsx');
+const { CreateTrainingPlanModal } = await load('components/training/CreateTrainingPlanModal.tsx');
+const { CreateHealthRecordModal } = await load('components/health/CreateHealthRecordModal.tsx');
+const { FeedingTab } = await load('pages/horse/FeedingTab.tsx');
 const { ErrorText } = await load('components/ErrorText.tsx');
 const { BODY_ZONES, bodyZoneLabel } = await load('ds/charts.tsx');
 const format = await load('lib/format.ts');
@@ -36,7 +43,8 @@ const auth = {
   user: { id: 'test', name: 'Test Manager', role: 'MANAGER' }, loading: false,
   login: async () => {}, loginWithGoogle: async () => {}, logout: async () => {},
 };
-const render = element => renderToStaticMarkup(h(MemoryRouter, null, h(AuthContext.Provider, { value: auth }, element)));
+const render = (element, role = 'MANAGER') => renderToStaticMarkup(h(MemoryRouter, null,
+  h(AuthContext.Provider, { value: { ...auth, user: { ...auth.user, role } } }, element)));
 const visibleText = html => html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
 
 test('restores the saved language, persists changes and updates the HTML language', async () => {
@@ -72,10 +80,18 @@ test('every literal translation key used in the UI exists in both languages', ()
   for (const file of walk(new URL('../src/', import.meta.url)).filter(file => /\.tsx?$/.test(file.pathname))) {
     const source = ts.createSourceFile(file.pathname, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const visit = node => {
-      if (ts.isCallExpression(node) && /^(?:t|i18n\.t)$/.test(node.expression.getText(source)) && node.arguments[0] && ts.isStringLiteral(node.arguments[0])) {
-        for (const lng of ['vi', 'en']) {
-          assert.ok(i18n.exists(node.arguments[0].text, { lng, fallbackLng: false }), `${lng}: ${node.arguments[0].text} in ${file.pathname}`);
-        }
+      if (ts.isCallExpression(node) && /^(?:t|translate|i18n\.t)$/.test(node.expression.getText(source)) && node.arguments[0]) {
+        const check = argument => {
+          if (ts.isStringLiteral(argument)) {
+            for (const lng of ['vi', 'en']) {
+              assert.ok(i18n.exists(argument.text, { lng, fallbackLng: false }), `${lng}: ${argument.text} in ${file.pathname}`);
+            }
+          } else if (ts.isConditionalExpression(argument)) {
+            check(argument.whenTrue);
+            check(argument.whenFalse);
+          }
+        };
+        check(node.arguments[0]);
       }
       ts.forEachChild(node, visit);
     };
@@ -88,19 +104,42 @@ test('auth, navigation, horse list and dashboard translate on repeated language 
     await i18n.changeLanguage(language);
     const shell = visibleText(render(h(AppShell, null, h(HorsesPage))));
     const dashboard = visibleText(render(h(DashboardPage)));
-    const login = visibleText(render(h(AuthLayout, { title: i18n.t('auth.login') }, '')));
+    const login = visibleText(render(h(AuthLayout, { title: i18n.t('auth.login'), eyebrow: i18n.t('auth.portalEyebrow') }, '')));
     if (language === 'en') {
       assert.match(shell, /Horses/);
       assert.match(shell, /Notifications/);
-      assert.match(dashboard, /Ready to train today/);
-      assert.match(login, /Manage & train/);
-      assert.doesNotMatch(shell + dashboard + login, /[\u00c0-\u1ef9]/u);
+      assert.match(dashboard, /Operating normally/);
+      assert.match(login, /Management portal/);
+      assert.doesNotMatch(shell + dashboard + login, /[À-ỹ]/u);
     } else {
       assert.match(shell, /Ngựa đua/);
-      assert.match(dashboard, /Sẵn sàng tập hôm nay/);
-      assert.match(login, /Quản lý & huấn luyện/);
+      assert.match(dashboard, /Hoạt động bình thường/);
+      assert.ok(login.includes(i18n.t('auth.portalEyebrow')));
     }
     assert.doesNotMatch(shell + dashboard + login, /ui\.[a-zA-Z]|{{v\d}}/);
+  }
+});
+
+test('all roles translate their dashboard actions, training and care screens on repeated switches', async () => {
+  const horse = { id: 'horse-test', name: 'Thunder', healthStatus: 'FIT', status: 'ACTIVE', locked: false };
+  const noop = () => {};
+  for (const role of ['MANAGER', 'TRAINER', 'VET', 'GROOM', 'OWNER']) {
+    for (const language of ['en', 'vi', 'en']) {
+      setLanguage(language);
+      const elements = [h(AppShell, null, h(DashboardPage)), h(TrainingPlansPage),
+        h(FeedingTab, { horse }),
+        h(CreateTrainingPlanModal, { isOpen: true, onClose: noop, onCreated: noop }),
+        h(CreateHealthRecordModal, { isOpen: true, horseId: horse.id, horseName: horse.name, onClose: noop, onCreated: noop })];
+      if (role === 'VET') elements.push(h(HealthRecordsPage));
+      if (role !== 'OWNER') elements.push(h(HealthSchedulePage), h(IncidentsPage));
+      const html = elements.map(element => render(element, role)).join('');
+      const content = visibleText(html);
+      assert.ok(content.includes(i18n.t(`dashboard.roleSubtitle.${role}`)), `${role}/${language}: dashboard subtitle`);
+      assert.ok(content.includes(i18n.t(`trainingPage.roleSubtitle.${role}`)), `${role}/${language}: training subtitle`);
+      assert.doesNotMatch(html, /(?:dashboard|trainingPage|trainingPlanModal|healthRecordModal|healthRecordsPage|feedingTab|horsePage|language|common)\.[a-zA-Z]|{{[^}]+}}/);
+      if (language === 'en') assert.doesNotMatch(content, /[À-ỹ]/u, role);
+      assert.ok(html.includes(language === 'en' ? 'Switch to Tiếng Việt' : 'Chuyển sang English'));
+    }
   }
 });
 

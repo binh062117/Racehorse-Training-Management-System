@@ -70,7 +70,7 @@ export function HealthSchedulePage() {
       {error ? (
         <ErrorText err={error} />
       ) : records === null ? (
-        <p className="text-muted">Đang tải lịch…</p>
+        <p className="text-muted">{t('healthSchedule.subLoading')}</p>
       ) : records.length === 0 ? (
         <EmptyState>{t(upcomingOnly ? 'healthSchedule.emptyUpcoming' : 'healthSchedule.emptyAll')}</EmptyState>
       ) : (
@@ -90,7 +90,7 @@ export function HealthSchedulePage() {
               <tbody>
                 {records.map((record) => (
                   <tr key={record.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
-                    <td className="pl-5 pr-4 py-3">{record.horse ? <Link to={`/horses/${record.horse.id}`} className="font-medium text-ink hover:text-info no-underline">{record.horse.name}</Link> : <span className="text-muted">Không rõ</span>}</td>
+                    <td className="pl-5 pr-4 py-3">{record.horse ? <Link to={`/horses/${record.horse.id}`} className="font-medium text-ink hover:text-info no-underline">{record.horse.name}</Link> : <span className="text-muted">{t('common.unknown')}</span>}</td>
                     <td className="px-4 py-3">{record.vaccineName}</td>
                     <td className="px-4 py-3 text-muted">{t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}</td>
                     <td className="px-4 py-3 num text-right text-muted whitespace-nowrap">{formatDate(record.date)}</td>
@@ -120,8 +120,8 @@ function DueStatus({ date }: { date: string | null }) {
   const { t } = useTranslation();
   const d = daysUntil(date);
   if (d == null) return <Badge tone="neu">{t('healthSchedule.noDueDate')}</Badge>;
-  if (d < 0) return <Badge tone="bad">{t('healthSchedule.overdue')} {-d} ngày</Badge>;
-  if (d <= 14) return <Badge tone="warn">{d === 0 ? 'Đến hạn hôm nay' : `Còn ${d} ngày`}</Badge>;
+  if (d < 0) return <Badge tone="bad">{t('healthSchedule.overdueDays', { count: -d })}</Badge>;
+  if (d <= 14) return <Badge tone="warn">{d === 0 ? t('healthSchedule.dueToday') : t('healthSchedule.dueInDays', { count: d })}</Badge>;
   return <Badge tone="ok">{t('healthSchedule.scheduled')}</Badge>;
 }
 
@@ -197,7 +197,7 @@ function CreateVaccinationForm({ onCreated, onClose }: { onCreated: () => Promis
           <Btn v="p" type="submit" disabled={saving || horses.length === 0}>
             {saving ? t('healthSchedule.saving') : t('common.create')}
           </Btn>
-          <Btn v="g" onClick={onClose}>Đóng</Btn>
+          <Btn v="g" onClick={onClose}>{t('common.close')}</Btn>
         </div>
       </Card>
     </form>

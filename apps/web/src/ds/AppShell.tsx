@@ -7,7 +7,7 @@ import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
 import type { Notification, Paginated, Role } from '../lib/types';
 import { HORSE_LOGO, Icon, SearchInput } from './ui';
-import { setLanguage } from '../i18n';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 interface NavItem {
   to: string;
@@ -115,17 +115,12 @@ function initials(name?: string) {
 /** Navigation shared by the desktop sidebar and the phone sheet. */
 function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }) {
   const fade = rail ? RAIL_FADE : '';
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const role = user?.role ?? null;
   const visible = (item: NavItem) => !item.roles || (role !== null && item.roles.includes(role));
 
-  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
-  const toggleLang = () => {
-    const next = isVi ? 'en' : 'vi';
-    setLanguage(next);
-  };
 
   const handleLogout = async () => {
     if (!window.confirm(t('nav.logoutConfirm', 'Bạn chắc chắn muốn đăng xuất?'))) return;
@@ -136,7 +131,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
   return (
     <div className="flex flex-col h-full">
       <div className="px-0.5 pb-4"><Brand rail={rail} /></div>
-      <nav aria-label="Điều hướng chính" className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+      <nav aria-label={t('dashboard.navigation')} className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex flex-col gap-0.5">
           {NAV.filter(visible).map(({ to, labelKey, defaultLabel, icon }) => {
             const label = t(labelKey, defaultLabel);
@@ -153,7 +148,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
               {rail && unread > 0 && <span aria-hidden className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-bad ring-2 ring-navy transition-opacity duration-150 group-hover/rail:opacity-0 group-focus-within/rail:opacity-0" />}
             </span>
             <span className={`flex-1 ${fade}`}>{t('nav.notifications', 'Thông báo')}</span>
-            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={`${unread} chưa đọc`}>{unread}</span>}
+            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={t('nav.unreadCount', { count: unread })}>{unread}</span>}
           </NavLink>
         </div>
         <NavGroup title={t('nav.healthSection', 'Sức khỏe')} items={HEALTH_NAV.filter(visible)} rail={rail} />
@@ -165,17 +160,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
           <span className="block text-[13.5px] font-medium leading-[18px] truncate text-white">{user?.name}</span>
           <span className="block text-[12px] leading-4 text-[#b7c0cc] truncate">{user?.role ? t(`role.${user.role}`) : ''}</span>
         </span>
-        <button
-          type="button"
-          onClick={toggleLang}
-          className={`h-8 px-2 rounded-btn text-[12px] font-medium border border-white/15 text-[#b7c0cc] hover:bg-white/[.08] hover:text-white transition-colors inline-flex items-center gap-1 ${fade}`}
-          aria-label={isVi ? 'Chuyển sang tiếng Anh' : 'Switch to Vietnamese'}
-          title={isVi ? 'Switch to English' : 'Chuyển sang tiếng Việt'}
-        >
-          <span className={isVi ? 'text-white font-bold' : 'opacity-60'}>VI</span>
-          <span className="opacity-30">/</span>
-          <span className={!isVi ? 'text-white font-bold' : 'opacity-60'}>EN</span>
-        </button>
+        <LanguageSwitcher className={`border border-white/15 text-[#b7c0cc] hover:bg-white/[.08] hover:text-white transition-colors ${fade}`} />
         <button
           type="button"
           onClick={() => void handleLogout()}
@@ -267,7 +252,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <span className="flex-1 min-w-0 truncate text-[15px] font-semibold">{pageName || 'Racehorse Club'}</span>
           {unread > 0 && (
-            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={`Thông báo, ${unread} chưa đọc`}>
+            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={`${t('nav.notifications')}, ${t('nav.unreadCount', { count: unread })}`}>
               <Icon name="bell" className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-bad" />
             </Link>

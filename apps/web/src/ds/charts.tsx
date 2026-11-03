@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tip } from './ui';
+import i18n from '../i18n';
 
 const FONT = 'Inter, sans-serif';
 
@@ -22,6 +23,10 @@ export const BODY_ZONES: BodyZone[] = (
     ['ht', 'Gân chân sau', 298, 222], ['hh', 'Móng sau', 295, 243],
   ] as [string, string, number, number][]
 ).map(([key, name, x, y]) => ({ key, name, x, y }));
+
+export function bodyZoneLabel(zone: BodyZone): string {
+  return i18n.t(`injury.zones.${zone.key}`, { defaultValue: zone.name });
+}
 
 /** Line chart with crosshair + tooltip on hover. Single series → no legend needed. */
 export function LineChart({
@@ -95,7 +100,7 @@ export function HorseMap({
 }) {
   const { t } = useTranslation();
   const zn = zones.find((z) => z.key === zone);
-  const zoneName = (z: BodyZone) => t(`injury.zones.${z.key}`, { defaultValue: z.name });
+  const zoneName = bodyZoneLabel;
   return (
     <svg viewBox="0 0 420 270" className="w-full h-auto block bg-[#fbfaf7] rounded-card" role="img"
       aria-label={t('injury.bodyMapLabel', { side: t(side === 'L' ? 'common.left' : 'common.right'), position: zn ? t('injury.bodyMapPosition', { position: zoneName(zn) }) : '' })}>

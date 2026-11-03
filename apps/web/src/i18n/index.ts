@@ -15,6 +15,18 @@ function initialLang(): 'vi' | 'en' {
   return 'vi';
 }
 
+function syncLanguage(lang: string): void {
+  const language = lang.startsWith('en') ? 'en' : 'vi';
+  try {
+    localStorage.setItem(STORAGE_KEY, language);
+  } catch {
+    /* storage unavailable */
+  }
+  if (typeof document !== 'undefined') document.documentElement.lang = language;
+}
+
+i18n.on('languageChanged', syncLanguage);
+
 void i18n.use(initReactI18next).init({
   resources: {
     vi: { translation: vi },
@@ -26,12 +38,11 @@ void i18n.use(initReactI18next).init({
 });
 
 export function setLanguage(lang: 'vi' | 'en'): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, lang);
-  } catch {
-    /* ignore */
-  }
   void i18n.changeLanguage(lang);
+}
+
+export function getLocale(): 'vi-VN' | 'en-GB' {
+  return i18n.resolvedLanguage?.startsWith('en') ? 'en-GB' : 'vi-VN';
 }
 
 export default i18n;
