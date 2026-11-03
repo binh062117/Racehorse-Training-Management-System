@@ -15,13 +15,18 @@ interface CreateHorseModalProps {
 export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModalProps) {
   useTranslation();
   const [owners, setOwners] = useState<User[]>([]);
+  const [trainers, setTrainers] = useState<User[]>([]);
+  const [grooms, setGrooms] = useState<User[]>([]);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<HorseGender | ''>('MALE');
   const [breed, setBreed] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [ownerId, setOwnerId] = useState('');
+  const [trainerId, setTrainerId] = useState('');
+  const [groomId, setGroomId] = useState('');
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
   const [saddleNumber, setSaddleNumber] = useState('');
+  const [stallNumber, setStallNumber] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [err, setErr] = useState<unknown>(null);
@@ -34,6 +39,16 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
       .get<Paginated<User>>('/users', { params: { role: 'OWNER', limit: 100 } })
       .then((r) => setOwners(r.data.data))
       .catch(() => setOwners([]));
+
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'TRAINER', limit: 100 } })
+      .then((r) => setTrainers(r.data.data))
+      .catch(() => setTrainers([]));
+
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'GROOM', limit: 100 } })
+      .then((r) => setGrooms(r.data.data))
+      .catch(() => setGrooms([]));
   }, [isOpen]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -51,6 +66,9 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
         ...(breed.trim() ? { breed: breed.trim() } : {}),
         ...(birthDate ? { birthDate: new Date(birthDate).toISOString() } : {}),
         ...(saddleNumber ? { saddleNumber: Number(saddleNumber) } : {}),
+        ...(stallNumber.trim() ? { stallNumber: stallNumber.trim() } : {}),
+        ...(trainerId ? { trainerId } : {}),
+        ...(groomId ? { groomId } : {}),
         status,
       });
 
@@ -65,8 +83,11 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
       setBreed('');
       setBirthDate('');
       setOwnerId('');
+      setTrainerId('');
+      setGroomId('');
       setStatus('ACTIVE');
       setSaddleNumber('');
+      setStallNumber('');
       setPhoto(null);
       setPreview(null);
       onCreated();
@@ -107,6 +128,22 @@ export function CreateHorseModal({ isOpen, onClose, onCreated }: CreateHorseModa
 
             <Field label={i18n.t("ui.saddleNumberOptional")} hint="Số hiển thị trên yếm số (saddle cloth)">
               <Input type="number" min={0} max={999} placeholder={i18n.t("ui.eG7")} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
+            </Field>
+
+            <Field label={i18n.t('assignment.stall')} hint={i18n.t('assignment.stallHint')}>
+              <Input placeholder="A-01" value={stallNumber} onChange={(e) => setStallNumber(e.target.value)} maxLength={50} />
+            </Field>
+            <Field label={i18n.t('assignment.trainer')}>
+              <select className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15" value={trainerId} onChange={(e) => setTrainerId(e.target.value)}>
+                <option value="">{i18n.t('assignment.none')}</option>
+                {trainers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </Field>
+            <Field label={i18n.t('assignment.groom')}>
+              <select className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15" value={groomId} onChange={(e) => setGroomId(e.target.value)}>
+                <option value="">{i18n.t('assignment.none')}</option>
+                {grooms.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
             </Field>
 
             <Field label={i18n.t("ui.breed")}>

@@ -25,12 +25,25 @@ import {
   ListHorsesQueryDto,
   LockHorseDto,
   UpdateHorseDto,
+  CreateFitnessAssessmentDto,
 } from './dto/horses.dto';
 
 const OWNER_SELECT = { id: true, name: true, email: true } as const;
+const USER_REF_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+} as const;
+
+const HORSE_INCLUDE = {
+  owner: { select: OWNER_SELECT },
+  trainer: { select: USER_REF_SELECT },
+  groom: { select: USER_REF_SELECT },
+} as const;
 
 type HorseWithOwner = Prisma.HorseGetPayload<{
-  include: { owner: { select: typeof OWNER_SELECT } };
+  include: typeof HORSE_INCLUDE;
 }>;
 
 export interface HorseView extends HorseWithOwner {
@@ -157,9 +170,12 @@ export class HorsesService {
         breed: dto.breed?.trim() ?? null,
         birthDate: this.parseBirthDate(dto.birthDate) ?? null,
         saddleNumber: dto.saddleNumber ?? null,
+        stallNumber: dto.stallNumber?.trim() || null,
+        trainerId: dto.trainerId ?? null,
+        groomId: dto.groomId ?? null,
         ...(dto.status ? { status: dto.status } : {}),
       },
-      include: { owner: { select: OWNER_SELECT } },
+      include: HORSE_INCLUDE,
     });
     await this.audit.record({
       actorId,
@@ -190,7 +206,7 @@ export class HorsesService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.horse.findMany({
         where,
-        include: { owner: { select: OWNER_SELECT } },
+        include: HORSE_INCLUDE,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
@@ -208,7 +224,7 @@ export class HorsesService {
   async get(id: string): Promise<HorseView> {
     const horse = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
-      include: { owner: { select: OWNER_SELECT } },
+      include: HORSE_INCLUDE,
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
     return this.toView(horse);
@@ -248,11 +264,23 @@ export class HorsesService {
         : { disconnect: true };
     if (dto.fitnessScore !== undefined) data.fitnessScore = dto.fitnessScore;
     if (dto.saddleNumber !== undefined) data.saddleNumber = dto.saddleNumber;
+    if (dto.stallNumber !== undefined)
+      data.stallNumber = dto.stallNumber?.trim() || null;
+    if (dto.trainerId !== undefined) {
+      data.trainer = dto.trainerId
+        ? { connect: { id: dto.trainerId } }
+        : { disconnect: true };
+    }
+    if (dto.groomId !== undefined) {
+      data.groom = dto.groomId
+        ? { connect: { id: dto.groomId } }
+        : { disconnect: true };
+    }
 
     const horse = await this.prisma.horse.update({
       where: { id },
       data,
-      include: { owner: { select: OWNER_SELECT } },
+      include: HORSE_INCLUDE,
     });
     await this.audit.record({
       actorId,
@@ -439,7 +467,7 @@ export class HorsesService {
           lockReason: e.locked ? e.reason : null,
           lockIncidentId: e.locked ? (e.incidentReportId ?? null) : null,
         },
-        include: { owner: { select: OWNER_SELECT } },
+        include: HORSE_INCLUDE,
       }),
       this.prisma.horseLockEvent.create({
         data: {
@@ -540,7 +568,7 @@ export class HorsesService {
     const horse = await this.prisma.horse.update({
       where: { id },
       data: { photoPath },
-      include: { owner: { select: OWNER_SELECT } },
+      include: HORSE_INCLUDE,
     });
     if (current?.photoPath && current.photoPath !== photoPath) {
       if (current.photoPath.startsWith('http')) {
@@ -770,6 +798,90 @@ export class HorsesService {
           )
         : null;
     return { id, name, fitnessScore, sire, dam };
+  }
+
+  async assessFitness(
+    horseId: string,
+    dto: CreateFitnessAssessmentDto,
+    currentUser: AuthUser,
+  ) {
+    const horse = await this.prisma.horse.findFirst({
+      where: { id: horseId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
+
+    const totalScore =
+      dto.speedScore +
+      dto.staminaScore +
+      dto.conditionScore +
+      dto.recoveryScore +
+      dto.moraleScore;
+
+    const [assessment, updatedHorse] = await this.prisma.$transaction([
+      this.prisma.fitnessAssessment.create({
+        data: {
+          horseId,
+          assessedById: currentUser.id,
+          speedScore: dto.speedScore,
+          staminaScore: dto.staminaScore,
+          conditionScore: dto.conditionScore,
+          recoveryScore: dto.recoveryScore,
+          moraleScore: dto.moraleScore,
+          totalScore,
+          notes: dto.notes?.trim() || null,
+        },
+        include: {
+          assessedBy: { select: { id: true, name: true, role: true } },
+        },
+      }),
+      this.prisma.horse.update({
+        where: { id: horseId },
+        data: { fitnessScore: totalScore },
+        include: HORSE_INCLUDE,
+      }),
+    ]);
+
+    return {
+      assessment,
+      horse: this.toView(updatedHorse),
+    };
+  }
+
+  async getFitnessAssessments(horseId: string) {
+    return this.prisma.fitnessAssessment.findMany({
+      where: { horseId },
+      include: {
+        assessedBy: { select: { id: true, name: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
+  async getStallMap() {
+    const horses = await this.prisma.horse.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        stallNumber: true,
+        saddleNumber: true,
+        photoPath: true,
+        status: true,
+        healthStatus: true,
+        locked: true,
+        lockReason: true,
+        fitnessScore: true,
+        breed: true,
+        owner: { select: { id: true, name: true } },
+      },
+      orderBy: [{ stallNumber: 'asc' }, { name: 'asc' }],
+    });
+    return horses.map((h) => ({
+      ...h,
+      photoUrl: h.photoPath ? `${API_PREFIX}/horses/${h.id}/photo` : null,
+    }));
   }
 }
 

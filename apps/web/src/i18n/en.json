@@ -70,7 +70,8 @@
     "adminSection": "Administration",
     "supplies": "Supplies",
     "dailyCare": "Daily care",
-    "auditLogs": "Audit log"
+    "auditLogs": "Audit log",
+    "stalls": "Stable map"
   },
   "dashboard": {
     "title": "System Overview Dashboard",
@@ -170,7 +171,8 @@
     "cancel": "Cancel",
     "save": "Save",
     "update": "Update",
-    "to": "to"
+    "to": "to",
+    "unassigned": "Unassigned"
   },
   "role": {
     "MANAGER": "Club Manager",
@@ -190,7 +192,11 @@
     "owner": "Owner",
     "status": "Status",
     "empty": "No horses yet.",
-    "new": "New horse"
+    "new": "New horse",
+    "stall": "Stall",
+    "noStall": "No stall assigned",
+    "assignedTrainer": "Assigned Trainer",
+    "assignedGroom": "Assigned Groom"
   },
   "horseStatusBadge": {
     "ACTIVE": "● Active",
@@ -1449,5 +1455,55 @@
       "INCIDENT_REPORT": "Incident",
       "DAILY_CARE": "Daily care"
     }
+  },
+  "badgeLegend": {
+    "btnLabel": "Badge legend",
+    "title": "Status badge meanings",
+    "careerTitle": "Career status",
+    "careerActive": "Actively competing",
+    "careerResting": "In a rest or recovery phase",
+    "careerRetired": "Retired from competition",
+    "healthTitle": "Health status",
+    "healthFit": "Healthy, ready for training and racing",
+    "healthMonitoring": "Under observation, avoid high-intensity drills",
+    "healthInjured": "Injured, undergoing veterinary treatment",
+    "healthQuarantined": "Medical quarantine, no training activities",
+    "lockTitle": "Training lock",
+    "lockDesc": "A veterinarian has locked training. No new training plans or sessions can be created until unlocked."
+  },
+  "pagination": {
+    "showingRange": "Showing {{start}} - {{end}} of {{total}}",
+    "pageOf": "Page {{page}} of {{totalPages}}",
+    "perPage": "Per page:",
+    "prev": "Prev",
+    "next": "Next"
+  },
+  "stallsPage": {
+    "title": "Stable & Stall Map",
+    "subtitle": "Track stall distribution, horse locations, and available stalls across barns.",
+    "kpiTotalStalls": "Total stalls",
+    "kpiOccupied": "Occupied",
+    "kpiAvailable": "Available stalls",
+    "kpiLocked": "Horses with locked training",
+    "allSections": "All barns",
+    "sectionA": "Barn A — Main racing barn",
+    "sectionB": "Barn B — Training & recovery",
+    "sectionC": "Barn C — Quarantine & foals",
+    "filterOccupied": "Occupied only",
+    "filterVacant": "Vacant only",
+    "stallAvailable": "Vacant stall",
+    "availableHint": "Ready for horse assignment",
+    "assignHorse": "Assign stall",
+    "unassignedTitle": "Horses without an assigned stall",
+    "unassignedDesc": "Club horses that do not currently have a designated stall location.",
+    "assignModalTitle": "Assign horse to stall",
+    "stallInputLabel": "Enter stall code"
+  },
+  "assignment": {
+    "stall": "Stall",
+    "stallHint": "Block and number, e.g. A-01",
+    "trainer": "Trainer",
+    "groom": "Groom",
+    "none": "Not assigned"
   }
 }

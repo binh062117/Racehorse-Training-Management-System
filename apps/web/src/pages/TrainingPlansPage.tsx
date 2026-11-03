@@ -9,7 +9,7 @@ import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
 import { CreateTrainingPlanModal } from '../components/training/CreateTrainingPlanModal';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Bar, Btn, Card, Chip, ChipCount, EmptyState, Icon, PageHeader } from '../ds/ui';
+import { Badge, Bar, Btn, Card, Chip, ChipCount, EmptyState, Icon, PageHeader, Pagination } from '../ds/ui';
 
 type Filter = 'ALL' | 'ACTIVE' | 'COMPLETED';
 
@@ -33,6 +33,8 @@ export function TrainingPlansPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<Filter>('ALL');
   const [createOpen, setCreateOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
 
   useEffect(() => {
     if (searchParams.get('action') === 'create' && canCreate) {
@@ -43,7 +45,7 @@ export function TrainingPlansPage() {
   }, [searchParams, setSearchParams, canCreate]);
 
   const { data, loading, error: loadErr, reload: loadPlans } = useCachedResource('training-plans', () =>
-    api.get<Paginated<TrainingPlan>>('/training-plans', { params: { limit: 100 } }).then((r) => r.data),
+    api.get<Paginated<TrainingPlan>>('/training-plans', { params: { limit: 500 } }).then((r) => r.data),
   );
   const plans = data?.data ?? [];
 
@@ -65,6 +67,9 @@ export function TrainingPlansPage() {
     return true;
   });
 
+  const totalPages = Math.ceil(filteredPlans.length / pageSize) || 1;
+  const paginatedPlans = filteredPlans.slice((page - 1) * pageSize, page * pageSize);
+
   const sub = loading && plans.length === 0
     ? t('plansPage.loading', 'Đang tải giáo án…')
     : plans.length === 0
@@ -76,14 +81,14 @@ export function TrainingPlansPage() {
       <PageHeader
         title={t('plansPage.title', 'Giáo án huấn luyện')}
         sub={sub}
-        search={{ placeholder: t('plansPage.searchPlaceholder', 'Tìm theo mục tiêu, tên ngựa'), value: search, onChange: setSearch }}
+        search={{ placeholder: t('plansPage.searchPlaceholder', 'Tìm theo mục tiêu, tên ngựa'), value: search, onChange: (val) => { setSearch(val); setPage(1); } }}
         actions={canCreate ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('plansPage.newPlan', 'Tạo giáo án')}</Btn> : undefined}
       />
 
       <div className="flex flex-wrap gap-2 items-center">
-        <Chip on={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')}>{t('plansPage.all', 'Tất cả')} <ChipCount n={plans.length} /></Chip>
-        <Chip on={statusFilter === 'ACTIVE'} onClick={() => setStatusFilter('ACTIVE')}>{t('plansPage.active', 'Đang áp dụng')} <ChipCount n={activeCount} /></Chip>
-        <Chip on={statusFilter === 'COMPLETED'} onClick={() => setStatusFilter('COMPLETED')}>{t('plansPage.completed', 'Đã kết thúc')} <ChipCount n={completedCount} /></Chip>
+        <Chip on={statusFilter === 'ALL'} onClick={() => { setStatusFilter('ALL'); setPage(1); }}>{t('plansPage.all', 'Tất cả')} <ChipCount n={plans.length} /></Chip>
+        <Chip on={statusFilter === 'ACTIVE'} onClick={() => { setStatusFilter('ACTIVE'); setPage(1); }}>{t('plansPage.active', 'Đang áp dụng')} <ChipCount n={activeCount} /></Chip>
+        <Chip on={statusFilter === 'COMPLETED'} onClick={() => { setStatusFilter('COMPLETED'); setPage(1); }}>{t('plansPage.completed', 'Đã kết thúc')} <ChipCount n={completedCount} /></Chip>
       </div>
 
       {loading && plans.length === 0 ? (
@@ -109,7 +114,7 @@ export function TrainingPlansPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredPlans.map((plan) => {
+                {paginatedPlans.map((plan) => {
                   const ongoing = isOngoing(plan);
                   const pct = elapsed(plan, now);
                   return (
@@ -149,6 +154,17 @@ export function TrainingPlansPage() {
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="px-5 pb-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={filteredPlans.length}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 15, 25, 50]}
+              onPageChange={setPage}
+              onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+            />
           </div>
         </Card>
       )}
