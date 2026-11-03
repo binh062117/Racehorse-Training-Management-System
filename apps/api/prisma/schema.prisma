@@ -126,6 +126,9 @@ model User {
   deletedAt       DateTime?
 
   horses            Horse[]           @relation("HorseOwner")
+  trainedHorses     Horse[]           @relation("HorseTrainer")
+  groomedHorses     Horse[]           @relation("HorseGroom")
+  fitnessAssessments FitnessAssessment[]
   trainerSessions   TrainingSession[] @relation("SessionTrainer")
   groomSessions     TrainingSession[] @relation("SessionGroom")
   trainingPlans     TrainingPlan[]    @relation("PlanTrainer")
@@ -140,9 +143,7 @@ model User {
   auditLogs         AuditLog[]        @relation("AuditActor")
   refreshTokens     RefreshToken[]
   authTokens        AuthToken[]
-  otpCodes          OtpCode[]
-
-  @@index([status])
+  otpCodes          OtpCode[]  @@index([status])
 }
 
 model RefreshToken {
@@ -199,6 +200,12 @@ model Horse {
   dam            Horse?       @relation("HorsePedigree_Dam", fields: [damId], references: [id])
   fitnessScore   Int? // 0..100, nullable — chưa đánh giá
   saddleNumber   Int? // Số áo đua (saddle cloth) — hiển thị trên UI, không bắt buộc duy nhất
+  stallNumber    String? // Ô chuồng: ví dụ "A-01", "B-03"
+  // HLV và người chăm sóc phụ trách chính (Tấn)
+  trainerId      String?
+  trainer        User?        @relation("HorseTrainer", fields: [trainerId], references: [id], onDelete: SetNull)
+  groomId        String?
+  groom          User?        @relation("HorseGroom", fields: [groomId], references: [id], onDelete: SetNull)
   locked         Boolean      @default(false) // Training Lock — VET ban hành
   lockReason     String? // chỉ có ý nghĩa khi locked=true
   // Sự cố đã khóa ngựa (nếu khóa do sự cố mức Nặng) — chỉ đóng đúng sự cố này mới tự mở khóa.
@@ -217,6 +224,7 @@ model Horse {
   feedingRecords FeedingRecord[]
   lockEvents     HorseLockEvent[]
   careLogs       DailyCareLog[]
+  fitnessAssessments FitnessAssessment[]
   siredFoals     Horse[]           @relation("HorsePedigree_Sire")
   damFoals       Horse[]           @relation("HorsePedigree_Dam")
 
@@ -536,4 +544,24 @@ model DailyCareLog {
   @@index([horseId, date])
   @@index([groomId])
   @@index([completed])
+}
+
+// Đánh giá thể lực 5 tiêu chí (Tấn) — mỗi lần đánh giá cập nhật Horse.fitnessScore.
+model FitnessAssessment {
+  id             String   @id @default(uuid())
+  horseId        String
+  horse          Horse    @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  assessedById   String
+  assessedBy     User     @relation(fields: [assessedById], references: [id], onDelete: Cascade)
+  speedScore     Int      // 0..20: Tốc độ bứt phá
+  staminaScore   Int      // 0..20: Sức bền cự ly
+  conditionScore Int      // 0..20: Cơ gân & khớp
+  recoveryScore  Int      // 0..20: Khả năng phục hồi
+  moraleScore    Int      // 0..20: Tinh thần thi đấu
+  totalScore     Int      // 0..100: Tổng điểm tự động tính từ 5 tiêu chí
+  notes          String?  // Nhận xét chi tiết của Vet / HLV
+  createdAt      DateTime @default(now())
+
+  @@index([horseId, createdAt])
+  @@index([assessedById])
 }

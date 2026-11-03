@@ -16,17 +16,22 @@ interface EditHorseModalProps {
 export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseModalProps) {
   useTranslation();
   const [owners, setOwners] = useState<User[]>([]);
+  const [trainers, setTrainers] = useState<User[]>([]);
+  const [grooms, setGrooms] = useState<User[]>([]);
   const [allHorses, setAllHorses] = useState<Horse[]>([]);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<HorseGender | ''>('');
   const [breed, setBreed] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [ownerId, setOwnerId] = useState('');
+  const [trainerId, setTrainerId] = useState('');
+  const [groomId, setGroomId] = useState('');
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
   const [sireId, setSireId] = useState('');
   const [damId, setDamId] = useState('');
   const [fitnessScore, setFitnessScore] = useState<string>('');
   const [saddleNumber, setSaddleNumber] = useState<string>('');
+  const [stallNumber, setStallNumber] = useState<string>('');
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,17 +43,32 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
     setBreed(horse.breed ?? '');
     setBirthDate(horse.birthDate ? horse.birthDate.slice(0, 10) : '');
     setOwnerId(horse.ownerId);
+    setTrainerId(horse.trainerId ?? '');
+    setGroomId(horse.groomId ?? '');
     setStatus(horse.status);
     setSireId(horse.sireId ?? '');
     setDamId(horse.damId ?? '');
     setFitnessScore(horse.fitnessScore != null ? String(horse.fitnessScore) : '');
     setSaddleNumber(horse.saddleNumber != null ? String(horse.saddleNumber) : '');
+    setStallNumber(horse.stallNumber ?? '');
 
     // Fetch owners
     api
       .get<Paginated<User>>('/users', { params: { role: 'OWNER', limit: 100 } })
       .then((r) => setOwners(r.data.data))
       .catch(() => setOwners([]));
+
+    // Fetch trainers
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'TRAINER', limit: 100 } })
+      .then((r) => setTrainers(r.data.data))
+      .catch(() => setTrainers([]));
+
+    // Fetch grooms
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'GROOM', limit: 100 } })
+      .then((r) => setGrooms(r.data.data))
+      .catch(() => setGrooms([]));
 
     // Fetch horses for pedigree selection (exclude self)
     api
@@ -84,6 +104,9 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
         damId: damId ? damId : null,
         fitnessScore: fitnessScore !== '' ? Number(fitnessScore) : null,
         saddleNumber: saddleNumber !== '' ? Number(saddleNumber) : null,
+        stallNumber: stallNumber.trim() ? stallNumber.trim() : null,
+        trainerId: trainerId ? trainerId : null,
+        groomId: groomId ? groomId : null,
       };
 
       await api.patch(`/horses/${horse.id}`, payload);
@@ -146,6 +169,23 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
           <Field label={i18n.t("ui.saddleNumberOptional")} hint="Số hiển thị trên yếm số (saddle cloth)">
             <Input type="number" min={0} max={999} placeholder={i18n.t("ui.eG7")} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
           </Field>
+          <div className="grid gap-3.5 sm:grid-cols-3">
+             <Field label={i18n.t('assignment.stall')} hint={i18n.t('assignment.stallHint')}>
+               <Input placeholder="A-01" value={stallNumber} onChange={(e) => setStallNumber(e.target.value)} maxLength={50} />
+             </Field>
+             <Field label={i18n.t('assignment.trainer')}>
+               <select className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15" value={trainerId} onChange={(e) => setTrainerId(e.target.value)}>
+                 <option value="">{i18n.t('assignment.none')}</option>
+                 {trainers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+               </select>
+             </Field>
+             <Field label={i18n.t('assignment.groom')}>
+               <select className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15" value={groomId} onChange={(e) => setGroomId(e.target.value)}>
+                 <option value="">{i18n.t('assignment.none')}</option>
+                 {grooms.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+               </select>
+             </Field>
+            </div>
 
           <div className="p-3 rounded-card border border-line bg-subtle">
             <div className="lbl text-navy mb-2">Phả hệ (Pedigree)</div>

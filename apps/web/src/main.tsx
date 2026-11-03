@@ -15,6 +15,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { HorsesPage } from './pages/HorsesPage';
+import { StableMapPage } from './pages/StableMapPage';
 import { HorseDetailPage } from './pages/HorseDetailPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -71,6 +72,7 @@ const router = createBrowserRouter([
         ),
       },
       { path: '/horses', element: <HorsesPage /> },
+      { path: '/stalls', element: <StableMapPage /> },
       {
         path: '/health-records',
         element: (

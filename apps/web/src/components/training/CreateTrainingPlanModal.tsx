@@ -71,6 +71,10 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
       setErr(new Error('Vui lòng chọn ngựa để lập giáo án.'));
       return;
     }
+    if (selectedHorse?.locked) {
+      setErr(new Error('Không thể lập giáo án cho ngựa đang bị khóa tập luyện.'));
+      return;
+    }
     if (!goal.trim()) {
       setErr(new Error(i18n.t("ui.enterATrainingGoal")));
       return;
@@ -181,7 +185,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
 
         <ModalFoot>
           <Btn onClick={onClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
-          <Btn v="p" type="submit" disabled={busy || loadingHorses}>{busy ? i18n.t("ui.creating2") : i18n.t("ui.createPlan")}</Btn>
+          <Btn v="p" type="submit" disabled={busy || loadingHorses || Boolean(selectedHorse?.locked)}>{busy ? i18n.t("ui.creating2") : i18n.t("ui.createPlan")}</Btn>
         </ModalFoot>
       </form>
     </Modal>

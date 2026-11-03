@@ -66,7 +66,17 @@ export class NotificationsService {
         select: { trainerId: true },
       }),
     ]);
-    const ids = [...new Set([...plans, ...sessions].map((x) => x.trainerId))];
+    // The horse's assigned trainer (Horse.trainerId) always hears about it too.
+    const horse = await this.prisma.horse.findUnique({
+      where: { id: horseId },
+      select: { trainerId: true },
+    });
+    const ids = [
+      ...new Set([
+        ...(horse?.trainerId ? [horse.trainerId] : []),
+        ...[...plans, ...sessions].map((x) => x.trainerId),
+      ]),
+    ];
     if (ids.length > 0) return ids;
     const all = await this.prisma.user.findMany({
       where: { role: 'TRAINER', status: 'ACTIVE', deletedAt: null },

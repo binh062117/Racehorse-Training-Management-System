@@ -21,6 +21,7 @@ const NAV: NavItem[] = [
   { to: '/training/progress', labelKey: 'hai.clubProgress', defaultLabel: 'Club training progress', icon: 'plans', roles: ['MANAGER', 'TRAINER'] },
   { to: '/dashboard', labelKey: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: 'dashboard' },
   { to: '/horses', labelKey: 'nav.horses', defaultLabel: 'Ngựa đua', icon: 'horse' },
+  { to: '/stalls', labelKey: 'nav.stalls', defaultLabel: 'Sơ đồ chuồng trại', icon: 'reports' },
   { to: '/plans', labelKey: 'nav.plansTrainer', defaultLabel: 'Giáo án huấn luyện', icon: 'plans' },
   { to: '/races', labelKey: 'nav.races', defaultLabel: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
   { to: '/supplies', labelKey: 'nav.supplies', defaultLabel: 'Vật tư', icon: 'box', roles: ['MANAGER', 'GROOM', 'VET', 'TRAINER'] },
