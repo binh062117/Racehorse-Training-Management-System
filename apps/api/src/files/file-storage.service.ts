@@ -24,6 +24,7 @@ export class FileStorageService {
       HORSE_PHOTO_KIND,
       HEALTH_ATTACHMENT_KIND,
       INCIDENT_PHOTO_KIND,
+      'training-media',
     ]) {
       const dir = uploadKindDir(this.config, kind);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

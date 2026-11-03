@@ -82,7 +82,7 @@ export class SessionsController {
   }
 
   @Patch(':id')
-  @Roles(Role.TRAINER, Role.GROOM)
+  @Roles(Role.TRAINER)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSessionDto,

@@ -80,6 +80,7 @@ export class SuppliesService {
         unit: dto.unit.trim(),
         quantity: dto.quantity ?? 0,
         minQuantity: dto.minQuantity ?? 0,
+        unitPrice: dto.unitPrice ?? null,
         notes: dto.notes?.trim() || null,
       },
     });
@@ -96,6 +97,7 @@ export class SuppliesService {
         ...(dto.minQuantity !== undefined
           ? { minQuantity: dto.minQuantity }
           : {}),
+        ...(dto.unitPrice !== undefined ? { unitPrice: dto.unitPrice } : {}),
         ...(dto.notes !== undefined ? { notes: dto.notes.trim() || null } : {}),
       },
     });

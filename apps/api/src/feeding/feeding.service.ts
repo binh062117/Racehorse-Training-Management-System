@@ -53,6 +53,7 @@ export class FeedingService {
         unit: true,
         category: true,
         quantity: true,
+        unitPrice: true,
       },
     });
     if (!item || item.category !== 'FEED') {
@@ -69,7 +70,15 @@ export class FeedingService {
     }
     const [record] = await this.prisma.$transaction([
       this.prisma.feedingRecord.create({
-        data: { ...data, supplyItemId: item.id },
+        data: {
+          ...data,
+          supplyItemId: item.id,
+          // Cost at today's price — kept even if the price changes later.
+          costVnd:
+            item.unitPrice != null
+              ? Math.round(dto.quantityKg * item.unitPrice)
+              : null,
+        },
         include,
       }),
       this.prisma.supplyItem.update({

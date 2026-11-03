@@ -29,7 +29,7 @@ export class CloudinaryService {
     buffer: Buffer,
     folder: string,
     publicId: string,
-    resourceType: 'image' | 'raw' = 'image',
+    resourceType: 'image' | 'raw' | 'video' = 'image',
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
@@ -63,7 +63,11 @@ export class CloudinaryService {
   async destroyByUrl(url: string): Promise<void> {
     const publicId = this.publicIdFromUrl(url);
     if (!publicId) return;
-    const resourceType = url.includes('/raw/upload/') ? 'raw' : 'image';
+    const resourceType = url.includes('/raw/upload/')
+      ? 'raw'
+      : url.includes('/video/upload/')
+        ? 'video'
+        : 'image';
     try {
       await cloudinary.uploader.destroy(publicId, {
         resource_type: resourceType,

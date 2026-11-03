@@ -58,8 +58,9 @@ export class HorsesController {
     return this.horses.get(id);
   }
 
+  // The vet scores fitness — the trainer who wants the horse back can't.
   @Post(':id/fitness-assessment')
-  @Roles(Role.VET, Role.TRAINER, Role.MANAGER)
+  @Roles(Role.VET)
   @UseGuards(HorseOwnershipGuard)
   assessFitness(
     @Param('id', ParseUUIDPipe) id: string,

@@ -28,6 +28,9 @@ import {
   CreateFitnessAssessmentDto,
 } from './dto/horses.dto';
 
+/** A horse returns to training / may race only at this 5-criteria score or above. */
+export const FITNESS_PASS = 80;
+
 const OWNER_SELECT = { id: true, name: true, email: true } as const;
 const USER_REF_SELECT = {
   id: true,
@@ -262,7 +265,6 @@ export class HorsesService {
       data.dam = dto.damId
         ? { connect: { id: dto.damId } }
         : { disconnect: true };
-    if (dto.fitnessScore !== undefined) data.fitnessScore = dto.fitnessScore;
     if (dto.saddleNumber !== undefined) data.saddleNumber = dto.saddleNumber;
     if (dto.stallNumber !== undefined)
       data.stallNumber = dto.stallNumber?.trim() || null;
@@ -389,6 +391,38 @@ export class HorsesService {
         'Cần một lần khám mới, ghi sau thời điểm ngựa bị khóa tập.',
       );
     }
+    const score = await this.passingAssessmentScore(
+      horseId,
+      lockedSince?.createdAt,
+    );
+    if (score == null || score < FITNESS_PASS) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        score == null
+          ? `Bác sĩ cần đánh giá thể lực 5 tiêu chí sau khi khóa (đạt từ ${FITNESS_PASS}/100) trước khi mở khóa tập.`
+          : `Điểm thể lực gần nhất là ${score}/100 — cần đạt từ ${FITNESS_PASS} mới mở khóa tập.`,
+      );
+    }
+  }
+
+  /**
+   * The vet's latest 5-criteria score written after `since` (the lock), or
+   * null when there is none. Reintegration needs it at FITNESS_PASS or more.
+   */
+  async passingAssessmentScore(
+    horseId: string,
+    since?: Date,
+  ): Promise<number | null> {
+    const latest = await this.prisma.fitnessAssessment.findFirst({
+      where: {
+        horseId,
+        assessedBy: { role: Role.VET },
+        ...(since ? { createdAt: { gte: since } } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { totalScore: true },
+    });
+    return latest?.totalScore ?? null;
   }
 
   /** Lock triggered by a HIGH incident. A horse already locked keeps its own lock untouched. */
@@ -481,6 +515,30 @@ export class HorsesService {
       }),
     ]);
 
+    // A lock is a medical stop: a fit or watched horse becomes "injured"
+    // (quarantine stays quarantine). Unlocking needs a FIT exam, which is what
+    // brings the status back.
+    if (
+      e.locked &&
+      (horse.healthStatus === HealthStatus.FIT ||
+        horse.healthStatus === HealthStatus.MONITORING)
+    ) {
+      await this.prisma.horse.update({
+        where: { id },
+        data: { healthStatus: HealthStatus.INJURED },
+      });
+      horse.healthStatus = HealthStatus.INJURED;
+    }
+    const plannedAhead = e.locked
+      ? await this.prisma.trainingSession.count({
+          where: {
+            horseId: id,
+            status: 'PLANNED',
+            scheduledAt: { gte: new Date() },
+          },
+        })
+      : 0;
+
     // Owner, managers and the trainers working with this horse all need to
     // know training is (no longer) allowed.
     const [managerIds, trainerIds] = await Promise.all([
@@ -488,7 +546,7 @@ export class HorsesService {
       this.notifications.trainerIdsForHorse(id),
     ]);
     const message = e.locked
-      ? `${horse.name} đã bị khóa tập luyện: ${e.reason}`
+      ? `${horse.name} đã bị khóa tập luyện: ${e.reason}${plannedAhead ? ` — ${plannedAhead} buổi tập đã lên lịch sẽ không được diễn ra cho đến khi mở khóa` : ''}`
       : `${horse.name} đã được mở khóa tập luyện — ${e.reason}`;
     await this.notifications.notifyUsers(
       [horse.ownerId, ...managerIds, ...trainerIds],
