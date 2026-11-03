@@ -1,6 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { api, getFileUrl } from '../lib/api';
 import type { Horse, HorseRaceEntry, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
@@ -259,7 +259,7 @@ export function HorseDetailPage() {
         <div hidden={tab !== 'progress'}><TrainingProgressTab horseId={horse.id} /></div>
       )}
       {visitedTabs.has('health') && (
-        <div hidden={tab !== 'health'}><HealthTab horse={horse} lockVersion={lockVersion} /></div>
+        <div hidden={tab !== 'health'}><HealthTab key={horse.id} horse={horse} lockVersion={lockVersion} onHorseChanged={loadHorse} /></div>
       )}
       {visitedTabs.has('feeding') && (
         <div hidden={tab !== 'feeding'}><FeedingTab horse={horse} /></div>

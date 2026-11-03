@@ -1,7 +1,7 @@
 export type Role = 'MANAGER' | 'TRAINER' | 'VET' | 'GROOM' | 'OWNER';
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'DISABLED';
 export type HorseStatus = 'ACTIVE' | 'RESTING' | 'RETIRED';
-export type SessionStatus = 'PLANNED' | 'DONE' | 'CANCELLED';
+export type SessionStatus = 'PLANNED' | 'DONE' | 'CANCELLED' | 'MISSED';
 
 export interface User {
   id: string;
@@ -117,6 +117,9 @@ export interface TrainingPlan {
 }
 
 export interface TrainingSession {
+  planId: string | null;
+  groomId: string | null;
+  groom: { id: string; name: string } | null;
   id: string;
   horseId: string;
   horse: { id: string; name: string; ownerId: string };
@@ -149,6 +152,7 @@ export interface HealthRecord {
 }
 
 export interface TreatmentPlan {
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   id: string;
   healthRecordId: string;
   description: string;
@@ -161,7 +165,7 @@ export interface TreatmentPlan {
 export interface Medication {
   id: string;
   healthRecordId: string;
-  treatmentPlanId: string;
+  treatmentPlanId: string | null;
   name: string;
   dosage: string | null;
   startDate: string | null;

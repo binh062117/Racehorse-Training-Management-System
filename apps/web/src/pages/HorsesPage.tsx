@@ -1,9 +1,10 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
-import type { Horse, Paginated } from '../lib/types';
+import type { Horse, HealthStatus, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { CreateHorseModal } from '../components/horse/CreateHorseModal';
@@ -34,6 +35,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [healthFilter, setHealthFilter] = useState<HealthStatus | ''>('');
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 
   const queryParams = {
     limit: 100,
+    ...(healthFilter ? { healthStatus: healthFilter } : {}),
     ...(personal && isOwner && user?.id ? { ownerId: user.id } : {}),
   };
   const cacheKey = `horses:${JSON.stringify(queryParams)}`;
@@ -108,6 +111,11 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
         {filters.map(([k, l, fn]) => (
           <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{l} <ChipCount n={bySearch.filter(fn).length} /></Chip>
         ))}
+        <select className="h-9 w-auto rounded-btn border border-line-strong bg-white px-3" aria-label={i18n.t('ui.healthStatus')} value={healthFilter}
+          onChange={(e) => setHealthFilter(e.target.value as HealthStatus | '')}>
+          <option value="">{i18n.t('healthView.all')}</option>
+          {(['FIT', 'MONITORING', 'INJURED', 'QUARANTINED'] as const).map((status) => <option key={status} value={status}>{i18n.t('horseStatusBadge.' + status)}</option>)}
+        </select>
         <div className="ml-auto">
           <Seg options={[['cards', t('horsesPage.cards', 'Thẻ')], ['table', t('horsesPage.table', 'Bảng')]]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} />
         </div>
@@ -118,7 +126,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
       {loading && rows.length === 0 ? (
         <p className="text-muted">{t('horsesPage.loading', 'Đang tải danh sách ngựa…')}</p>
       ) : rows.length === 0 ? (
-        <EmptyState action={filter !== 'all' || q ? <Btn sm onClick={() => { setFilter('all'); setSearch(''); }}>{t('horsesPage.clearFilters', 'Xóa bộ lọc')}</Btn> : undefined}>
+        <EmptyState action={filter !== 'all' || healthFilter || q ? <Btn sm onClick={() => { setFilter('all'); setHealthFilter(''); setSearch(''); }}>{t('horsesPage.clearFilters', 'Xóa bộ lọc')}</Btn> : undefined}>
           {all.length === 0 ? t('horsesPage.emptyNone', 'Chưa có hồ sơ ngựa nào.') : t('horsesPage.emptyFilter', 'Không có ngựa nào khớp với bộ lọc hiện tại.')}
         </EmptyState>
       ) : view === 'cards' ? (
@@ -191,11 +199,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
           </div>
         </Card>
       )}
-      {rows.length > 0 && (
-        <p className="text-[13px] text-muted">
-          {t('horseFlow.horsesFound', 'Hiển thị {{count}} trong {{total}} ngựa · xếp theo thể lực, cao nhất trước', { count: rows.length, total: all.length })}
-        </p>
-      )}
+      {rows.length > 0 && <p className="text-[13px] text-muted">{i18n.t('mergeUi.horseRows', { count: rows.length, total: all.length })}</p>}
 
       <CreateHorseModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onCreated={load} />
       <EditHorseModal horse={editingHorse} isOpen={editingHorse !== null} onClose={() => setEditingHorse(null)} onUpdated={load} />

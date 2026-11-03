@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { ErrorText } from '../ErrorText';
@@ -23,6 +25,7 @@ export function FeedingSuggestionCard({
   horseId: string;
   onApply?: (feed: SuggestedFeed) => void;
 }) {
+  useTranslation();
   const [suggestion, setSuggestion] = useState<FeedingSuggestion | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<unknown>(null);
@@ -44,11 +47,11 @@ export function FeedingSuggestionCard({
     <Card className="p-5">
       <div className="flex justify-between items-center gap-3 flex-wrap">
         <div>
-          <h2 className="text-[15px] font-semibold flex items-center gap-2"><Icon name="sparkle" />Trợ lý AI — đề xuất khẩu phần ăn</h2>
-          <p className="cap mt-1">Dựa vào khẩu phần hiện tại, cường độ tập luyện và tình trạng sức khỏe để gợi ý điều chỉnh. Chỉ mang tính tham khảo.</p>
+          <h2 className="text-[15px] font-semibold flex items-center gap-2"><Icon name="sparkle" />{i18n.t("ui.aiAssistantFeedingSuggestions")}</h2>
+          <p className="cap mt-1">{i18n.t("ui.suggestFeedingAdjustmentsBasedOnCurrentFeedTrainingIntensityAndHealthF")}</p>
         </div>
         <Btn v="p" sm onClick={() => void analyze()} disabled={loading} className="whitespace-nowrap">
-          {loading ? 'Đang tạo đề xuất…' : suggestion ? 'Đề xuất lại' : 'Đề xuất khẩu phần'}
+          {loading ? i18n.t("ui.generatingSuggestions") : suggestion ? i18n.t("ui.suggestAgain") : i18n.t("ui.suggestFeeding")}
         </Btn>
       </div>
 
@@ -68,7 +71,7 @@ export function FeedingSuggestionCard({
                       <Badge tone="neu" className="ml-2">{f.quantityKg} kg</Badge>
                       {f.note && <p className="cap mt-1">{f.note}</p>}
                     </div>
-                    {onApply && <Btn sm onClick={() => onApply(f)} className="whitespace-nowrap">Dùng gợi ý này</Btn>}
+                    {onApply && <Btn sm onClick={() => onApply(f)} className="whitespace-nowrap">{i18n.t("ui.useThisSuggestion")}</Btn>}
                   </Card>
                 </li>
               ))}
@@ -77,7 +80,7 @@ export function FeedingSuggestionCard({
 
           {suggestion.cautions.length > 0 && (
             <div className="mt-3">
-              <span className="lbl">Lưu ý</span>
+              <span className="lbl">{i18n.t("ui.pleaseNote")}</span>
               <ul className="mt-1.5 pl-5 list-disc">
                 {suggestion.cautions.map((c, i) => <li key={i} className="mb-1">{c}</li>)}
               </ul>

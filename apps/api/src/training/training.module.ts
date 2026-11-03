@@ -6,8 +6,10 @@ import {
   HorseTrainingPlansController,
   SessionsController,
   TrainingPlansController,
+  TrainingOverviewController,
 } from './training.controller';
 import { TrainingService } from './training.service';
+import { MissedSessionsJob } from './missed-sessions.job';
 
 @Module({
   imports: [NotificationsModule],
@@ -16,7 +18,8 @@ import { TrainingService } from './training.service';
     SessionsController,
     HorseTrainingPlansController,
     TrainingPlansController,
+    TrainingOverviewController,
   ],
-  providers: [TrainingService, HorseOwnershipGuard],
+  providers: [TrainingService, HorseOwnershipGuard, MissedSessionsJob],
 })
 export class TrainingModule {}

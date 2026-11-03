@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { ReactNode } from 'react';
 import { setLanguage } from '../i18n';
 
 const FEATURES: { label: string; enLabel: string; icon: ReactNode }[] = [

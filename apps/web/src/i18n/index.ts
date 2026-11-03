@@ -32,12 +32,21 @@ i18n.on('languageChanged', (lng) => {
   } catch {
     /* ignore */
   }
+  updateDocumentLanguage();
 });
 
 export function getLanguage(): 'vi' | 'en' {
   const current = i18n.resolvedLanguage || i18n.language || initialLang();
   return current.toLowerCase().startsWith('en') ? 'en' : 'vi';
 }
+
+function updateDocumentLanguage() {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = getLanguage();
+  document.title = i18n.t('app.title');
+}
+
+updateDocumentLanguage();
 
 export function setLanguage(lang: 'vi' | 'en'): void {
   try {
