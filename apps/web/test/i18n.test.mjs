@@ -33,6 +33,10 @@ const { HealthRecordsPage } = await load('pages/HealthRecordsPage.tsx');
 const { HealthSchedulePage } = await load('pages/HealthSchedulePage.tsx');
 const { IncidentsPage } = await load('pages/IncidentsPage.tsx');
 const { FeedingTab } = await load('pages/horse/FeedingTab.tsx');
+const { TrialVideosTab } = await load('pages/horse/TrialVideosTab.tsx');
+const { TrialVideoPlayer } = await load('components/horse/TrialVideoPlayer.tsx');
+const { trialVideoSource } = await load('lib/trialVideo.ts');
+const { setCached } = await load('lib/dataCache.ts');
 const { ErrorText } = await load('components/ErrorText.tsx');
 const { BODY_ZONES, bodyZoneLabel } = await load('ds/charts.tsx');
 const format = await load('lib/format.ts');
@@ -171,5 +175,57 @@ test('formatting keeps Vietnam timezone and date input values in both languages'
     assert.equal(format.formatDate('invalid'), '—');
     assert.equal(format.formatDateTime(null), '—');
     assert.equal(format.toDateInput('invalid'), '');
+  }
+});
+
+test('trial videos resolve YouTube and Vimeo page links to in-page players', () => {
+  for (const url of [
+    'https://www.youtube.com/watch?v=M7lc1UVf-VE&feature=shared',
+    'https://youtu.be/M7lc1UVf-VE',
+    'https://m.youtube.com/shorts/M7lc1UVf-VE',
+    'https://www.youtube.com/live/M7lc1UVf-VE',
+    'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE',
+  ]) {
+    assert.deepEqual(trialVideoSource(url), {
+      kind: 'embed', url: 'https://www.youtube.com/embed/M7lc1UVf-VE?playsinline=1&rel=0',
+    });
+  }
+  assert.deepEqual(trialVideoSource('https://vimeo.com/76979871'), { kind: 'embed', url: 'https://player.vimeo.com/video/76979871' });
+  for (const url of ['https://vimeo.com/76979871/abc123', 'https://player.vimeo.com/video/76979871?h=abc123']) {
+    assert.equal(trialVideoSource(url).url, 'https://player.vimeo.com/video/76979871?h=abc123');
+  }
+  for (const url of ['https://example.com/trial.mp4?token=abc#t=2', 'https://example.com/media/123']) {
+    assert.deepEqual(trialVideoSource(url), { kind: 'video', url });
+  }
+  for (const url of ['javascript:alert(1)', 'data:text/html,test', 'not a URL', 'https://youtube.com/watch?v=invalid', 'https://vimeo.com/invalid']) {
+    assert.equal(trialVideoSource(url), null);
+  }
+  assert.equal(trialVideoSource('https://youtube.com.example.com/watch?v=M7lc1UVf-VE').kind, 'video');
+});
+
+test('owners see embedded and direct trial videos without a link to another page', async () => {
+  const horseId = 'video-horse';
+  const videos = ['https://youtu.be/M7lc1UVf-VE', 'https://vimeo.com/76979871', 'https://example.com/trial.mp4?token=abc'];
+  setCached(`trial-videos:test:${horseId}`, videos.map((videoUrl, id) => ({
+    id: String(id), horseId, title: `Trial ${id}`, videoUrl, recordedAt: '2026-11-03T00:00:00Z',
+  })));
+  for (const language of ['vi', 'en']) {
+    await i18n.changeLanguage(language);
+    const html = render(h(TrialVideosTab, { horseId }), 'OWNER');
+    assert.equal((html.match(/<iframe /g) ?? []).length, 2);
+    assert.equal((html.match(/<video /g) ?? []).length, 1);
+    assert.match(html, /controls=""/);
+    assert.match(html, /playsInline=""/);
+    assert.match(html, /allowFullScreen=""/);
+    assert.doesNotMatch(html, /<a\b|target="_blank"|<form\b/);
+  }
+});
+
+test('invalid trial video URLs display a translated message inside the page', async () => {
+  for (const language of ['vi', 'en']) {
+    await i18n.changeLanguage(language);
+    const html = render(h(TrialVideoPlayer, { url: 'javascript:alert(1)', title: 'Trial' }));
+    assert.ok(visibleText(html).includes(i18n.t('raceFeatures.videoUnavailable')));
+    assert.doesNotMatch(html, /<iframe|<video|<a\b/);
   }
 });

@@ -7,6 +7,7 @@ import type { TrialVideo } from '../../lib/types';
 import { formatDate } from '../../lib/format';
 import { ErrorText } from '../../components/ErrorText';
 import { Btn, Card, EmptyState, Field, Input } from '../../ds/ui';
+import { TrialVideoPlayer } from '../../components/horse/TrialVideoPlayer';
 
 export function TrialVideosTab({ horseId }: { horseId: string }) {
   const { t } = useTranslation();
@@ -93,22 +94,7 @@ export function TrialVideosTab({ horseId }: { horseId: string }) {
           <Card key={video.id} className="p-4">
             <h3 className="font-semibold">{video.title}</h3>
             <p className="cap mb-3">{formatDate(video.recordedAt)}</p>
-            {/\.(mp4|webm|ogg)(\?|$)/i.test(video.videoUrl) && (
-              <video
-                controls
-                preload="metadata"
-                className="w-full max-h-[420px] bg-black"
-                src={video.videoUrl}
-              />
-            )}
-            <a
-              className="text-info block mt-2"
-              href={video.videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t('raceFeatures.openVideo')}
-            </a>
+            <TrialVideoPlayer key={video.videoUrl} url={video.videoUrl} title={video.title} />
             {video.notes && <p className="mt-2">{video.notes}</p>}
             {canEdit && (
               <Btn

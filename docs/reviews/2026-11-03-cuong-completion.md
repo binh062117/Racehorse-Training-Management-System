@@ -10,7 +10,7 @@ Nhánh: `cuong-work`. Tích hợp `origin/main` tại `d2ba5ee`, giữ các cậ
 | Kết quả Groom | Hiện người nhập; Groom không được xác nhận. HLV có nút xác nhận kết quả đã hoàn thành, giữ nguyên người nhập và số liệu gốc. |
 | Farrier | Có loại chăm sóc FARRIER, bộ lọc, form tạo và lịch đến hạn. Nhắc lịch dùng đúng nhãn kiểm tra móng. |
 | Báo cáo tài chính | Manager ghi chi phí thực tế; Manager và Owner xem chi phí, tiền thưởng đã ghi nhận, chênh lệch và lọc thời gian. Owner chỉ xem ngựa của mình. |
-| Video đua thử | Manager / HLV thêm hoặc xóa liên kết HTTP(S). Owner xem video ngựa của mình trong tab hồ sơ; không được xem ngựa người khác hoặc xóa video. MP4/WebM/OGG phát trực tiếp; liên kết khác mở ngoài. |
+| Video đua thử | Manager / HLV thêm hoặc xóa liên kết HTTP(S). Owner xem video ngựa của mình trong tab hồ sơ; không được xem ngựa người khác hoặc xóa video. Video trực tiếp, YouTube và Vimeo phát ngay tại trang, không có nút mở sang trang khác. Video nhà cung cấp phải cho phép nhúng; liên kết không phát được hiện thông báo tại chỗ. |
 
 ## Xác minh
 
@@ -19,6 +19,7 @@ Nhánh: `cuong-work`. Tích hợp `origin/main` tại `d2ba5ee`, giữ các cậ
 - Toàn bộ API e2e: **14 suite, 211/211 đạt**.
 - API unit test: **3 suite, 55/55 đạt**.
 - Web i18n: **8/8 đạt**, kiểm tra đủ 5 role, chuyển ngôn ngữ lặp lại, khóa dịch và biến nội suy.
+- Sau cập nhật trình phát video tại trang: **11/11 kiểm thử web đạt**, gồm chuyển đổi liên kết YouTube/Vimeo, video trực tiếp, quyền hiển thị Owner và thông báo liên kết không hợp lệ. Build web và lint các file trình phát đạt.
 - API và web build thành công. Web lint không có lỗi; còn cảnh báo React và kích thước bundle.
 - Database local `racehorse` đã được sao lưu trước khi áp dụng 5 migration còn thiếu của main; không reset hoặc seed đè dữ liệu local.
 
