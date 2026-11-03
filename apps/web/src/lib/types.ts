@@ -127,9 +127,33 @@ export interface TrainingSession {
   trainer: UserRef;
   scheduledAt: string;
   type: string;
+  distanceM?: number | null;
+  surface?: string | null;
   status: SessionStatus;
   resultMetric: string | null;
   resultValue: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DailyCareTask =
+  | 'FEEDING'
+  | 'CLEANING'
+  | 'BATHING'
+  | 'ICE_SOAK'
+  | 'HEALTH_CHECK';
+
+export interface DailyCareLog {
+  id: string;
+  horseId: string;
+  horse: { id: string; name: string; ownerId: string };
+  groomId: string;
+  groom: UserRef;
+  date: string;
+  taskType: DailyCareTask;
+  completed: boolean;
+  completedAt: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -280,3 +304,30 @@ export interface SupplyRequest {
 
 /** A page plus per-filter counts, as returned by GET /incidents and GET /users. */
 export type CountedPage<T> = Paginated<T> & { counts: Record<string, number> };
+
+export interface AuditLog {
+  id: string;
+  actorId: string | null;
+  actor: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role | null;
+  } | null;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  description: string;
+  diff: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditStats {
+  totalLogs: number;
+  todayLogs: number;
+  authEventsToday: number;
+  uniqueActorsCount: number;
+  topActions: { action: string; count: number }[];
+}

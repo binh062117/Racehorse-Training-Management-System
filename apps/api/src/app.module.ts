@@ -17,6 +17,8 @@ import { InjuriesModule } from './injuries/injuries.module';
 import { VaccinationsModule } from './vaccinations/vaccinations.module';
 import { FeedingModule } from './feeding/feeding.module';
 import { SuppliesModule } from './supplies/supplies.module';
+import { DailyCareModule } from './daily-care/daily-care.module';
+import { AuditModule } from './audit/audit.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -28,6 +30,7 @@ import { RolesGuard } from './common/guards/roles.guard';
       validate: validateEnv,
     }),
     PrismaModule,
+    AuditModule,
     MailModule,
     HealthModule,
     AuthModule,
@@ -42,6 +45,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     VaccinationsModule,
     FeedingModule,
     SuppliesModule,
+    DailyCareModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

@@ -34,8 +34,8 @@ export class UsersController {
   }
 
   @Post('approve')
-  approveMany(@Body() dto: ApproveUsersDto) {
-    return this.users.approveMany(dto);
+  approveMany(@Body() dto: ApproveUsersDto, @CurrentUser() user: AuthUser) {
+    return this.users.approveMany(dto, user.id);
   }
 
   @Get(':id')
@@ -44,13 +44,20 @@ export class UsersController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
-    return this.users.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.users.update(id, dto, user.id);
   }
 
   @Post(':id/reject')
-  reject(@Param('id', ParseUUIDPipe) id: string) {
-    return this.users.reject(id);
+  reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.users.reject(id, user.id);
   }
 
   @Delete(':id')

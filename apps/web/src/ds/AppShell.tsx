@@ -28,10 +28,12 @@ const NAV: NavItem[] = [
 const HEALTH_NAV: NavItem[] = [
   { to: '/health-records', labelKey: 'nav.healthRecords', defaultLabel: 'Hồ sơ khám bệnh', icon: 'steth', roles: ['VET'] },
   { to: '/vaccinations', labelKey: 'nav.vaccinations', defaultLabel: 'Tiêm phòng & tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
+  { to: '/daily-care', labelKey: 'nav.dailyCare', defaultLabel: 'Chăm sóc hằng ngày', icon: 'check', roles: ['GROOM', 'MANAGER', 'TRAINER', 'VET', 'OWNER'] },
   { to: '/incidents', labelKey: 'nav.incidents', defaultLabel: 'Sự cố y tế', icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
 ];
 const ADMIN_NAV: NavItem[] = [
   { to: '/admin/users', labelKey: 'nav.users', defaultLabel: 'Phân quyền tài khoản', icon: 'user', roles: ['MANAGER'] },
+  { to: '/admin/audit-logs', labelKey: 'nav.auditLogs', defaultLabel: 'Nhật ký hệ thống', icon: 'eye', roles: ['MANAGER'] },
 ];
 
 const POLL_MS = 20_000;

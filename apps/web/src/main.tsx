@@ -33,6 +33,9 @@ import {
   HorseRaceHistoryPage,
   MyHorsesPage,
 } from './pages/HorseFlowPages';
+import { AuditLogPage } from './pages/AuditLogPage';
+import { AuditLogDetailPage } from './pages/AuditLogDetailPage';
+import { DailyCarePage } from './pages/DailyCarePage';
 
 const router = createBrowserRouter([
   // Visitors see what the club is before signing in; members go straight to the dashboard.
@@ -73,6 +76,14 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['VET']}>
             <HealthRecordsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/daily-care',
+        element: (
+          <RequireAuth roles={['MANAGER', 'GROOM', 'TRAINER', 'VET', 'OWNER']}>
+            <DailyCarePage />
           </RequireAuth>
         ),
       },
@@ -126,6 +137,22 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['MANAGER']}>
             <AdminUsersPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/admin/audit-logs',
+        element: (
+          <RequireAuth roles={['MANAGER']}>
+            <AuditLogPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/admin/audit-logs/:id',
+        element: (
+          <RequireAuth roles={['MANAGER']}>
+            <AuditLogDetailPage />
           </RequireAuth>
         ),
       },

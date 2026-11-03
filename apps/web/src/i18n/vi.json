@@ -68,7 +68,9 @@
     "logoutConfirm": "Bạn chắc chắn muốn đăng xuất?",
     "healthSection": "Sức khỏe",
     "adminSection": "Quản trị",
-    "supplies": "Vật tư"
+    "supplies": "Vật tư",
+    "dailyCare": "Chăm sóc hằng ngày",
+    "auditLogs": "Nhật ký hệ thống"
   },
   "dashboard": {
     "title": "Tổng quan Hệ thống",
@@ -530,7 +532,9 @@
     "selectRaceDescription": "Thông tin giải, danh sách ghi danh và kết quả sẽ hiển thị tại đây.",
     "subUpcoming": "Giải gần nhất: {{name}}, ngày {{date}}{{venue}} · {{count}} giải sắp diễn ra.",
     "subNoUpcoming": "Không có giải nào sắp diễn ra · {{count}} giải đã diễn ra.",
-    "atVenue": " tại {{venue}}"
+    "atVenue": " tại {{venue}}",
+    "surfaceTurf": "Cỏ",
+    "surfaceDirt": "Cát"
   },
   "user": {
     "role": "Vai trò",
@@ -1336,5 +1340,114 @@
       "body": "Đăng nhập là thấy ngay bảng chuồng và những việc cần làm hôm nay."
     },
     "finalCta": "Câu lạc bộ của bạn đã dùng Racehorse Club? Đăng nhập để vào việc."
+  },
+  "dailyCare": {
+    "title": "Chăm sóc hằng ngày",
+    "loading": "Đang tải checklist…",
+    "sub": "Đã xong {{done}}/{{total}} việc cho {{horses}} ngựa.",
+    "subEmpty": "Chưa có checklist chăm sóc cho ngày này.",
+    "generate": "Tạo checklist ngày này",
+    "generating": "Đang tạo…",
+    "kpiTotal": "Tổng việc",
+    "kpiDone": "Đã xong",
+    "kpiPending": "Chưa làm",
+    "kpiProgress": "Tiến độ",
+    "date": "Ngày",
+    "horse": "Ngựa",
+    "allHorses": "Tất cả ngựa",
+    "task": "Công việc",
+    "allTasks": "Tất cả công việc",
+    "status": {
+      "ALL": "Tất cả",
+      "PENDING": "Chưa làm",
+      "DONE": "Đã xong"
+    },
+    "emptyToday": "Hôm nay chưa có checklist — tạo để có 5 việc chuẩn cho từng ngựa.",
+    "emptyDay": "Ngày {{date}} chưa có checklist chăm sóc.",
+    "tasks": {
+      "FEEDING": {
+        "label": "Cho ăn",
+        "desc": "Khẩu phần cỏ, cám và khoáng chất theo chỉ định"
+      },
+      "CLEANING": {
+        "label": "Vệ sinh chuồng",
+        "desc": "Dọn chuồng, thay rơm lót, khử trùng máng ăn"
+      },
+      "BATHING": {
+        "label": "Tắm & chải lông",
+        "desc": "Vệ sinh thân, chải bờm, làm sạch móng"
+      },
+      "ICE_SOAK": {
+        "label": "Ngâm chân nước đá",
+        "desc": "Giảm viêm gân, phục hồi khớp sau bài tập nặng"
+      },
+      "HEALTH_CHECK": {
+        "label": "Kiểm tra thể trạng",
+        "desc": "Thân nhiệt, niêm mạc mắt, dáng đi"
+      }
+    }
+  },
+  "audit": {
+    "title": "Nhật ký hệ thống",
+    "detail": "Chi tiết",
+    "loading": "Đang tải nhật ký…",
+    "sub": "Hôm nay {{today}} thao tác · {{actors}} người dùng · {{failed}} sự kiện đăng nhập.",
+    "search": "Tìm theo mô tả, người thực hiện",
+    "kpiTotal": "Tổng bản ghi",
+    "kpiToday": "Hôm nay",
+    "kpiAuth": "Đăng nhập hôm nay",
+    "kpiActors": "Người thao tác",
+    "entity": "Đối tượng",
+    "action": "Thao tác",
+    "all": "Tất cả",
+    "from": "Từ ngày",
+    "to": "Đến ngày",
+    "clear": "Xóa bộ lọc",
+    "empty": "Chưa có thao tác nào được ghi lại.",
+    "noMatch": "Không có bản ghi nào khớp với bộ lọc.",
+    "time": "Thời điểm",
+    "actor": "Người thực hiện",
+    "description": "Mô tả",
+    "ip": "Địa chỉ IP",
+    "device": "Thiết bị",
+    "system": "Hệ thống",
+    "pageLabel": "{{from}}–{{to}} trong {{total}} bản ghi",
+    "back": "Về nhật ký",
+    "changes": "Thay đổi",
+    "viewTable": "Bảng",
+    "noChanges": "Thao tác này không kèm dữ liệu thay đổi.",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép",
+    "field": "Trường",
+    "before": "Trước",
+    "after": "Sau",
+    "actions": {
+      "AUTH_LOGIN": "Đăng nhập",
+      "AUTH_LOGIN_FAILED": "Đăng nhập thất bại",
+      "USER_APPROVE": "Duyệt tài khoản",
+      "USER_DISABLE": "Khóa tài khoản",
+      "USER_REJECT": "Từ chối đăng ký",
+      "USER_DELETE": "Xóa tài khoản",
+      "USER_ROLE_ASSIGN": "Đổi vai trò",
+      "USER_UPDATE": "Cập nhật tài khoản",
+      "HORSE_CREATE": "Thêm ngựa",
+      "HORSE_UPDATE": "Sửa hồ sơ ngựa",
+      "HORSE_DELETE": "Xóa ngựa",
+      "HORSE_LOCK": "Khóa tập",
+      "HORSE_UNLOCK": "Mở khóa tập",
+      "DAILY_CARE_GENERATE": "Tạo checklist",
+      "DAILY_CARE_COMPLETE": "Hoàn thành chăm sóc",
+      "DAILY_CARE_UNCOMPLETE": "Bỏ hoàn thành"
+    },
+    "entities": {
+      "AUTH": "Đăng nhập",
+      "USER": "Tài khoản",
+      "HORSE": "Ngựa",
+      "TRAINING_SESSION": "Buổi tập",
+      "TRAINING_PLAN": "Giáo án",
+      "HEALTH_RECORD": "Hồ sơ khám",
+      "INCIDENT_REPORT": "Sự cố",
+      "DAILY_CARE": "Chăm sóc"
+    }
   }
 }
