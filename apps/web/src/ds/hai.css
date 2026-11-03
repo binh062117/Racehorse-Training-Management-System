@@ -1,0 +1,29 @@
+/* Scoped design-system tokens; no feature-local theme control. */
+.hai-progress, .hai-body-map {
+  --hai-action: #8a1622;
+  --hai-card: #fbefe1;
+  --hai-page: #f5dabf;
+  --hai-ink: #3a1210;
+  --hai-line: #e6d3ba;
+  color: var(--hai-ink);
+  background: var(--hai-card);
+}
+[data-theme="dark"] .hai-progress, [data-theme="dark"] .hai-body-map {
+  --hai-action: #d1394a;
+  --hai-card: #153f3c;
+  --hai-page: #0f3d3a;
+  --hai-ink: #f5dabf;
+  --hai-line: #2a5551;
+}
+.hai-progress { padding: 24px; border-radius: 12px; font-family: 'Work Sans', sans-serif; }
+.hai-progress h1, .hai-progress h2 { font-family: Fraunces, serif; }
+.hai-progress h1 { font-size: 32px; line-height: 40px; }
+.hai-progress h2 { font-size: 20px; line-height: 28px; }
+.hai-progress .hai-summary { display: flex; flex-wrap: wrap; gap: 16px; margin-block: 24px; }
+.hai-progress .hai-stat { flex: 1 1 128px; padding: 16px; border: 1px solid var(--hai-line); border-radius: 12px; }
+.hai-progress .hai-stat strong { display: block; font: 500 24px/32px 'JetBrains Mono', monospace; }
+.hai-progress .hai-lead { background: var(--hai-action); color: #fbefe1; }
+.hai-progress table { width: 100%; margin-top: 16px; border-collapse: collapse; }
+.hai-progress th, .hai-progress td { text-align: start; padding: 8px; border-bottom: 1px solid var(--hai-line); }
+.hai-progress svg { width: 100%; height: auto; color: var(--hai-action); }
+.hai-body-map g[role="button"]:focus-visible { outline: 2px solid var(--hai-action); outline-offset: 4px; }

@@ -1,13 +1,13 @@
+import { Pagination } from '../../components/Pagination';
+import { usePagedResource } from '../../lib/usePagedResource';
 import {
-  useCallback,
-  useEffect,
   useRef,
   useState,
   type FormEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, getFileUrl } from '../../lib/api';
-import type { HealthRecord, Horse, Paginated } from '../../lib/types';
+import type { HealthRecord, Horse } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { CreateHealthRecordModal } from '../../components/health/CreateHealthRecordModal';
@@ -16,34 +16,18 @@ import { InjuryLocationsSection } from '../../components/health/InjuryLocationsS
 import { AiInsightCard } from '../../components/horse/AiInsightCard';
 import { LockHistory } from '../../components/horse/LockHorseModal';
 import { formatDate } from '../../lib/format';
-import { Btn, Card, EmptyState, Field, Icon, Textarea } from '../../ds/ui';
+import { Btn, Card, EmptyState, Field, FileInput, HealthBadge, LockBadge, Icon, Textarea } from '../../ds/ui';
 
 /* ========== Main component ========== */
-export function HealthTab({ horse, lockVersion }: { horse: Horse; lockVersion?: number }) {
-  const { t, i18n } = useTranslation();
-  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
+export function HealthTab({ horse, lockVersion, onHorseChanged }: { horse: Horse; lockVersion?: number; onHorseChanged: () => Promise<void> }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isVet = user?.role === 'VET';
   const canUseAi = user?.role === 'VET' || user?.role === 'MANAGER';
 
-  const [records, setRecords] = useState<HealthRecord[]>([]);
-  const [err, setErr] = useState<unknown>(null);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await api.get<Paginated<HealthRecord>>(`/horses/${horse.id}/health-records`, { params: { limit: 100 } });
-      setRecords(res.data.data);
-      setErr(null);
-    } catch (e) {
-      setErr(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [horse.id]);
-
-  useEffect(() => { void load(); }, [load]);
+  const { data: records, total, loading, error: err, refresh: load } = usePagedResource<HealthRecord>('/horses/' + horse.id + '/health-records', page);
 
   return (
     <div className="flex flex-col gap-5">
@@ -51,13 +35,7 @@ export function HealthTab({ horse, lockVersion }: { horse: Horse; lockVersion?: 
         <div>
           <h2 className="text-[15px] font-semibold">{t('healthRecordsPage.title', 'Hồ sơ khám bệnh')}</h2>
           <p className="text-[13px] text-muted mt-0.5">
-            {loading
-              ? (isVi ? 'Đang tải…' : 'Loading…')
-              : records.length === 0
-                ? (isVi ? 'Chưa có lần khám nào.' : 'No health records yet.')
-                : (isVi
-                    ? `${records.length} lần khám · gần nhất ${formatDate(records[0].examDate)}`
-                    : `${records.length} records · latest ${formatDate(records[0].examDate)}`)}
+            {loading ? t('ui.loading') : t('hai.recordCount', { count: total })}
           </p>
         </div>
         {isVet && (
@@ -68,6 +46,11 @@ export function HealthTab({ horse, lockVersion }: { horse: Horse; lockVersion?: 
       </div>
 
       {canUseAi && <AiInsightCard horseId={horse.id} />}
+      <Card className="px-5 py-3.5 flex flex-wrap items-center gap-3">
+        <span className="text-muted">{t('healthView.currentStatus')}</span>
+        <HealthBadge status={horse.healthStatus} />
+        {horse.locked && <LockBadge />}
+      </Card>
 
       {loading ? (
         <p className="text-muted">{t('healthRecordsPage.loading', 'Đang tải hồ sơ…')}</p>
@@ -83,9 +66,10 @@ export function HealthTab({ horse, lockVersion }: { horse: Horse; lockVersion?: 
         </ul>
       )}
 
+      <Pagination page={page} total={total} onPage={setPage} disabled={loading} />
       <LockHistory horseId={horse.id} refreshKey={`${lockVersion ?? 0}-${horse.locked}`} />
 
-      <CreateHealthRecordModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onCreated={() => void load()} horseId={horse.id} horseName={horse.name} />
+      <CreateHealthRecordModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onCreated={() => { setPage(1); load(); void onHorseChanged(); }} horseId={horse.id} horseName={horse.name} />
     </div>
   );
 }
@@ -128,7 +112,10 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
     form.append('file', file);
     try {
       await api.post(`/health-records/${record.id}/attachment`, form);
-      if (fileRef.current) fileRef.current.value = '';
+      if (fileRef.current) {
+        fileRef.current.value = '';
+        fileRef.current.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       onChanged();
     } catch (e2) {
       setErr(e2);
@@ -165,14 +152,14 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
         {/* Doctor-entered treatment is kept as-is */}
         {record.treatment && (
           <div className="mb-2">
-            <span className="lbl">{t('health.treatment')}</span>
+            <span className="lbl">{t('treatmentPlans.examinationNotes')}</span>
             <p className="mt-1 leading-relaxed">{record.treatment}</p>
           </div>
         )}
 
         {isVet && (
           <form onSubmit={upload} className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-line-soft">
-            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" aria-label={t('health.uploadAttachment')} className="flex-1 min-w-0" />
+            <FileInput ref={fileRef} type="file" aria-label={t('health.uploadAttachment')} accept=".jpg,.jpeg,.png,.webp,.pdf" className="flex-1 min-w-0" />
             <Btn sm type="submit" disabled={busy}>{t('health.uploadAttachment')}</Btn>
           </form>
         )}
@@ -180,7 +167,7 @@ function RecordItem({ record, isVet, onChanged }: { record: HealthRecord; isVet:
         {editing && (
           <form onSubmit={save} className="flex flex-col gap-3 mt-3.5">
             <Field label={t('health.diagnosis')}><Textarea value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} rows={2} /></Field>
-            <Field label={t('health.treatment')}><Textarea value={treatment} onChange={(e) => setTreatment(e.target.value)} rows={2} /></Field>
+            <Field label={t('treatmentPlans.examinationNotes')}><Textarea value={treatment} onChange={(e) => setTreatment(e.target.value)} rows={2} /></Field>
             <div className="flex gap-2">
               <Btn v="p" sm type="submit" disabled={busy}>{t('common.save')}</Btn>
               <Btn sm onClick={() => setEditing(false)} disabled={busy}>{t('common.cancel')}</Btn>

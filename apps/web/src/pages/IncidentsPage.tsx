@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
@@ -327,12 +328,12 @@ function IncidentPhotoCell({ incident, photoUrl, canUpload, onChanged }: { incid
           </button>
           <ImageLightbox src={photoUrl} alt={t('incidents.photoAlt', { horse: incident.horse.name })} open={open} onClose={() => setOpen(false)} />
         </>
-      ) : !canUpload && <span className="text-muted">Không</span>}
+      ) : !canUpload && <span className="text-muted">{t('mergeUi.no')}</span>}
       {canUpload && (
         <>
           <input ref={inputRef} type="file" accept={PHOTO_TYPES.join(',')} className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
           <Btn sm v="g" disabled={busy} onClick={() => inputRef.current?.click()} className="-ml-2">
-            <Icon name="camera" className="w-3.5 h-3.5" />{busy ? 'Đang tải…' : photoUrl ? 'Đổi ảnh' : 'Thêm ảnh'}
+            <Icon name="camera" className="w-3.5 h-3.5" />{busy ? i18n.t("treatmentPlans.loading") : photoUrl ? i18n.t("ui.changePhoto") : 'Thêm ảnh'}
           </Btn>
         </>
       )}

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import type { Horse, Paginated, TrainingPlan } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';

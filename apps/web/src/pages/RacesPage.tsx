@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -184,7 +185,7 @@ export function RacesPage() {
                         </td>
                         <td className="px-3 py-3 num whitespace-nowrap">{formatDate(race.date)}</td>
                         <td className="px-3 py-3">{race.venue || <span className="text-muted">—</span>}</td>
-                        <td className="px-3 py-3 num text-right whitespace-nowrap">{race.distance ? <>{race.distance.toLocaleString('vi-VN')}<span className="text-muted"> m</span></> : <span className="text-muted">—</span>}</td>
+                        <td className="px-3 py-3 num text-right whitespace-nowrap">{race.distance ? <>{race.distance.toLocaleString('vi-VN')}<span className="text-muted"> {i18n.t("races.meters")}</span></> : <span className="text-muted">—</span>}</td>
                         <td className="px-5 py-3"><Badge tone={isUpcoming ? 'ok' : 'neu'}>{isUpcoming ? t('races.filters.UPCOMING') : t('races.filters.PAST')}</Badge></td>
                       </tr>
                     );

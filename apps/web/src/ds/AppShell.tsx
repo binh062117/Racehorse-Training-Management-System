@@ -18,6 +18,7 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { to: '/training/progress', labelKey: 'hai.clubProgress', defaultLabel: 'Club training progress', icon: 'plans', roles: ['MANAGER', 'TRAINER'] },
   { to: '/dashboard', labelKey: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: 'dashboard' },
   { to: '/horses', labelKey: 'nav.horses', defaultLabel: 'Ngựa đua', icon: 'horse' },
   { to: '/plans', labelKey: 'nav.plansTrainer', defaultLabel: 'Giáo án huấn luyện', icon: 'plans' },
@@ -136,7 +137,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
   return (
     <div className="flex flex-col h-full">
       <div className="px-0.5 pb-4"><Brand rail={rail} /></div>
-      <nav aria-label="Điều hướng chính" className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+      <nav aria-label={i18n.t("dashboard.navigation")} className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex flex-col gap-0.5">
           {NAV.filter(visible).map(({ to, labelKey, defaultLabel, icon }) => {
             const label = t(labelKey, defaultLabel);
@@ -153,7 +154,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
               {rail && unread > 0 && <span aria-hidden className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-bad ring-2 ring-navy transition-opacity duration-150 group-hover/rail:opacity-0 group-focus-within/rail:opacity-0" />}
             </span>
             <span className={`flex-1 ${fade}`}>{t('nav.notifications', 'Thông báo')}</span>
-            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={`${unread} chưa đọc`}>{unread}</span>}
+            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={t('mergeUi.unreadCount', { count: unread })}>{unread}</span>}
           </NavLink>
         </div>
         <NavGroup title={t('nav.healthSection', 'Sức khỏe')} items={HEALTH_NAV.filter(visible)} rail={rail} />
@@ -265,7 +266,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <span className="flex-1 min-w-0 truncate text-[15px] font-semibold">{pageName || 'Racehorse Club'}</span>
           {unread > 0 && (
-            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={`Thông báo, ${unread} chưa đọc`}>
+            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={t('mergeUi.notificationCount', { count: unread })}>
               <Icon name="bell" className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-bad" />
             </Link>

@@ -1,0 +1,74 @@
+[
+  {
+    "key": "head",
+    "name": "Đầu",
+    "x": 70,
+    "y": 82
+  },
+  {
+    "key": "neck",
+    "name": "Cổ",
+    "x": 120,
+    "y": 90
+  },
+  {
+    "key": "sh",
+    "name": "Vai",
+    "x": 150,
+    "y": 124
+  },
+  {
+    "key": "back",
+    "name": "Lưng",
+    "x": 222,
+    "y": 104
+  },
+  {
+    "key": "hip",
+    "name": "Hông / mông",
+    "x": 300,
+    "y": 120
+  },
+  {
+    "key": "belly",
+    "name": "Bụng / ngực",
+    "x": 205,
+    "y": 152
+  },
+  {
+    "key": "fu",
+    "name": "Cẳng trước",
+    "x": 134,
+    "y": 178
+  },
+  {
+    "key": "ft",
+    "name": "Gân chân trước",
+    "x": 136,
+    "y": 212
+  },
+  {
+    "key": "fh",
+    "name": "Móng trước",
+    "x": 132,
+    "y": 243
+  },
+  {
+    "key": "hock",
+    "name": "Khớp cổ chân sau",
+    "x": 304,
+    "y": 196
+  },
+  {
+    "key": "ht",
+    "name": "Gân chân sau",
+    "x": 298,
+    "y": 222
+  },
+  {
+    "key": "hh",
+    "name": "Móng sau",
+    "x": 295,
+    "y": 243
+  }
+]

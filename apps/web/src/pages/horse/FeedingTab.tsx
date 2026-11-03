@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import { Link } from 'react-router-dom';
 import type { FeedingRecord, Horse, Paginated, SupplyItem } from '../../lib/types';
@@ -73,7 +73,7 @@ export function FeedingTab({ horse }: { horse: Horse }) {
       )}
 
       {loading ? (
-        <p className="cap">{t('plansPage.loading', 'Đang tải...')}</p>
+        <p className="cap">{t('ui.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
@@ -172,7 +172,7 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
             </Field>
           )}
           <Field label={t('feeding.thFeedType', 'Loại thức ăn')}>
-            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required readOnly={!!stock} placeholder="Ví dụ: Cỏ khô Alfalfa, Cám hỗn hợp..." />
+            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required readOnly={!!stock} placeholder={t('ui.exampleAlfalfaHayMixedFeed')} />
           </Field>
           <Field label={`${t('feeding.thQuantity', 'Khối lượng')} (kg)`}>
             <Input type="number" step="0.1" min="0.1" max="100" value={quantityKg} onChange={(e) => setQuantityKg(e.target.value)} required />
@@ -181,7 +181,7 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
           </Field>
           <Field label={t('feeding.thNotes', 'Ghi chú')}>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder="..." />
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder={t('ui.exampleAteLessThanUsual')} />
           </Field>
         </div>
         {short && stock && (

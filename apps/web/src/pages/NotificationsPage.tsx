@@ -1,8 +1,9 @@
+import i18n from "../i18n";
 import { useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { ErrorText } from '../components/ErrorText';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, formatNotificationMessage } from '../lib/format';
 import { useAuth } from '../auth/useAuth';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Notification, Paginated } from '../lib/types';
@@ -69,8 +70,8 @@ export function NotificationsPage() {
       <PageHeader
         title={t('notificationsPage.title')}
         sub={loading ? t('notificationsPage.loading') : total === 0 ? t('notificationsPage.description') : unreadHere > 0
-          ? `${unreadHere} thông báo chưa đọc trong ${notifications.length} mới nhất · tổng ${total}.`
-          : `Đã đọc hết · tổng ${total} thông báo.`}
+          ? t('mergeUi.unreadSummary', { count: unreadHere, latest: notifications.length, total })
+          : t('mergeUi.readSummary', { total })}
       />
 
       <ErrorText err={error} />
@@ -98,14 +99,14 @@ export function NotificationsPage() {
                       title={notification.read ? t('notificationsPage.read') : t('notificationsPage.markRead')}
                       className="flex-1 min-w-0 text-left disabled:cursor-default"
                     >
-                      <span className={`block ${notification.read ? 'text-muted' : 'text-ink font-medium'}`}>{notification.message.replace(/^⚠️?\s*/u, '')}</span>
+                      <span className={`block ${notification.read ? 'text-muted' : 'text-ink font-medium'}`}>{formatNotificationMessage(notification.message).replace(/^⚠️?\s*/u, '')}</span>
                       <span className="num block text-[12.5px] text-muted mt-0.5">{formatDateTime(notification.createdAt)}</span>
                     </button>
                     {!notification.read && <span className="mt-2 w-2 h-2 rounded-full bg-info flex-none" aria-label={t('notificationsPage.unread')} />}
                     <button
                       type="button"
-                      aria-label="Xóa thông báo"
-                      title="Xóa thông báo"
+                      aria-label={i18n.t("mergeUi.deleteNotification")}
+                      title={i18n.t("mergeUi.deleteNotification")}
                       disabled={updatingId !== null}
                       onClick={(e) => void remove(notification, e)}
                       className="flex-none -my-1 w-8 h-8 inline-flex items-center justify-center rounded-btn text-muted hover:text-bad hover:bg-bad-bg disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"

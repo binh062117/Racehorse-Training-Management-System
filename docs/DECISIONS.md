@@ -1,5 +1,17 @@
 # Decisions — quyết định kỹ thuật & lý do
 
+## 2026-10-29 — HẢI training/health completion
+
+Nguồn: yêu cầu triển khai bảy nhiệm vụ HẢI của người dùng. Hợp đồng mới:
+[hai-training-health-completion](specs/hai-training-health-completion.md).
+Thay quyền lên lịch hồi tố của Phase 3 bằng cấm thời gian quá khứ; thêm MISSED
+tự động và terminal, Groom nullable, phân trang, body map và tổng hợp CLB.
+Ngày giáo án tính theo lịch Việt Nam, bao gồm cả ngày kết thúc. Giữ công thức
+UC-13 DONE/(DONE+CANCELLED); MISSED thống kê riêng, đổi mẫu số là quyết định
+sản phẩm tiếp theo. Migration chỉ được tạo, chưa chạy. Cần review thay đổi
+schema/API chung với nhóm trước triển khai; không gửi thông báo thay người dùng.
+
+
 Ghi mọi quyết định thiết kế ở đây, kèm ngày và nguồn (Claude Code / Claude chat /
 nhóm). Mới nhất lên đầu.
 

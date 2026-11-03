@@ -1,3 +1,4 @@
+import i18n from '../../i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -86,7 +87,7 @@ export function HorseFormPage() {
     };
   }, [id]);
 
-  usePageChrome({ crumbs: [['Ngựa đua', '/horses'], id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')] });
+  usePageChrome({ crumbs: [[i18n.t("nav.horses"), '/horses'], id ? t('horseFlow.editHorse') : t('horseFlow.addHorse')] });
 
   const setValue = <K extends keyof HorseFormState>(key: K, value: HorseFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));

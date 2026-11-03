@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
-import { createPortal } from 'react-dom';
-import { Link, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
+import { forwardRef, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, NavLink } from 'react-router-dom';
 
 /* ---------- icons (stroke, 24px grid) ---------- */
 const P: Record<string, string[]> = {
@@ -134,7 +134,7 @@ export function PageHeader({ crumbs, title, sub, actions, search }: {
     <header className="flex flex-wrap items-end gap-x-6 gap-y-3">
       <div className="min-w-0 flex-[1_1_320px]">
         {crumbs && crumbs.length > 0 && (
-          <nav aria-label="Đường dẫn" className="flex items-center gap-1.5 text-[13px] text-muted mb-1">
+          <nav aria-label={i18n.t('mergeUi.breadcrumb')} className="flex items-center gap-1.5 text-[13px] text-muted mb-1">
             {crumbs.map(([label, to]) => (
               <span key={to} className="flex items-center gap-1.5">
                 <Link to={to} className="no-underline text-muted hover:text-ink">{label}</Link>
@@ -276,8 +276,9 @@ export function EmptyState({ children, action }: { children: ReactNode; action?:
 /** Saddle-cloth number. Renders nothing when the horse has no number, so an
  *  empty cloth never reads as a stray "—" button. */
 export function Cloth({ n, className = '' }: { n: number | string | null | undefined; className?: string }) {
+  useTranslation();
   if (n == null || n === '') return null;
-  return <span className={`cloth ${className}`} title="Số áo đua">{n}</span>;
+  return <span className={`cloth ${className}`} title={i18n.t("ui.saddleNumber")}>{n}</span>;
 }
 export const HORSE_LOGO = '/icons/manager-horse-head.png';
 /** Soft grounds for horses without a photo — one per horse, picked from its name so it never changes. */
@@ -405,10 +406,11 @@ export function Modal({ open, onClose, width = 560, labelledBy, children }: { op
 }
 /** Dialog title row. A destructive dialog (tone="bad") colours its title, never an icon tile. */
 export function ModalHead({ tone = 'info', title, sub, onClose, id }: { icon?: string; tone?: 'bad' | 'info' | 'ok' | 'warn'; title: ReactNode; sub?: ReactNode; onClose?: () => void; id?: string }) {
+  useTranslation();
   return (
     <div className="flex items-start gap-3 px-6 pt-5 pb-4">
       <div className="flex-1 min-w-0"><h2 id={id} className={`text-[17px] leading-6 font-semibold ${tone === 'bad' ? 'text-bad' : ''}`}>{title}</h2>{sub && <p className="text-[13.5px] text-muted mt-1">{sub}</p>}</div>
-      <button type="button" aria-label="Đóng" onClick={onClose} className="w-8 h-8 -mr-2 -mt-1 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="x" /></button>
+      <button type="button" aria-label={i18n.t("ui.close")} onClick={onClose} className="w-8 h-8 -mr-2 -mt-1 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="x" /></button>
     </div>
   );
 }
@@ -417,6 +419,7 @@ export const ModalFoot = ({ children }: { children: ReactNode }) => <div classNa
 
 /** Full-screen click-to-view for a thumbnail image (e.g. a horse's photo). */
 export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: string; open: boolean; onClose: () => void }) {
+  useTranslation();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -426,7 +429,7 @@ export function ImageLightbox({ src, alt, open, onClose }: { src: string; alt: s
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[rgba(17,24,39,.86)]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <button type="button" onClick={onClose} aria-label="Đóng" className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20">
+      <button type="button" onClick={onClose} aria-label={i18n.t("ui.close")} className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20">
         <Icon name="x" className="w-5 h-5" />
       </button>
       <img src={src} alt={alt} className="max-w-full max-h-full rounded-card object-contain" />
@@ -446,3 +449,20 @@ export function Ring({ value, size = 52, stroke = 4, color, track = '#eff0f3', t
     </svg>
   );
 }
+
+/** Keep native file selection while localizing browser-provided control labels. */
+export const FileInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function FileInput({ className = '', onChange, ...rest }, ref) {
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  return (
+    <label className={`relative flex flex-wrap items-center gap-2 min-w-0 max-w-full rounded-btn focus-within:ring-1 focus-within:ring-info ${className}`}>
+      <span className="rounded-btn border border-line bg-white px-3 py-2 font-medium">{t('fileInput.choose')}</span>
+      <span className="text-muted break-all" aria-live="polite">{name || t('fileInput.empty')}</span>
+      <input {...rest} ref={ref} type="file" aria-label={rest['aria-label'] || t('fileInput.choose')}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(event) => {
+          onChange?.(event);
+          setName(Array.from(event.currentTarget.files ?? []).map((file) => file.name).join(', '));
+        }} />
+    </label>
+  );
+});
