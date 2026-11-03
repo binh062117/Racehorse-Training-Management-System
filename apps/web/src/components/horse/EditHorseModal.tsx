@@ -29,7 +29,6 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
   const [sireId, setSireId] = useState('');
   const [damId, setDamId] = useState('');
-  const [fitnessScore, setFitnessScore] = useState<string>('');
   const [saddleNumber, setSaddleNumber] = useState<string>('');
   const [stallNumber, setStallNumber] = useState<string>('');
   const [err, setErr] = useState<unknown>(null);
@@ -48,7 +47,6 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
     setStatus(horse.status);
     setSireId(horse.sireId ?? '');
     setDamId(horse.damId ?? '');
-    setFitnessScore(horse.fitnessScore != null ? String(horse.fitnessScore) : '');
     setSaddleNumber(horse.saddleNumber != null ? String(horse.saddleNumber) : '');
     setStallNumber(horse.stallNumber ?? '');
 
@@ -102,7 +100,6 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
         status,
         sireId: sireId ? sireId : null,
         damId: damId ? damId : null,
-        fitnessScore: fitnessScore !== '' ? Number(fitnessScore) : null,
         saddleNumber: saddleNumber !== '' ? Number(saddleNumber) : null,
         stallNumber: stallNumber.trim() ? stallNumber.trim() : null,
         trainerId: trainerId ? trainerId : null,
@@ -161,8 +158,9 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
                 <option value="RETIRED">{i18n.t("ui.retired")}</option>
               </select>
             </Field>
-            <Field label={i18n.t("ui.fitnessScore0100")}>
-              <Input type="number" min={0} max={100} placeholder={i18n.t("ui.notAssessed")} value={fitnessScore} onChange={(e) => setFitnessScore(e.target.value)} />
+            {/* Fitness comes only from the vet's 5-criteria assessment — shown, not typed. */}
+            <Field label={i18n.t("ui.fitnessScore0100")} hint={i18n.t("fitnessFromVet")}>
+              <Input ro value={horse.fitnessScore != null ? `${horse.fitnessScore} / 100` : i18n.t("ui.notAssessed")} />
             </Field>
           </div>
 

@@ -751,6 +751,7 @@ async function main(): Promise<void> {
           unit: 'kg',
           quantity: 180,
           minQuantity: 100,
+          unitPrice: 18000,
         },
         {
           name: 'Cỏ khô Timothy',
@@ -758,6 +759,7 @@ async function main(): Promise<void> {
           unit: 'kg',
           quantity: 420,
           minQuantity: 200,
+          unitPrice: 9000,
         },
         {
           name: 'Cám hỗn hợp giàu đạm',
@@ -765,6 +767,7 @@ async function main(): Promise<void> {
           unit: 'kg',
           quantity: 35,
           minQuantity: 60,
+          unitPrice: 22000,
         },
         {
           name: 'Cà rốt',
@@ -772,6 +775,7 @@ async function main(): Promise<void> {
           unit: 'kg',
           quantity: 24,
           minQuantity: 20,
+          unitPrice: 15000,
         },
         {
           name: 'Muối khoáng liếm',
@@ -779,6 +783,7 @@ async function main(): Promise<void> {
           unit: 'tảng',
           quantity: 6,
           minQuantity: 4,
+          unitPrice: 120000,
         },
         {
           name: 'Ivermectin 1.87% (gel uống)',
@@ -786,6 +791,7 @@ async function main(): Promise<void> {
           unit: 'ống',
           quantity: 3,
           minQuantity: 10,
+          unitPrice: 95000,
         },
         {
           name: 'Vắc xin cúm ngựa',
@@ -793,6 +799,7 @@ async function main(): Promise<void> {
           unit: 'liều',
           quantity: 12,
           minQuantity: 8,
+          unitPrice: 450000,
         },
         {
           name: 'Povidone-iodine 10%',
@@ -800,6 +807,7 @@ async function main(): Promise<void> {
           unit: 'chai',
           quantity: 5,
           minQuantity: 4,
+          unitPrice: 60000,
         },
         {
           name: 'Băng quấn chân',
@@ -807,6 +815,7 @@ async function main(): Promise<void> {
           unit: 'cuộn',
           quantity: 40,
           minQuantity: 20,
+          unitPrice: 35000,
         },
         {
           name: 'Móng sắt',
@@ -814,6 +823,7 @@ async function main(): Promise<void> {
           unit: 'bộ',
           quantity: 6,
           minQuantity: 8,
+          unitPrice: 280000,
         },
         {
           name: 'Bàn chải lông',
@@ -821,6 +831,7 @@ async function main(): Promise<void> {
           unit: 'cái',
           quantity: 9,
           minQuantity: 4,
+          unitPrice: 45000,
         },
       ],
     });

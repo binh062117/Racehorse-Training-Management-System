@@ -23,9 +23,11 @@ interface Props {
   onClose: () => void;
   horse: Horse;
   onUpdated: () => void;
+  /** Trainer / manager / owner: history only — only the vet scores fitness. */
+  readOnly?: boolean;
 }
 
-export function FitnessAssessmentModal({ isOpen, onClose, horse, onUpdated }: Props) {
+export function FitnessAssessmentModal({ isOpen, onClose, horse, onUpdated, readOnly = false }: Props) {
   const { i18n } = useTranslation();
   const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
 
@@ -50,7 +52,7 @@ export function FitnessAssessmentModal({ isOpen, onClose, horse, onUpdated }: Pr
   useEffect(() => {
     if (!isOpen) return;
     setErr(null);
-    setTab('form');
+    setTab(readOnly ? 'history' : 'form');
     // Pre-fill with reasonable defaults based on existing fitnessScore if available
     if (horse.fitnessScore != null) {
       const avg = Math.round(horse.fitnessScore / 5);
@@ -67,7 +69,7 @@ export function FitnessAssessmentModal({ isOpen, onClose, horse, onUpdated }: Pr
       .then((res) => setHistory(res.data ?? []))
       .catch(() => setHistory([]))
       .finally(() => setLoadingHistory(false));
-  }, [isOpen, horse.id, horse.fitnessScore]);
+  }, [isOpen, horse.id, horse.fitnessScore, readOnly]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -149,7 +151,7 @@ export function FitnessAssessmentModal({ isOpen, onClose, horse, onUpdated }: Pr
 
         {/* Tab switcher */}
         <div className="flex border-b border-line mb-4 -mt-2">
-          <button
+          {!readOnly && <button
             type="button"
             onClick={() => setTab('form')}
             className={`pb-2.5 px-3 text-[13.5px] font-medium border-b-2 transition-colors ${
@@ -159,7 +161,7 @@ export function FitnessAssessmentModal({ isOpen, onClose, horse, onUpdated }: Pr
             }`}
           >
             {isVi ? 'Phiếu chấm điểm thể lực' : 'Assessment Form'}
-          </button>
+          </button>}
           <button
             type="button"
             onClick={() => setTab('history')}
@@ -334,7 +336,7 @@ export function FitnessAssessmentModal({ isOpen, onClose, horse, onUpdated }: Pr
         <Btn onClick={onClose} disabled={busy}>
           {isVi ? 'Đóng' : 'Close'}
         </Btn>
-        {tab === 'form' && (
+        {tab === 'form' && !readOnly && (
           <Btn v="p" type="submit" form="fitness-assessment-form" disabled={busy}>
             {busy ? (isVi ? 'Đang lưu…' : 'Saving…') : (isVi ? 'Lưu kết quả chấm điểm' : 'Save Assessment')}
           </Btn>

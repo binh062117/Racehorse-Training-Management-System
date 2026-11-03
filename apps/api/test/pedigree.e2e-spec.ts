@@ -94,15 +94,14 @@ describe('Pedigree (e2e)', () => {
     await app.close();
   });
 
-  it('MANAGER sets sireId + damId + fitnessScore (200)', async () => {
+  it('MANAGER sets sireId + damId (200)', async () => {
     const res = await api()
       .patch(`/api/v1/horses/${childId}`)
       .set(auth('manager'))
-      .send({ sireId, damId, fitnessScore: 80 });
+      .send({ sireId, damId });
     expect(res.status).toBe(200);
     expect(res.body.sireId).toBe(sireId);
     expect(res.body.damId).toBe(damId);
-    expect(res.body.fitnessScore).toBe(80);
   });
 
   it('rejects sireId pointing at itself (400)', async () => {
@@ -130,7 +129,7 @@ describe('Pedigree (e2e)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rejects fitnessScore out of range (400)', async () => {
+  it('fitnessScore can no longer be typed in — it comes from the vet assessment (400)', async () => {
     const res = await api()
       .patch(`/api/v1/horses/${childId}`)
       .set(auth('manager'))
@@ -142,7 +141,7 @@ describe('Pedigree (e2e)', () => {
     const res = await api()
       .patch(`/api/v1/horses/${childId}`)
       .set(auth('trainer'))
-      .send({ fitnessScore: 10 });
+      .send({ breed: 'x' });
     expect(res.status).toBe(403);
   });
 

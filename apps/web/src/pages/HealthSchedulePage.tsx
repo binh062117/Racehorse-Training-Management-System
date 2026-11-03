@@ -1,3 +1,4 @@
+import { HorseFilterChip, useHorseFilter } from '../components/HorseFilterChip';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,8 +19,10 @@ export function HealthSchedulePage() {
 
   usePageChrome({ crumbs: [t('nav.healthSection', 'Sức khỏe'), t('healthSchedule.title')] });
 
+  const horseFilter = useHorseFilter();
   const vaccinationParams = {
     limit: 100,
+    ...(horseFilter.horseId ? { horseId: horseFilter.horseId } : {}),
     ...(upcomingOnly ? { upcoming: true } : {}),
     ...(careType !== 'ALL' ? { careType } : {}),
   };
@@ -55,6 +58,7 @@ export function HealthSchedulePage() {
 
       {isVet && formOpen && <CreateVaccinationForm onCreated={load} onClose={() => setFormOpen(false)} />}
 
+      <HorseFilterChip horseId={horseFilter.horseId} horseName={horseFilter.horseName} onClear={horseFilter.clear} />
       <div className="flex flex-wrap items-center gap-2">
         <Seg value={upcomingOnly ? 'up' : 'all'} onChange={(k) => setUpcomingOnly(k === 'up')}
           options={[['up', t('healthSchedule.upcoming')], ['all', t('healthSchedule.all')]]} />

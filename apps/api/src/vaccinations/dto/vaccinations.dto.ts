@@ -11,6 +11,7 @@ import {
   Max,
   MaxLength,
   Min,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateVaccinationDto {
@@ -47,6 +48,11 @@ export class ListVaccinationsQueryDto {
 }
 
 export class ListUpcomingVaccinationsQueryDto extends ListVaccinationsQueryDto {
+  /** Only this horse — pages opened from a horse's record keep it selected. */
+  @IsOptional()
+  @IsUUID()
+  horseId?: string;
+
   // Query strings are always strings — see notifications.dto.ts for why a
   // plain @Type(() => Boolean) is unsafe for "false".
   @IsOptional()

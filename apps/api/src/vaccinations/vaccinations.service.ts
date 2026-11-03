@@ -131,9 +131,10 @@ export class VaccinationsService {
   async listUpcoming(
     q: ListUpcomingVaccinationsQueryDto,
   ): Promise<Paginated<UpcomingVaccination>> {
-    const where: Prisma.VaccinationWhereInput = q.careType
-      ? { careType: q.careType }
-      : {};
+    const where: Prisma.VaccinationWhereInput = {
+      ...(q.careType ? { careType: q.careType } : {}),
+      ...(q.horseId ? { horseId: q.horseId } : {}),
+    };
     if (q.upcoming) {
       const now = new Date();
       const until = new Date(now.getTime() + UPCOMING_WINDOW_DAYS * 86_400_000);

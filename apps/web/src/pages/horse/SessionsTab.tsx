@@ -2,15 +2,15 @@ import { Pagination } from '../../components/Pagination';
 import { GroomSelect } from '../../components/GroomSelect';
 import { usePagedResource } from '../../lib/usePagedResource';
 import { scheduleError } from '../../lib/sessionSchedule';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../lib/api';
-import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
+import { api, getFileUrl } from '../../lib/api';
+import type { Paginated, TrainingMedia, TrainingPlan, TrainingSession } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate, fromDateTimeLocal, toDateTimeLocal } from '../../lib/format';
 import {
-  Alert, Badge, Btn, Card, EmptyState, Field, Icon, Input, Modal, ModalBody, ModalFoot, ModalHead, NativeSelect, Textarea, type Tone,
+  Alert, Badge, Btn, Card, EmptyState, Field, Icon, ImageLightbox, Input, Modal, ModalBody, ModalFoot, ModalHead, NativeSelect, Textarea, type Tone,
 } from '../../ds/ui';
 
 const sessionTime = new Intl.DateTimeFormat('vi-VN', {
@@ -34,7 +34,14 @@ function SessionsContent({ horseId, isLocked }: Props) {
   const { user } = useAuth();
   const role = user?.role;
   const canCreate = role === 'TRAINER';
-  const canUpdate = role === 'TRAINER' || role === 'GROOM';
+  const canUpdate = role === 'TRAINER';
+  const canUpload = role === 'TRAINER' || role === 'GROOM';
+  // Training photos / videos, grouped per session below.
+  const [media, setMedia] = useState<TrainingMedia[]>([]);
+  const loadMedia = useCallback(() => {
+    api.get<TrainingMedia[]>(`/horses/${horseId}/media`).then((r) => setMedia(r.data)).catch(() => setMedia([]));
+  }, [horseId]);
+  useEffect(() => { loadMedia(); }, [loadMedia]);
 
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(false);
@@ -129,6 +136,11 @@ function SessionsContent({ horseId, isLocked }: Props) {
                 {entries.map((s) => (
                   <SessionItem
                     key={s.id}
+                    isLocked={!!isLocked}
+                    media={media.filter((m) => m.sessionId === s.id)}
+                    canUpload={canUpload}
+                    horseId={horseId}
+                    onMediaChanged={loadMedia}
                     session={s}
                     hasPlan={!!s.planId}
                     planLabel={s.planId ? plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable') : t('session.noPlan')}
@@ -310,7 +322,15 @@ function CreateSessionForm({
   );
 }
 
-function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSessions, plans, onChanged }: {
+const RESULT_WINDOW_MS = 24 * 3600_000;
+const MUSCLE = ['NORMAL', 'TIGHT', 'SORE'] as const;
+
+function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSessions, plans, onChanged, isLocked, media, canUpload, horseId, onMediaChanged }: {
+  isLocked: boolean;
+  media: TrainingMedia[];
+  canUpload: boolean;
+  horseId: string;
+  onMediaChanged: () => void;
   session: TrainingSession;
   planLabel: string;
   hasPlan: boolean;
@@ -325,6 +345,9 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
   const [status, setStatus] = useState<'DONE' | 'CANCELLED' | ''>('');
   const [resultMetric, setResultMetric] = useState(session.resultMetric ?? '');
   const [resultValue, setResultValue] = useState(session.resultValue?.toString() ?? '');
+  const [finishTime, setFinishTime] = useState(session.finishTimeSec?.toString() ?? '');
+  const [recoveryHr, setRecoveryHr] = useState(session.recoveryHeartRate?.toString() ?? '');
+  const [muscle, setMuscle] = useState<string>(session.muscleResponse ?? '');
   const [notes, setNotes] = useState(session.notes ?? '');
   const [groomId, setGroomId] = useState(session.groomId ?? '');
   const [planId, setPlanId] = useState(session.planId ?? '');
@@ -334,15 +357,20 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
-  const editable = canUpdate && session.status === 'PLANNED';
+  // Rescheduling needs a session still ahead; results can be recorded up to 24h after it.
+  const at = new Date(session.scheduledAt).getTime();
+  const ahead = at > Date.now();
+  const editable = canUpdate && session.status === 'PLANNED' && at > Date.now() - RESULT_WINDOW_MS;
+  const hasResult = finishTime.trim() !== '' || recoveryHr.trim() !== '' || muscle !== '' || (resultMetric.trim() !== '' && resultValue.trim() !== '');
   // Only a trainer reschedules, and only while the session stays planned (EX-01 applies to planned sessions).
-  const moving = isTrainer && !status && when !== originalTime;
+  const moving = isTrainer && ahead && !status && when !== originalTime;
   const clash = moving ? findClash(allSessions, when, session.id) : null;
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
     if (busy || clash) return;
     setValidation('');
+    if (status === 'DONE' && !hasResult) { setValidation('sessionResult.needOne'); return; }
     if (moving || planId !== (session.planId ?? '')) {
       const timeError = scheduleError(when, plans.find((p) => p.id === planId));
       if (timeError) { setValidation(timeError); return; }
@@ -356,6 +384,9 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
     if (status) body.status = status;
     if (resultMetric.trim()) body.resultMetric = resultMetric.trim();
     if (resultValue.trim()) body.resultValue = Number(resultValue);
+    if (finishTime.trim()) body.finishTimeSec = Number(finishTime);
+    if (recoveryHr.trim()) body.recoveryHeartRate = Number(recoveryHr);
+    if (muscle) body.muscleResponse = muscle;
     if (isTrainer && notes !== (session.notes ?? '')) body.notes = notes.trim();
     try {
       await api.patch(`/sessions/${session.id}`, body);
@@ -390,12 +421,25 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
             <dd>{session.trainer.name}</dd>
             <dt className="text-muted">{t('hai.assignedGroom')}</dt><dd>{session.groom?.name ?? t('hai.unassigned')}</dd>
             {session.notes && <><dt className="text-muted">{t('session.notes')}</dt><dd>{session.notes}</dd></>}
+            {session.finishTimeSec != null && <><dt className="text-muted">{t('sessionResult.finishTime')}</dt><dd className="num">{session.finishTimeSec} s</dd></>}
+            {session.recoveryHeartRate != null && <><dt className="text-muted">{t('sessionResult.recoveryHr')}</dt><dd className="num">{session.recoveryHeartRate} bpm</dd></>}
+            {session.muscleResponse && <><dt className="text-muted">{t('sessionResult.muscle')}</dt><dd>{t(`sessionResult.muscleValue.${session.muscleResponse}`)}</dd></>}
             {(session.resultMetric || session.resultValue != null) && (
               <><dt className="text-muted">{t('session.result')}</dt><dd className="num">{session.resultMetric ?? t('hai.metric')}: <strong>{session.resultValue ?? t('hai.noResult')}</strong></dd></>
             )}
           </dl>
 
-          {editable && !editing && <Btn sm className="mt-3" onClick={() => setEditing(true)}>{t('common.update')}</Btn>}
+          {isLocked && session.status === 'PLANNED' && ahead && (
+            <p className="mt-2 text-[12.5px] text-warn font-medium">{t('sessionResult.lockedHold')}</p>
+          )}
+          {session.status === 'PLANNED' && !ahead && editable && (
+            <p className="mt-2 text-[12.5px] text-info">{t('sessionResult.recordNow')}</p>
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {editable && !editing && <Btn sm onClick={() => setEditing(true)}>{ahead ? t('common.update') : t('sessionResult.record')}</Btn>}
+            {canUpload && <MediaUpload horseId={horseId} sessionId={session.id} onDone={onMediaChanged} />}
+          </div>
+          {media.length > 0 && <MediaStrip media={media} />}
 
         {editing && (
           <form onSubmit={save} className="flex flex-col gap-3 mt-3.5 pt-3.5 border-t border-line-soft">
@@ -406,7 +450,7 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
                 <option value="CANCELLED">{t('session.displayStatus.CANCELLED')}</option>
               </NativeSelect>
             </Field>
-            {isTrainer && !status && (
+            {isTrainer && !status && ahead && (
               <>
                 <Field label={t('session.scheduledAt')} hint={t('hai.rescheduleHint')}>
                   <Input type="datetime-local" min={toDateTimeLocal(new Date().toISOString())} value={when} onChange={(e) => { e.currentTarget.setCustomValidity(''); setWhen(e.target.value); }} onInvalid={(e) => { if (e.currentTarget.validity.rangeUnderflow) e.currentTarget.setCustomValidity(t('hai.pastTime')); }} err={!!clash} required />
@@ -422,12 +466,31 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
               </NativeSelect></Field>
             </>}
             {validation && <p role="alert" className="text-bad">{t(validation)}</p>}
-            <Field label={t('session.resultMetric')}>
-              <Input value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} />
-            </Field>
-            <Field label={t('session.resultValue')}>
-              <Input type="number" step="any" value={resultValue} onChange={(e) => setResultValue(e.target.value)} />
-            </Field>
+            {status === 'DONE' && (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label={t('sessionResult.finishTime')} hint={t('sessionResult.finishTimeHint')}>
+                  <Input type="number" min="1" step="0.1" value={finishTime} onChange={(e) => setFinishTime(e.target.value)} />
+                </Field>
+                <Field label={t('sessionResult.recoveryHr')} hint={t('sessionResult.recoveryHrHint')}>
+                  <Input type="number" min="20" max="250" value={recoveryHr} onChange={(e) => setRecoveryHr(e.target.value)} />
+                </Field>
+                <Field label={t('sessionResult.muscle')}>
+                  <NativeSelect value={muscle} onChange={(e) => setMuscle(e.target.value)}>
+                    <option value="">{t('sessionResult.notRecorded')}</option>
+                    {MUSCLE.map((m) => <option key={m} value={m}>{t(`sessionResult.muscleValue.${m}`)}</option>)}
+                  </NativeSelect>
+                </Field>
+              </div>
+            )}
+            {status === 'DONE' && (
+              <details className="text-[13px]">
+                <summary className="cursor-pointer text-muted">{t('sessionResult.otherMetric')}</summary>
+                <div className="grid gap-3 sm:grid-cols-2 mt-2">
+                  <Field label={t('session.resultMetric')}><Input value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} placeholder="heart_rate_max" /></Field>
+                  <Field label={t('session.resultValue')}><Input type="number" step="any" value={resultValue} onChange={(e) => setResultValue(e.target.value)} /></Field>
+                </div>
+              </details>
+            )}
             {isTrainer && <Field label={t('session.notes')}><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></Field>}
             <ErrorText err={err} />
             <div className="flex gap-2">
@@ -439,5 +502,56 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
         </div>
       </Card>
     </li>
+  );
+}
+
+/** Add a photo or video to a session — the owner sees it in the monthly report. */
+function MediaUpload({ horseId, sessionId, onDone }: { horseId: string; sessionId: string; onDone: () => void }) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<unknown>(null);
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) { setErr(new Error(t('media.tooBig'))); return; }
+    setBusy(true);
+    setErr(null);
+    const form = new FormData();
+    form.append('file', file);
+    form.append('sessionId', sessionId);
+    try {
+      await api.post(`/horses/${horseId}/media`, form);
+      onDone();
+    } catch (e) {
+      setErr(e);
+    } finally {
+      setBusy(false);
+      if (ref.current) ref.current.value = '';
+    }
+  };
+  return (
+    <>
+      <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
+      <Btn sm v="g" disabled={busy} onClick={() => ref.current?.click()}><Icon name="camera" className="w-3.5 h-3.5" />{busy ? t('media.uploading') : t('media.add')}</Btn>
+      {err != null && <span className="w-full"><ErrorText err={err} /></span>}
+    </>
+  );
+}
+
+export function MediaStrip({ media }: { media: TrainingMedia[] }) {
+  const [open, setOpen] = useState<TrainingMedia | null>(null);
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {media.map((m) => (
+        <button key={m.id} type="button" onClick={() => setOpen(m)} className="w-16 h-16 rounded-badge overflow-hidden border border-line bg-subtle relative cursor-zoom-in" title={m.caption ?? ''}>
+          {m.kind === 'VIDEO'
+            ? <><video src={getFileUrl(m.url) ?? undefined} className="w-full h-full object-cover" muted preload="metadata" /><span className="absolute inset-0 flex items-center justify-center text-white text-[18px] bg-black/25">▶</span></>
+            : <img src={getFileUrl(m.url) ?? undefined} alt={m.caption ?? ''} className="w-full h-full object-cover" loading="lazy" />}
+        </button>
+      ))}
+      {open && (open.kind === 'VIDEO'
+        ? <Modal open onClose={() => setOpen(null)} width={860}><video src={getFileUrl(open.url) ?? undefined} controls autoPlay className="w-full max-h-[80vh] bg-black" /></Modal>
+        : <ImageLightbox src={getFileUrl(open.url) ?? ''} alt={open.caption ?? ''} open onClose={() => setOpen(null)} />)}
+    </div>
   );
 }

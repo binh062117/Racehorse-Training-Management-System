@@ -10,6 +10,7 @@ import {
   MaxLength,
   Min,
   ValidateIf,
+  IsUUID,
 } from 'class-validator';
 import { HealthStatus } from '@prisma/client';
 
@@ -53,6 +54,11 @@ export class UpdateHealthRecordDto {
 }
 
 export class ListHealthRecordsQueryDto {
+  /** Only this horse — pages opened from a horse's record keep it selected. */
+  @IsOptional()
+  @IsUUID()
+  horseId?: string;
+
   @IsOptional()
   @IsEnum(HealthStatus)
   healthStatus?: HealthStatus;
