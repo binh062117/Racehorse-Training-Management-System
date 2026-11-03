@@ -19,6 +19,7 @@ import {
 } from '../ai/ai.service';
 import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { AuditService } from '../audit/audit.service';
 import {
   CreateHorseDto,
   ListHorsesQueryDto,
@@ -54,6 +55,7 @@ export class HorsesService {
     private readonly cloudinary: CloudinaryService,
     private readonly notifications: NotificationsService,
     private readonly ai: AiService,
+    private readonly audit: AuditService,
   ) {}
 
   private toView(horse: HorseWithOwner): HorseView {
@@ -145,7 +147,7 @@ export class HorsesService {
     return date;
   }
 
-  async create(dto: CreateHorseDto): Promise<HorseView> {
+  async create(dto: CreateHorseDto, actorId?: string): Promise<HorseView> {
     await this.assertOwner(dto.ownerId);
     const horse = await this.prisma.horse.create({
       data: {
@@ -158,6 +160,14 @@ export class HorsesService {
         ...(dto.status ? { status: dto.status } : {}),
       },
       include: { owner: { select: OWNER_SELECT } },
+    });
+    await this.audit.record({
+      actorId,
+      action: 'HORSE_CREATE',
+      entity: 'HORSE',
+      entityId: horse.id,
+      description: `Thêm mới hồ sơ ngựa đua "${horse.name}"`,
+      diff: { name: horse.name, ownerId: horse.ownerId, breed: horse.breed },
     });
     return this.toView(horse);
   }
@@ -204,10 +214,14 @@ export class HorsesService {
     return this.toView(horse);
   }
 
-  async update(id: string, dto: UpdateHorseDto): Promise<HorseView> {
+  async update(
+    id: string,
+    dto: UpdateHorseDto,
+    actorId?: string,
+  ): Promise<HorseView> {
     const existing = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!existing) throw new AppException('NOT_FOUND', 'Horse not found');
     if (dto.ownerId) await this.assertOwner(dto.ownerId);
@@ -239,6 +253,14 @@ export class HorsesService {
       where: { id },
       data,
       include: { owner: { select: OWNER_SELECT } },
+    });
+    await this.audit.record({
+      actorId,
+      action: 'HORSE_UPDATE',
+      entity: 'HORSE',
+      entityId: horse.id,
+      description: `Cập nhật hồ sơ ngựa đua "${horse.name}"`,
+      diff: dto as Record<string, unknown>,
     });
     return this.toView(horse);
   }
@@ -447,18 +469,42 @@ export class HorsesService {
         : NotificationType.TRAINING_UNLOCKED,
       message,
     );
+    // Audit trail (Tân): every lock change — manual or from an incident — lands here.
+    await this.audit.record({
+      actorId: e.actorId ?? undefined,
+      action: e.locked ? 'HORSE_LOCK' : 'HORSE_UNLOCK',
+      entity: 'HORSE',
+      entityId: id,
+      description: e.locked
+        ? `Khóa tập luyện ngựa "${horse.name}": ${e.reason}`
+        : `Mở khóa tập luyện ngựa "${horse.name}" — ${e.reason}`,
+      diff: {
+        locked: e.locked,
+        reason: e.reason,
+        healthRecordId: e.healthRecordId ?? null,
+        incidentReportId: e.incidentReportId ?? null,
+      },
+    });
     return this.toView(horse);
   }
 
-  async remove(id: string): Promise<{ message: string }> {
+  async remove(id: string, actorId?: string): Promise<{ message: string }> {
     const existing = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!existing) throw new AppException('NOT_FOUND', 'Horse not found');
     await this.prisma.horse.update({
       where: { id },
       data: { deletedAt: new Date() },
+    });
+    await this.audit.record({
+      actorId,
+      action: 'HORSE_DELETE',
+      entity: 'HORSE',
+      entityId: id,
+      description: `Xóa hồ sơ ngựa đua "${existing.name}"`,
+      diff: { name: existing.name },
     });
     return { message: 'Horse deleted' };
   }

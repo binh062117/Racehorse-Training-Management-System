@@ -28,6 +28,18 @@ export class CreateSessionDto {
   type!: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(10000)
+  distanceM?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  surface?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(2000)
   notes?: string;
@@ -56,6 +68,18 @@ export class UpdateSessionDto {
   @IsNotEmpty()
   @MaxLength(80)
   type?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(10000)
+  distanceM?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  surface?: string;
 
   @IsOptional()
   @IsString()

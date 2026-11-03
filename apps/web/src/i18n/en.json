@@ -68,7 +68,9 @@
     "logoutConfirm": "Are you sure you want to log out?",
     "healthSection": "Health",
     "adminSection": "Administration",
-    "supplies": "Supplies"
+    "supplies": "Supplies",
+    "dailyCare": "Daily care",
+    "auditLogs": "Audit log"
   },
   "dashboard": {
     "title": "System Overview Dashboard",
@@ -530,7 +532,9 @@
     "selectRaceDescription": "Race details, entries, and results will appear here.",
     "subUpcoming": "Next race: {{name}}, {{date}}{{venue}} · {{count}} upcoming race(s).",
     "subNoUpcoming": "No upcoming races · {{count}} past race(s).",
-    "atVenue": " at {{venue}}"
+    "atVenue": " at {{venue}}",
+    "surfaceTurf": "Turf",
+    "surfaceDirt": "Dirt"
   },
   "user": {
     "role": "Role",
@@ -1336,5 +1340,114 @@
       "body": "Sign in to see the stable board and today's tasks right away."
     },
     "finalCta": "Your club already uses Racehorse Club? Sign in to get to work."
+  },
+  "dailyCare": {
+    "title": "Daily care",
+    "loading": "Loading checklist…",
+    "sub": "{{done}}/{{total}} tasks done across {{horses}} horses.",
+    "subEmpty": "No care checklist for this day yet.",
+    "generate": "Create checklist for this day",
+    "generating": "Creating…",
+    "kpiTotal": "Tasks",
+    "kpiDone": "Done",
+    "kpiPending": "To do",
+    "kpiProgress": "Progress",
+    "date": "Date",
+    "horse": "Horse",
+    "allHorses": "All horses",
+    "task": "Task",
+    "allTasks": "All tasks",
+    "status": {
+      "ALL": "All",
+      "PENDING": "To do",
+      "DONE": "Done"
+    },
+    "emptyToday": "No checklist for today — create one to get the five standard tasks per horse.",
+    "emptyDay": "No care checklist on {{date}}.",
+    "tasks": {
+      "FEEDING": {
+        "label": "Feeding",
+        "desc": "Hay, feed and minerals as prescribed"
+      },
+      "CLEANING": {
+        "label": "Muck out",
+        "desc": "Clean the box, change bedding, disinfect the manger"
+      },
+      "BATHING": {
+        "label": "Wash & groom",
+        "desc": "Wash, brush the mane, pick out hooves"
+      },
+      "ICE_SOAK": {
+        "label": "Ice soak",
+        "desc": "Ease tendons and joints after hard work"
+      },
+      "HEALTH_CHECK": {
+        "label": "Health check",
+        "desc": "Temperature, eyes, gait"
+      }
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "detail": "Detail",
+    "loading": "Loading the log…",
+    "sub": "Today: {{today}} actions · {{actors}} users · {{failed}} sign-in events.",
+    "search": "Search description or user",
+    "kpiTotal": "Entries",
+    "kpiToday": "Today",
+    "kpiAuth": "Sign-ins today",
+    "kpiActors": "Users acting",
+    "entity": "Object",
+    "action": "Action",
+    "all": "All",
+    "from": "From",
+    "to": "To",
+    "clear": "Clear filters",
+    "empty": "Nothing has been recorded yet.",
+    "noMatch": "No entries match the filters.",
+    "time": "Time",
+    "actor": "By",
+    "description": "Description",
+    "ip": "IP address",
+    "device": "Device",
+    "system": "System",
+    "pageLabel": "{{from}}–{{to}} of {{total}} entries",
+    "back": "Back to the log",
+    "changes": "Changes",
+    "viewTable": "Table",
+    "noChanges": "This action carries no change data.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "field": "Field",
+    "before": "Before",
+    "after": "After",
+    "actions": {
+      "AUTH_LOGIN": "Sign-in",
+      "AUTH_LOGIN_FAILED": "Failed sign-in",
+      "USER_APPROVE": "Account approved",
+      "USER_DISABLE": "Account disabled",
+      "USER_REJECT": "Sign-up rejected",
+      "USER_DELETE": "Account deleted",
+      "USER_ROLE_ASSIGN": "Role changed",
+      "USER_UPDATE": "Account updated",
+      "HORSE_CREATE": "Horse added",
+      "HORSE_UPDATE": "Horse edited",
+      "HORSE_DELETE": "Horse deleted",
+      "HORSE_LOCK": "Training locked",
+      "HORSE_UNLOCK": "Training unlocked",
+      "DAILY_CARE_GENERATE": "Checklist created",
+      "DAILY_CARE_COMPLETE": "Care done",
+      "DAILY_CARE_UNCOMPLETE": "Care undone"
+    },
+    "entities": {
+      "AUTH": "Sign-in",
+      "USER": "Account",
+      "HORSE": "Horse",
+      "TRAINING_SESSION": "Session",
+      "TRAINING_PLAN": "Plan",
+      "HEALTH_RECORD": "Exam",
+      "INCIDENT_REPORT": "Incident",
+      "DAILY_CARE": "Daily care"
+    }
   }
 }
