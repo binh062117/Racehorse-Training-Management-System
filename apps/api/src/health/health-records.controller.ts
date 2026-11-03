@@ -25,7 +25,7 @@ import { FileStorageService } from '../files/file-storage.service';
 import {
   HEALTH_ATTACHMENT_KIND,
   SAFE_ATTACHMENT_FILENAME,
-  buildAttachmentMulterOptions,
+  buildAttachmentMemoryMulterOptions,
 } from '../files/upload';
 import { HealthRecordsService } from './health-records.service';
 import {
@@ -66,6 +66,16 @@ export class HorseHealthRecordsController {
 export class HealthRecordsController {
   constructor(private readonly health: HealthRecordsService) {}
 
+  @Get()
+  list(@Query() q: ListHealthRecordsQueryDto, @CurrentUser() user: AuthUser) {
+    return this.health.listAll(q, user);
+  }
+
+  @Get('horse-summary')
+  summary(@CurrentUser() user: AuthUser) {
+    return this.health.horseSummary(user);
+  }
+
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     return this.health.get(id, user);
@@ -89,7 +99,9 @@ export class HealthRecordsController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @UseInterceptors(FileInterceptor('file', buildAttachmentMulterOptions()))
+  @UseInterceptors(
+    FileInterceptor('file', buildAttachmentMemoryMulterOptions()),
+  )
   uploadAttachment(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file?: Express.Multer.File,
@@ -97,10 +109,7 @@ export class HealthRecordsController {
     if (!file) {
       throw new AppException('VALIDATION_ERROR', 'A "file" field is required');
     }
-    return this.health.setAttachment(
-      id,
-      `${HEALTH_ATTACHMENT_KIND}/${file.filename}`,
-    );
+    return this.health.saveAttachment(id, file);
   }
 }
 

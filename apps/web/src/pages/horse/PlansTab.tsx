@@ -1,19 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import type { Horse, Paginated, TrainingPlan } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate } from '../../lib/format';
 import { CreateTrainingPlanModal } from '../../components/training/CreateTrainingPlanModal';
-import { Alert, Badge, Btn, Card, Icon } from '../../ds/ui';
+import { Alert, Badge, Btn, Card, EmptyState, Icon } from '../../ds/ui';
 
 interface Props {
   horse: Horse;
 }
 
 export function PlansTab({ horse }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
   const { user } = useAuth();
   const canCreate = user?.role === 'TRAINER';
 
@@ -45,57 +46,81 @@ export function PlansTab({ horse }: Props) {
     <div className="flex flex-col gap-4">
       {horse.status === 'RETIRED' && (
         <Alert tone="info" icon="info">
-          {t('plansTab.retired', { name: horse.name })}
+          {isVi
+            ? <>Ngựa <strong>{horse.name}</strong> đã giải nghệ. Hệ thống không hỗ trợ lập giáo án huấn luyện mới.</>
+            : <>Horse <strong>{horse.name}</strong> is retired. Creating new training plans is not supported.</>}
         </Alert>
       )}
       {horse.healthStatus === 'QUARANTINED' && (
         <Alert tone="bad" icon="alert">
-          {t('plansTab.quarantined')}
+          {isVi
+            ? <>Ngựa đang trong diện <strong>Cách ly y tế</strong>. Cần chờ Bác sĩ thú y gỡ cách ly trước khi lên giáo án huấn luyện.</>
+            : <>Horse is under <strong>medical quarantine</strong>. Wait for a veterinarian to lift quarantine before scheduling training.</>}
+        </Alert>
+      )}
+      {horse.locked && (
+        <Alert tone="bad" icon="alert">
+          {isVi ? (
+            <>Ngựa <strong>{horse.name}</strong> đang bị khóa tập luyện{horse.lockReason ? ` (Lý do: ${horse.lockReason})` : ''}. Hệ thống không cho phép tạo giáo án huấn luyện mới cho đến khi Bác sĩ thú y mở khóa.</>
+          ) : (
+            <>Horse <strong>{horse.name}</strong> training is currently locked{horse.lockReason ? ` (Reason: ${horse.lockReason})` : ''}. Creating new training plans is disabled until unlocked by a veterinarian.</>
+          )}
         </Alert>
       )}
 
       <div className="flex justify-between items-center flex-wrap gap-2.5">
         <div>
-          <h3 className="text-[15px] font-semibold">{t('plansTab.title')}</h3>
-          <p className="cap mt-0.5">
-            {t('plansTab.description', { name: horse.name })}
-            {horse.fitnessScore != null && <span className="ml-2 font-semibold text-brand-blue">{t('plansTab.currentFitness', { score: horse.fitnessScore })}</span>}
+          <h3 className="text-[15px] font-semibold">{t('plansPage.title', 'Giáo án huấn luyện')}</h3>
+          <p className="text-[13px] text-muted mt-0.5">
+            {plans.length === 0
+              ? (isVi ? `Mục tiêu và giai đoạn huấn luyện của ${horse.name}.` : `Goals and training stages for ${horse.name}.`)
+              : `${plans.length} ${t('plansPage.title', 'giáo án')} · ${t('horsesPage.thFitness', 'thể lực')} ${horse.fitnessScore != null ? `${horse.fitnessScore}/100` : '—'}`}
           </p>
         </div>
-        {canCreate && isEligible && <Btn v="p" sm onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('plansTab.create')}</Btn>}
+        {canCreate && isEligible && !horse.locked && (
+          <Btn v="p" sm onClick={() => setCreateOpen(true)}>
+            <Icon name="plus" />{t('plansPage.newPlan', 'Tạo giáo án mới')}
+          </Btn>
+        )}
       </div>
 
       <ErrorText err={err} />
 
       {loading && plans.length === 0 ? (
-        <p className="cap">{t('plansTab.loading')}</p>
+        <p className="text-muted">{t('plansPage.loading', 'Đang tải giáo án…')}</p>
       ) : plans.length === 0 ? (
-        <Card className="px-5 py-10 text-center flex flex-col items-center gap-3">
-          <Icon name="plans" className="w-6 h-6 text-muted" />
-          <p className="cap">{t('plansTab.empty')}</p>
-          {canCreate && <Btn v="p" sm onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('plansTab.firstPlan')}</Btn>}
-        </Card>
+        <EmptyState action={canCreate && isEligible && !horse.locked ? <Btn v="p" sm onClick={() => setCreateOpen(true)}>{t('plansPage.newPlan', 'Thiết lập giáo án đầu tiên')}</Btn> : undefined}>
+          {t('plansPage.empty', 'Ngựa này chưa có giáo án huấn luyện nào.')}
+        </EmptyState>
       ) : (
-        <div className="flex flex-col gap-3">
-          {plans.map((p) => {
-            const isOngoing = !p.endDate || new Date(p.endDate).getTime() >= now.getTime();
-            return (
-              <Card key={p.id} className={`p-5 border-l-4 ${isOngoing ? 'border-l-ok' : 'border-l-line'}`}>
-                <div className="flex justify-between items-start flex-wrap gap-2">
-                  <div>
-                    <h4 className="text-[15px] font-semibold">{p.goal}</h4>
-                    <p className="cap mt-1">{t('plansTab.trainer')} <strong>{p.trainer?.name ?? '—'}</strong> ({p.trainer?.email})</p>
+        <Card>
+          <ul className="list-none m-0 p-0">
+            {plans.map((p) => {
+              const isOngoing = !p.endDate || new Date(p.endDate).getTime() >= now.getTime();
+              return (
+                <li key={p.id} className="px-5 py-4 border-b border-line-soft last:border-0">
+                  <div className="flex justify-between items-start flex-wrap gap-2">
+                    <div className="min-w-0">
+                      {/* User input (goal) is kept untouched */}
+                      <h4 className="text-[15px] font-semibold">{p.goal}</h4>
+                      <p className="text-[13px] text-muted mt-0.5">
+                        {t('plansPage.colTrainer', 'Huấn luyện viên')} {p.trainer?.name ?? '—'}
+                      </p>
+                    </div>
+                    {isOngoing ? (
+                      <Badge tone="ok">{t('plansPage.active', 'Đang áp dụng')}</Badge>
+                    ) : (
+                      <Badge tone="neu">{t('plansPage.completed', 'Đã kết thúc')}</Badge>
+                    )}
                   </div>
-                  {isOngoing ? <Badge tone="ok"><Icon name="check" className="w-3.5 h-3.5" />{t('plansTab.active')}</Badge> : <Badge tone="neu">{t('plansTab.completed')}</Badge>}
-                </div>
-                <div className="flex items-center gap-4 mt-3 pt-2.5 border-t border-line-soft text-[12.5px]">
-                  <div><span className="text-muted">{t('plansTab.start')} </span><strong>{formatDate(p.startDate)}</strong></div>
-                  <div><span className="text-muted">{t('plansTab.end')} </span><strong>{p.endDate ? formatDate(p.endDate) : t('plansTab.unlimited')}</strong></div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                  <p className="num text-[13px] mt-2">
+                    {formatDate(p.startDate)} <span className="text-muted">{t('common.to', 'đến')}</span> {p.endDate ? formatDate(p.endDate) : <span className="text-muted">{t('plansPage.openEnded', 'không giới hạn')}</span>}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
       )}
 
       <CreateTrainingPlanModal

@@ -27,8 +27,9 @@ import {
   ListHorsesQueryDto,
   LockHorseDto,
   UpdateHorseDto,
+  CreateFitnessAssessmentDto,
 } from './dto/horses.dto';
-import { HORSE_PHOTO_KIND } from '../files/upload';
+import { buildImageMemoryMulterOptions } from '../files/upload';
 
 @ApiTags('horses')
 @ApiBearerAuth()
@@ -38,8 +39,8 @@ export class HorsesController {
 
   @Post()
   @Roles(Role.MANAGER)
-  create(@Body() dto: CreateHorseDto) {
-    return this.horses.create(dto);
+  create(@Body() dto: CreateHorseDto, @CurrentUser() user: AuthUser) {
+    return this.horses.create(dto, user.id);
   }
 
   @Get()
@@ -47,10 +48,32 @@ export class HorsesController {
     return this.horses.list(q, user);
   }
 
+  @Get('stalls/map')
+  getStallMap() {
+    return this.horses.getStallMap();
+  }
+
   @Get(':id')
   @UseGuards(HorseOwnershipGuard)
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.horses.get(id);
+  }
+
+  @Post(':id/fitness-assessment')
+  @Roles(Role.VET, Role.TRAINER, Role.MANAGER)
+  @UseGuards(HorseOwnershipGuard)
+  assessFitness(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateFitnessAssessmentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.assessFitness(id, dto, user);
+  }
+
+  @Get(':id/fitness-assessments')
+  @UseGuards(HorseOwnershipGuard)
+  getFitnessAssessments(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horses.getFitnessAssessments(id);
   }
 
   @Get(':id/pedigree')
@@ -75,21 +98,39 @@ export class HorsesController {
 
   @Patch(':id')
   @Roles(Role.MANAGER)
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateHorseDto) {
-    return this.horses.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateHorseDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.update(id, dto, user.id);
   }
 
   @Delete(':id')
   @Roles(Role.MANAGER)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.horses.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.remove(id, user.id);
   }
 
   @Patch(':id/lock')
   @Roles(Role.VET)
   @UseGuards(HorseOwnershipGuard)
-  lock(@Param('id', ParseUUIDPipe) id: string, @Body() dto: LockHorseDto) {
-    return this.horses.lock(id, dto);
+  lock(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: LockHorseDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.horses.lock(id, dto, user);
+  }
+
+  /** Every lock / unlock of this horse, newest first — the reason survives the unlock. */
+  @Get(':id/lock-events')
+  @UseGuards(HorseOwnershipGuard)
+  lockHistory(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horses.lockHistory(id);
   }
 
   @Post(':id/photo')
@@ -102,7 +143,7 @@ export class HorsesController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', buildImageMemoryMulterOptions()))
   uploadPhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file?: Express.Multer.File,
@@ -110,7 +151,7 @@ export class HorsesController {
     if (!file) {
       throw new AppException('VALIDATION_ERROR', 'A "file" field is required');
     }
-    return this.horses.setPhoto(id, `${HORSE_PHOTO_KIND}/${file.filename}`);
+    return this.horses.savePhoto(id, file);
   }
 
   @Post(':id/trial-videos')

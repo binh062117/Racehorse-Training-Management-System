@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { existsSync, mkdirSync, unlink } from 'fs';
+import { existsSync, mkdirSync, unlink, writeFileSync } from 'fs';
 import { join } from 'path';
 import {
   HEALTH_ATTACHMENT_KIND,
@@ -37,6 +37,11 @@ export class FileStorageService {
 
   exists(kind: string, filename: string): boolean {
     return existsSync(this.absolutePath(kind, filename));
+  }
+
+  /** Dev-only fallback for when Cloudinary isn't configured (see CloudinaryService). */
+  saveBuffer(kind: string, filename: string, buffer: Buffer): void {
+    writeFileSync(this.absolutePath(kind, filename), buffer);
   }
 
   /** Best-effort delete; a stored path is "<kind>/<filename>". */

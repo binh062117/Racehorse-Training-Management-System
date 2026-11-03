@@ -7,6 +7,20 @@ import { AppModule } from './../src/app.module';
 import { AllExceptionsFilter } from './../src/common/filters/all-exceptions.filter';
 import { PrismaService } from './../src/prisma/prisma.service';
 
+// The attachment-serving tests below exercise the local-disk fallback path
+// and its per-owner access control (CloudinaryService.enabled === false
+// bypasses that check entirely, by design — see horses.service.ts#toView
+// for the same trade-off on horse photos). Force the fallback here
+// regardless of what a developer's local .env has set, so this suite
+// doesn't flip behavior — or hit real Cloudinary — just because
+// CLOUDINARY_* happens to be configured for manual testing. Set to '' rather
+// than deleted: ConfigModule's dotenv load only fills in keys that are
+// *absent* from process.env, so a deleted key would just get repopulated
+// from .env when AppModule compiles below.
+process.env.CLOUDINARY_CLOUD_NAME = '';
+process.env.CLOUDINARY_API_KEY = '';
+process.env.CLOUDINARY_API_SECRET = '';
+
 /**
  * Phase 4 — Health records. Covers create (VET), horse-scoped listing +
  * ownership, record detail ownership, PATCH (VET only), the future-examDate
@@ -76,6 +90,7 @@ describe('Health records (e2e)', () => {
 
   afterAll(async () => {
     await prisma.healthRecord.deleteMany({ where: { horseId } });
+    await prisma.horseLockEvent.deleteMany({ where: { horseId: horseId } });
     await prisma.horse.deleteMany({ where: { id: horseId } });
     // Remove attachment files created for the test record.
     const dir = join(process.cwd(), 'uploads', 'health-attachments');

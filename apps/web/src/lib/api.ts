@@ -49,13 +49,15 @@ export function getFileUrl(pathOrUrl: string | null | undefined): string | null 
   if (pathOrUrl.startsWith('data:') || pathOrUrl.startsWith('blob:')) {
     return pathOrUrl;
   }
-  const token = getAccessToken();
-  let fullUrl = pathOrUrl;
-  if (!pathOrUrl.startsWith('http://') && !pathOrUrl.startsWith('https://')) {
-    const urlObj = new URL(baseURL, window.location.origin);
-    const origin = urlObj.origin;
-    fullUrl = pathOrUrl.startsWith('/') ? `${origin}${pathOrUrl}` : `${origin}/${pathOrUrl}`;
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    // Already an absolute URL to a third-party host (e.g. Cloudinary) —
+    // publicly readable by design, so don't leak our bearer token to it.
+    return pathOrUrl;
   }
+  const token = getAccessToken();
+  const urlObj = new URL(baseURL, window.location.origin);
+  const origin = urlObj.origin;
+  const fullUrl = pathOrUrl.startsWith('/') ? `${origin}${pathOrUrl}` : `${origin}/${pathOrUrl}`;
   if (token) {
     const separator = fullUrl.includes('?') ? '&' : '?';
     return `${fullUrl}${separator}token=${encodeURIComponent(token)}`;

@@ -45,6 +45,19 @@ export class CreateHorseDto {
   @Min(0)
   @Max(999)
   saddleNumber?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  stallNumber?: string;
+
+  @IsOptional()
+  @IsUUID()
+  trainerId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  groomId?: string;
 }
 
 export class UpdateHorseDto {
@@ -96,6 +109,19 @@ export class UpdateHorseDto {
   @Min(0)
   @Max(999)
   saddleNumber?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  stallNumber?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  trainerId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  groomId?: string | null;
 }
 
 // Phase 7 — Training Lock. Separate route (PATCH :id/lock, VET-only) from
@@ -104,10 +130,16 @@ export class LockHorseDto {
   @IsBoolean()
   locked!: boolean;
 
+  // Required when locking (checked in the service so the message can say why).
   @IsOptional()
   @IsString()
   @MaxLength(500)
   reason?: string;
+
+  // Required when unlocking: a FIT health record written after the lock began.
+  @IsOptional()
+  @IsUUID()
+  healthRecordId?: string;
 }
 
 export class ListHorsesQueryDto {
@@ -139,6 +171,38 @@ export class ListHorsesQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(500)
   limit = 20;
+}
+
+export class CreateFitnessAssessmentDto {
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  speedScore!: number; // 0..20: Tốc độ
+
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  staminaScore!: number; // 0..20: Sức bền
+
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  conditionScore!: number; // 0..20: Cơ gân & khớp
+
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  recoveryScore!: number; // 0..20: Phục hồi
+
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  moraleScore!: number; // 0..20: Tinh thần
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
 }

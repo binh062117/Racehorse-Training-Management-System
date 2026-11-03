@@ -1,22 +1,23 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { fetchAll } from '../lib/pagination';
 import { api, getFileUrl } from '../lib/api';
-import type { Horse, HorseRaceEntry } from '../lib/types';
+import type { Horse, HorseRaceEntry, Paginated } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
-import { TrialVideosTab } from './horse/TrialVideosTab';
 import { SessionsTab } from './horse/SessionsTab';
+import { TrialVideosTab } from './horse/TrialVideosTab';
 import { TrainingProgressTab } from './horse/TrainingProgressTab';
 import { HealthTab } from './horse/HealthTab';
 import { FeedingTab } from './horse/FeedingTab';
 import { PlansTab } from './horse/PlansTab';
 import { EditHorseModal } from '../components/horse/EditHorseModal';
 import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
+import { FitnessAssessmentModal } from '../components/horse/FitnessAssessmentModal';
 import { PhotoUploadModal } from '../components/horse/PhotoUploadModal';
 import { PedigreeTab } from './horse/PedigreeTab';
+import { LockHorseModal } from '../components/horse/LockHorseModal';
 import { usePageChrome } from '../ds/AppShell';
 import {
   Alert, Btn, Card, CountUp, Cloth, HealthBadge, CareerBadge, HorseAvatar, Icon, ImageLightbox, KpiStrip, LockBadge,
@@ -38,10 +39,13 @@ function calculateAge(birthDate: string | null): number | null {
 export function HorseDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
   const { user } = useAuth();
   const isManager = user?.role === 'MANAGER';
   const isVet = user?.role === 'VET';
+  const isTrainer = user?.role === 'TRAINER';
+  const canAssessFitness = isVet || isTrainer || isManager;
 
   const [params, setParams] = useSearchParams();
   const [horse, setHorse] = useState<Horse | null>(null);
@@ -51,6 +55,7 @@ export function HorseDetailPage() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [fitnessModalOpen, setFitnessModalOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
   const [pedigreeVersion, setPedigreeVersion] = useState(0);
@@ -62,8 +67,7 @@ export function HorseDetailPage() {
     rawTab === 'sessions' ||
     rawTab === 'progress' ||
     rawTab === 'health' ||
-    rawTab === 'videos' ||
-    rawTab === 'feeding'
+    rawTab === 'feeding' || rawTab === 'videos'
       ? rawTab
       : 'profile';
 
@@ -109,28 +113,13 @@ export function HorseDetailPage() {
 
   useEffect(() => {
     void loadHorse();
-    fetchAll<HorseRaceEntry>(`/horses/${id}/race-entries`)
-      .then((r) => setRaceEntries(r))
+    api.get<Paginated<HorseRaceEntry>>(`/horses/${id}/race-entries`, { params: { limit: 100 } })
+      .then((r) => setRaceEntries(r.data.data))
       .catch(() => setRaceEntries([]));
   }, [id, loadHorse]);
 
-  const handleToggleLock = async () => {
-    if (!horse) return;
-    const willLock = !horse.locked;
-    const promptText = willLock
-      ? (t('horsesPage.lockPrompt', 'Nhập lý do khóa tập luyện (tuỳ chọn):'))
-      : '';
-    const reason = willLock ? window.prompt(promptText) ?? '' : '';
-    try {
-      await api.patch(`/horses/${horse.id}/lock`, {
-        locked: willLock,
-        ...(willLock && reason.trim() ? { reason: reason.trim() } : {}),
-      });
-      await loadHorse();
-    } catch (e) {
-      alert(t('horsesPage.lockUpdateFailed', 'Không thể cập nhật trạng thái khóa tập luyện: ') + String(e));
-    }
-  };
+  const [lockOpen, setLockOpen] = useState(false);
+  const [lockVersion, setLockVersion] = useState(0);
 
   usePageChrome({ crumbs: [[t('horsesPage.title', 'Ngựa đua'), '/horses'], horse?.name ?? '…'] });
 
@@ -142,7 +131,7 @@ export function HorseDetailPage() {
   }
   if (!horse) return null;
 
-  const finished = raceEntries.filter((e) => e.status === 'COMPLETED');
+  const finished = raceEntries.filter((e) => e.position != null);
   const starts = finished.length;
   const wins = finished.filter((e) => e.position === 1).length;
   const podiums = finished.filter((e) => e.position != null && e.position <= 3).length;
@@ -172,6 +161,11 @@ export function HorseDetailPage() {
             <div className="flex items-center gap-2.5">
               <h1 className="text-[24px] leading-8 font-semibold tracking-[-0.01em] truncate">{horse.name}</h1>
               <Cloth n={horse.saddleNumber} />
+            {horse.stallNumber && (
+              <span className="px-2 py-0.5 rounded-badge bg-info-bg text-info-ink text-[12px] font-semibold border border-info/20" title={t('horse.stall', 'Ô chuồng')}>
+                {horse.stallNumber}
+              </span>
+            )}
             </div>
             <p className="text-[14px] text-muted mt-0.5">
               {facts} · {t('horsesPage.thOwner', 'Chủ sở hữu')} <span className="text-ink">{horse.owner.name}</span>
@@ -183,12 +177,18 @@ export function HorseDetailPage() {
             </div>
           </div>
         </div>
-        {(isVet || isManager) && (
+        {(canAssessFitness || isManager) && (
           <div className="flex flex-wrap gap-2">
+            {canAssessFitness && (
+              <Btn onClick={() => setFitnessModalOpen(true)}>
+                <Icon name="heart" />
+                {isVi ? 'Chấm điểm thể lực' : 'Assess Fitness'}
+              </Btn>
+            )}
             {isVet && (
-              <Btn v={horse.locked ? 'p' : 's'} onClick={() => void handleToggleLock()}>
+              <Btn v={horse.locked ? 'p' : 's'} onClick={() => setLockOpen(true)}>
                 <Icon name={horse.locked ? 'unlock' : 'lock'} />
-                {horse.locked ? t('horseFlow.unlocked', 'Mở khóa tập') : t('horseFlow.locked', 'Khóa tập')}
+                {horse.locked ? t('lock.unlockConfirm') : t('lock.lockConfirm')}
               </Btn>
             )}
             {isManager && (
@@ -204,7 +204,19 @@ export function HorseDetailPage() {
 
       {horse.locked && (
         <Alert tone="bad" icon="lock" title={t('horseDetail.lockedWarning', 'Ngựa đang bị khóa tập')}>
-          {lockReasonText(horse.lockReason)}. {t('horsesPage.lockBannerDesc', 'Không thể xếp buổi tập mới cho đến khi bác sĩ thú y mở khóa.')}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              {lockReasonText(horse.lockReason)}. {t('horsesPage.lockBannerDesc', 'Không thể xếp buổi tập mới cho đến khi bác sĩ thú y mở khóa.')}
+            </div>
+            <button
+              type="button"
+              onClick={() => setTab('health')}
+              className="text-[12.5px] font-semibold text-bad hover:underline inline-flex items-center gap-1 cursor-pointer"
+            >
+              <Icon name="clock" className="w-3.5 h-3.5" />
+              <span>{isVi ? 'Xem lịch sử khóa / mở' : 'View Lock History'}</span>
+            </button>
+          </div>
         </Alert>
       )}
 
@@ -214,7 +226,7 @@ export function HorseDetailPage() {
           lead: true,
           value: horse.fitnessScore != null ? <span style={{ color: fitColor(horse.fitnessScore) }}><CountUp value={horse.fitnessScore} /></span> : <span className="text-muted text-[16px] font-normal">—</span>,
           unit: horse.fitnessScore != null ? '/100' : undefined,
-          sub: horse.fitnessScore == null ? undefined : horse.fitnessScore >= 80 ? t('horsePage.fitnessGood') : horse.fitnessScore >= 60 ? t('horsePage.fitnessMonitor') : t('horsePage.fitnessLow'),
+          sub: horse.fitnessScore == null ? undefined : horse.fitnessScore >= 80 ? 'Tốt (≥80)' : horse.fitnessScore >= 60 ? 'Cần theo dõi (60–79)' : 'Thấp (<60)',
         },
         {
           label: t('horseDetail.racesStarted', 'Số lần đua'),
@@ -247,10 +259,27 @@ export function HorseDetailPage() {
               [t('horse.gender', 'Giới tính'), genderText(horse.gender) ?? <span className="text-muted">—</span>],
               [t('horse.birthDate', 'Ngày sinh'), horse.birthDate ? <>{formatDate(horse.birthDate)}{age != null && <span className="text-muted"> · {t('horsesPage.age', { age })}</span>}</> : <span className="text-muted">—</span>],
               [t('horse.owner', 'Chủ sở hữu'), <>{horse.owner.name} <span className="text-muted">· {horse.owner.email}</span></>],
+              [t('horse.assignedTrainer', 'HLV phụ trách'), horse.trainer ? <>{horse.trainer.name} <span className="text-muted">· {horse.trainer.email}</span></> : <span className="text-muted">{t('common.unassigned', 'Chưa phân công')}</span>],
+              [t('horse.assignedGroom', 'Nhân viên chăm sóc (Groom)'), horse.groom ? <>{horse.groom.name} <span className="text-muted">· {horse.groom.email}</span></> : <span className="text-muted">{t('common.unassigned', 'Chưa phân công')}</span>],
               [t('horsesPage.thRacing', 'Thi đấu'), <CareerBadge status={horse.status} />],
               [t('horsesPage.thHealth', 'Sức khỏe'), <HealthBadge status={horse.healthStatus} />],
-              [t('horsesPage.thFitness', 'Thể lực'), horse.fitnessScore != null ? <><span className="num">{horse.fitnessScore}</span><span className="text-muted"> / 100</span></> : <span className="text-muted">—</span>],
+              [t('horsesPage.thFitness', 'Thể lực'), (
+                <div className="flex items-center gap-2">
+                  {horse.fitnessScore != null ? <><span className="num">{horse.fitnessScore}</span><span className="text-muted"> / 100</span></> : <span className="text-muted">—</span>}
+                  {canAssessFitness && (
+                    <button
+                      type="button"
+                      onClick={() => setFitnessModalOpen(true)}
+                      className="text-[12px] text-info font-medium hover:underline inline-flex items-center gap-1 cursor-pointer ml-1"
+                    >
+                      <Icon name="heart" className="w-3.5 h-3.5" />
+                      <span>{isVi ? 'Đánh giá' : 'Assess'}</span>
+                    </button>
+                  )}
+                </div>
+              )],
               [t('horseFlow.saddleNumber', 'Số áo đua'), horse.saddleNumber ?? <span className="text-muted">—</span>],
+              [t('horse.stall', 'Ô chuồng trại'), horse.stallNumber ? <span className="font-semibold text-info">{horse.stallNumber}</span> : <span className="text-muted">{t('horse.noStall', 'Chưa phân chuồng')}</span>],
               [t('horseDetail.code', 'Mã hồ sơ'), <span className="font-mono text-[12.5px] text-muted" title={horse.id}>{horse.id.slice(0, 8)}…</span>],
             ] as [string, ReactNode][]).map(([k, v]) => (
               <div key={k} className="contents">
@@ -277,12 +306,13 @@ export function HorseDetailPage() {
         <div hidden={tab !== 'progress'}><TrainingProgressTab horseId={horse.id} /></div>
       )}
       {visitedTabs.has('health') && (
-        <div hidden={tab !== 'health'}><HealthTab horse={horse} /></div>
+        <div hidden={tab !== 'health'}><HealthTab key={horse.id} horse={horse} lockVersion={lockVersion} onHorseChanged={loadHorse} /></div>
       )}
       {visitedTabs.has('feeding') && (
         <div hidden={tab !== 'feeding'}><FeedingTab horse={horse} /></div>
       )}
 
+      {isVet && <LockHorseModal horse={horse} open={lockOpen} onClose={() => setLockOpen(false)} onDone={() => { setLockVersion((v) => v + 1); void loadHorse(); }} />}
       {visitedTabs.has('videos') && <div hidden={tab !== 'videos'}><TrialVideosTab key={horse.id} horseId={horse.id} /></div>}
       <EditHorseModal
         horse={horse}
@@ -295,6 +325,12 @@ export function HorseDetailPage() {
       />
       <DeleteHorseModal horse={horse} isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} onDeleted={() => navigate('/horses')} />
       <PhotoUploadModal horse={horse} isOpen={photoOpen} onClose={() => setPhotoOpen(false)} onUploaded={loadHorse} />
+      <FitnessAssessmentModal
+        isOpen={fitnessModalOpen}
+        onClose={() => setFitnessModalOpen(false)}
+        horse={horse}
+        onUpdated={() => void loadHorse()}
+      />
       {photo && <ImageLightbox src={photo} alt={horse.name} open={photoViewerOpen} onClose={() => setPhotoViewerOpen(false)} />}
     </>
   );

@@ -191,9 +191,9 @@ export function FinanceReportPage() {
                 </table>
                 <Pagination
                   page={page}
-                  total={data.transactions.length}
-                  limit={20}
-                  onChange={setPage}
+                  totalItems={data.transactions.length} totalPages={Math.max(1, Math.ceil(data.transactions.length / 20))}
+                  pageSize={20}
+                  onPageChange={setPage}
                   className="p-4"
                 />
               </Card>

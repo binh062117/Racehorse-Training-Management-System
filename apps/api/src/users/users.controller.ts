@@ -15,7 +15,11 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
-import { ListUsersQueryDto, UpdateUserDto } from './dto/users.dto';
+import {
+  ListUsersQueryDto,
+  UpdateUserDto,
+  ApproveUsersDto,
+} from './dto/users.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -29,19 +33,31 @@ export class UsersController {
     return this.users.list(q);
   }
 
+  @Post('approve')
+  approveMany(@Body() dto: ApproveUsersDto, @CurrentUser() user: AuthUser) {
+    return this.users.approveMany(dto, user.id);
+  }
+
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.get(id);
   }
 
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
-    return this.users.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.users.update(id, dto, user.id);
   }
 
   @Post(':id/reject')
-  reject(@Param('id', ParseUUIDPipe) id: string) {
-    return this.users.reject(id);
+  reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.users.reject(id, user.id);
   }
 
   @Delete(':id')

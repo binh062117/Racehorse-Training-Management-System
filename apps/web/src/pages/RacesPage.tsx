@@ -156,7 +156,7 @@ export function RacesPage() {
               </table>
             </div>
           )}
-          <Pagination page={page} limit={20} total={raceData?.total ?? 0} onChange={setPage} className="p-4" />
+          <Pagination page={page} pageSize={20} totalItems={raceData?.total ?? 0} totalPages={Math.max(1, Math.ceil((raceData?.total ?? 0) / 20))} onPageChange={setPage} className="p-4" />
         </Card>
 
         <Card className="min-w-0 p-5" aria-live="polite">

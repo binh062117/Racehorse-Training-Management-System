@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
-import type { FeedingRecord, Horse, Paginated } from '../../lib/types';
+import { Link } from 'react-router-dom';
+import type { FeedingRecord, Horse, Paginated, SupplyItem } from '../../lib/types';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { FeedingSuggestionCard } from '../../components/horse/FeedingSuggestionCard';
 import { formatDate } from '../../lib/format';
-import { Btn, Card, Field, Icon, Input } from '../../ds/ui';
+import { Btn, Card, EmptyState, Field, Icon, Input, NativeSelect, thCls } from '../../ds/ui';
 
 interface FormPrefill {
   feedType: string;
@@ -43,14 +44,14 @@ export function FeedingTab({ horse }: { horse: Horse }) {
     <div className="flex flex-col gap-5">
       <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h2 className="text-[15px] font-semibold">{t('feedingTab.title')}</h2>
+          <h2 className="text-[15px] font-semibold">{t('feeding.title', 'Khẩu phần ăn')}</h2>
           <p className="cap mt-0.5">
-            {isGroom ? t('feedingTab.groomDescription') : t('feedingTab.description')}
+            {isGroom ? t('feeding.groomHelp') : t('feeding.historyHelp')}
           </p>
         </div>
         {isGroom && (
           <Btn v="p" onClick={() => { setPrefill(null); setShowForm((s) => !s); }}>
-            <Icon name="plus" />{showForm ? t('feedingTab.close') : t('feedingTab.record')}
+            <Icon name="plus" />{showForm ? t('feeding.closeBtn', 'Đóng') : t('feeding.recordBtn', 'Ghi nhận khẩu phần')}
           </Btn>
         )}
       </div>
@@ -72,30 +73,32 @@ export function FeedingTab({ horse }: { horse: Horse }) {
       )}
 
       {loading ? (
-        <p className="cap">{t('feedingTab.loading')}</p>
+        <p className="cap">{t('ui.loading')}</p>
       ) : err ? (
         <ErrorText err={err} />
       ) : records.length === 0 ? (
-        <Card className="px-5 py-10 text-center"><p className="cap">{t('feedingTab.empty')}</p></Card>
+        <EmptyState>{t('feeding.empty', 'Chưa có bản ghi khẩu phần ăn nào.')}</EmptyState>
       ) : (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead>
-                <tr className="text-left">
-                  {[t('feedingTab.date'), t('feedingTab.feedType'), t('feedingTab.quantity'), t('feedingTab.notes'), t('feedingTab.recorder')].map((th) => (
-                    <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
-                  ))}
+                <tr>
+                  <th className={`${thCls} pl-5`}>{t('feeding.thDate', 'Ngày')}</th>
+                  <th className={thCls}>{t('feeding.thFeedType', 'Loại thức ăn')}</th>
+                  <th className={`${thCls} text-right`}>{t('feeding.thQuantity', 'Khối lượng')}</th>
+                  <th className={thCls}>{t('feeding.thNotes', 'Ghi chú')}</th>
+                  <th className={`${thCls} pr-5`}>{t('feeding.thRecordedBy', 'Người ghi')}</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((r) => (
-                  <tr key={r.id} className="border-b border-line-soft hover:bg-subtle">
-                    <td className="px-4 py-3">{formatDate(r.date)}</td>
+                  <tr key={r.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                    <td className="pl-5 pr-4 py-3 num whitespace-nowrap">{formatDate(r.date)}</td>
                     <td className="px-4 py-3">{r.feedType}</td>
-                    <td className="px-4 py-3 num">{r.quantityKg} kg</td>
-                    <td className="px-4 py-3 cap">{r.notes ?? '—'}</td>
-                    <td className="px-4 py-3 cap">{r.recordedBy.name}</td>
+                    <td className="px-4 py-3 num text-right whitespace-nowrap">{r.quantityKg} kg</td>
+                    <td className="px-4 py-3 text-muted">{r.notes ?? ''}</td>
+                    <td className="pl-4 pr-5 py-3 text-muted">{r.recordedBy.name}</td>
                   </tr>
                 ))}
               </tbody>
@@ -115,6 +118,21 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
+  // Feed in the store: picking one fills the feed type and takes the amount out of stock.
+  const [feeds, setFeeds] = useState<SupplyItem[]>([]);
+  const [supplyItemId, setSupplyItemId] = useState('');
+  useEffect(() => {
+    api.get<SupplyItem[]>('/supplies', { params: { category: 'FEED' } })
+      .then((r) => {
+        setFeeds(r.data);
+        // A prefilled feed (e.g. from the AI suggestion) that exists in the store is picked for you.
+        const match = r.data.find((f) => f.name.toLowerCase() === (initial?.feedType ?? '').trim().toLowerCase());
+        if (match) setSupplyItemId(match.id);
+      })
+      .catch(() => setFeeds([]));
+  }, [initial?.feedType]);
+  const stock = feeds.find((f) => f.id === supplyItemId) ?? null;
+  const short = stock != null && Number(quantityKg) > stock.quantity;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -126,6 +144,7 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
         quantityKg: Number(quantityKg),
         date: new Date(`${date}T00:00:00`).toISOString(),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
+        ...(supplyItemId ? { supplyItemId } : {}),
       });
       onCreated();
     } catch (e) {
@@ -139,21 +158,41 @@ function CreateFeedingForm({ horseId, initial, onCreated }: { horseId: string; i
     <form onSubmit={submit}>
       <Card className="p-5 flex flex-col gap-4">
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
-          <Field label={t('feedingTab.feedType')}>
-            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required placeholder={t('feedingTab.exampleFeed')} />
+          {feeds.length > 0 && (
+            <Field label={t('feeding.fromStore')} hint={stock ? t('feeding.stockLeft', { n: stock.quantity, unit: stock.unit }) : t('feeding.fromStoreHint')}>
+              <NativeSelect value={supplyItemId} onChange={(e) => {
+                const id = e.target.value;
+                setSupplyItemId(id);
+                const f = feeds.find((x) => x.id === id);
+                if (f) setFeedType(f.name);
+              }}>
+                <option value="">{t('feeding.notFromStore')}</option>
+                {feeds.map((f) => <option key={f.id} value={f.id}>{f.name} — {t('feeding.stockLeft', { n: f.quantity, unit: f.unit })}</option>)}
+              </NativeSelect>
+            </Field>
+          )}
+          <Field label={t('feeding.thFeedType', 'Loại thức ăn')}>
+            <Input value={feedType} onChange={(e) => setFeedType(e.target.value)} maxLength={120} required readOnly={!!stock} placeholder={t('ui.exampleAlfalfaHayMixedFeed')} />
           </Field>
-          <Field label={`${t('feedingTab.quantity')} (kg)`}>
+          <Field label={`${t('feeding.thQuantity', 'Khối lượng')} (kg)`}>
             <Input type="number" step="0.1" min="0.1" max="100" value={quantityKg} onChange={(e) => setQuantityKg(e.target.value)} required />
           </Field>
-          <Field label={t('feedingTab.date')}>
+          <Field label={t('feeding.thDate', 'Ngày')}>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
           </Field>
-          <Field label={t('feedingTab.optionalNotes')}>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder={t('feedingTab.exampleNotes')} />
+          <Field label={t('feeding.thNotes', 'Ghi chú')}>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder={t('ui.exampleAteLessThanUsual')} />
           </Field>
         </div>
+        {short && stock && (
+          <p className="text-[13px] text-bad font-medium" role="alert">
+            {t('feeding.notEnough', { n: stock.quantity, unit: stock.unit })} <Link to="/supplies" className="text-info">{t('feeding.goRequest')}</Link>
+          </p>
+        )}
         <ErrorText err={error} />
-        <Btn v="p" type="submit" disabled={saving} className="self-start">{saving ? t('feedingTab.saving') : t('feedingTab.save')}</Btn>
+        <Btn v="p" type="submit" disabled={saving || short} className="self-start">
+          {saving ? t('feeding.saving', 'Đang lưu...') : t('feeding.saveBtn', 'Lưu khẩu phần')}
+        </Btn>
       </Card>
     </form>
   );

@@ -15,34 +15,50 @@ function initialLang(): 'vi' | 'en' {
   return 'vi';
 }
 
-function syncLanguage(lang: string): void {
-  const language = lang.startsWith('en') ? 'en' : 'vi';
-  try {
-    localStorage.setItem(STORAGE_KEY, language);
-  } catch {
-    /* storage unavailable */
-  }
-  if (typeof document !== 'undefined') document.documentElement.lang = language;
-}
-
-i18n.on('languageChanged', syncLanguage);
-
 void i18n.use(initReactI18next).init({
   resources: {
     vi: { translation: vi },
     en: { translation: en },
   },
   lng: initialLang(),
-  fallbackLng: 'en',
+  fallbackLng: 'vi',
   interpolation: { escapeValue: false },
 });
 
+i18n.on('languageChanged', (lng) => {
+  const norm: 'vi' | 'en' = lng && lng.toLowerCase().startsWith('en') ? 'en' : 'vi';
+  try {
+    localStorage.setItem(STORAGE_KEY, norm);
+  } catch {
+    /* ignore */
+  }
+  updateDocumentLanguage();
+});
+
+export function getLanguage(): 'vi' | 'en' {
+  const current = i18n.resolvedLanguage || i18n.language || initialLang();
+  return current.toLowerCase().startsWith('en') ? 'en' : 'vi';
+}
+
+function updateDocumentLanguage() {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = getLanguage();
+  document.title = i18n.t('app.title');
+}
+
+updateDocumentLanguage();
+
 export function setLanguage(lang: 'vi' | 'en'): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, lang);
+  } catch {
+    /* ignore */
+  }
   void i18n.changeLanguage(lang);
 }
 
 export function getLocale(): 'vi-VN' | 'en-GB' {
-  return i18n.resolvedLanguage?.startsWith('en') ? 'en-GB' : 'vi-VN';
+  return getLanguage() === 'en' ? 'en-GB' : 'vi-VN';
 }
 
 export default i18n;

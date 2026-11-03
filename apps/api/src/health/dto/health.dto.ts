@@ -54,6 +54,15 @@ export class UpdateHealthRecordDto {
 
 export class ListHealthRecordsQueryDto {
   @IsOptional()
+  @IsEnum(HealthStatus)
+  healthStatus?: HealthStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
+
+  @IsOptional()
   @IsISO8601()
   from?: string;
 

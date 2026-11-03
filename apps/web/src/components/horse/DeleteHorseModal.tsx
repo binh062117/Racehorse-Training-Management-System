@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
+import { useState } from 'react';
 import { api } from '../../lib/api';
 import type { Horse } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -13,7 +14,7 @@ interface DeleteHorseModalProps {
 }
 
 export function DeleteHorseModal({ horse, isOpen, onClose, onDeleted }: DeleteHorseModalProps) {
-  const { t } = useTranslation();
+  useTranslation();
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -35,23 +36,18 @@ export function DeleteHorseModal({ horse, isOpen, onClose, onDeleted }: DeleteHo
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="delete-horse-title">
-      <ModalHead icon="alert" tone="bad" title={t('horseModal.deleteTitle')} id="delete-horse-title" onClose={() => !busy && onClose()} />
+      <ModalHead icon="alert" tone="bad" title={i18n.t("ui.confirmHorseDeletion")} id="delete-horse-title" onClose={() => !busy && onClose()} />
       <ModalBody>
         <p>
-          {t('horseModal.deleteConfirm', {
-            name: horse.name,
-            breed: horse.breed ?? t('horsePage.breedUnknown'),
-            owner: horse.owner.name,
-          })}
+          {i18n.t("ui.areYouSureYouWantToDeleteTheHorseProfile")}{' '}<strong>{horse.name}</strong> ({horse.breed ?? i18n.t("ui.unknownBreed2")}{i18n.t("ui.ownedBy")}{' '}<strong>{horse.owner.name}</strong>?
         </p>
-        <Alert tone="warn" icon="alert" title={t('horseModal.warningTitle')}>
-          {t('horseModal.deleteWarning')}
-        </Alert>
+        <Alert tone="warn" icon="alert" title={i18n.t("ui.pleaseNote")}>
+          {i18n.t("ui.theHorseWillBeHiddenFromTheClubListItsRaceHistoryTrainingPlansAndMedic")}</Alert>
         <ErrorText err={err} />
       </ModalBody>
       <ModalFoot>
-        <Btn onClick={onClose} disabled={busy}>{t('horseModal.cancel')}</Btn>
-        <Btn v="d" onClick={() => void handleDelete()} disabled={busy}>{busy ? t('horseModal.deleting') : t('horseModal.confirmDelete')}</Btn>
+        <Btn onClick={onClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
+        <Btn v="d" onClick={() => void handleDelete()} disabled={busy}>{busy ? i18n.t("ui.deleting") : i18n.t("ui.confirmDeletion")}</Btn>
       </ModalFoot>
     </Modal>
   );

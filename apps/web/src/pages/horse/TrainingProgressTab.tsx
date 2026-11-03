@@ -1,85 +1,183 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ErrorText } from '../../components/ErrorText';
 import { api } from '../../lib/api';
-import { formatDateTime } from '../../lib/format';
-import type { Paginated, TrainingSession } from '../../lib/types';
-import { Badge, Card, EmptyState, KpiStrip } from '../../ds/ui';
+import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
+import { ErrorText } from '../../components/ErrorText';
+import { formatDate } from '../../lib/format';
+import { Bar, Card, CardHeader, EmptyState, KpiStrip } from '../../ds/ui';
+import { LineChart } from '../../ds/charts';
 
-const SESSION_TONE = { PLANNED: 'info', DONE: 'ok', CANCELLED: 'neu' } as const;
+const WEEKS = 8;
+const shortDate = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' });
+
+function weekStart(d: Date): Date {
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7; // Monday = 0
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - day);
+  return x;
+}
+
+async function fetchAll<T>(url: string, signal: AbortSignal): Promise<T[]> {
+  const all: T[] = [];
+  let page = 1;
+  while (!signal.aborted) {
+    const res = await api.get<Paginated<T>>(url, { params: { page, limit: 100 }, signal });
+    all.push(...res.data.data);
+    if (res.data.meta.page * res.data.meta.limit >= res.data.meta.total) break;
+    page += 1;
+  }
+  return all;
+}
 
 export function TrainingProgressTab({ horseId }: { horseId: string }) {
-  const { t } = useTranslation();
+  return <ProgressContent key={horseId} horseId={horseId} />;
+}
+
+function ProgressContent({ horseId }: { horseId: string }) {
+  const { t, i18n } = useTranslation();
+  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
+  const [plans, setPlans] = useState<TrainingPlan[]>([]);
+  const [err, setErr] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    const load = async () => {
+    (async () => {
       try {
-        const all: TrainingSession[] = [];
-        for (let page = 1; !controller.signal.aborted; page += 1) {
-          const response = await api.get<Paginated<TrainingSession>>(
-            `/horses/${horseId}/sessions`,
-            { params: { page, limit: 100 }, signal: controller.signal },
-          );
-          all.push(...response.data.data);
-          if (page * response.data.meta.limit >= response.data.meta.total || response.data.data.length === 0) break;
-        }
+        const [s, p] = await Promise.all([
+          fetchAll<TrainingSession>(`/horses/${horseId}/sessions`, controller.signal),
+          fetchAll<TrainingPlan>(`/horses/${horseId}/training-plans`, controller.signal),
+        ]);
         if (!controller.signal.aborted) {
-          setSessions(all.sort((left, right) => right.scheduledAt.localeCompare(left.scheduledAt)));
-          setError(null);
+          setSessions(s);
+          setPlans(p);
         }
-      } catch (reason) {
-        if (!controller.signal.aborted) setError(reason);
+      } catch (e) {
+        if (!controller.signal.aborted) setErr(e);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    };
-    void load();
+    })();
     return () => controller.abort();
   }, [horseId]);
 
-  const completed = sessions.filter((session) => session.status === 'DONE');
-  const planned = sessions.filter((session) => session.status === 'PLANNED');
-  const metrics = completed.filter((session) => session.resultValue != null);
+  if (loading) return <p className="text-muted" role="status">{isVi ? 'Đang tải tiến độ huấn luyện…' : 'Loading training progress…'}</p>;
+  if (err) return <ErrorText err={err} />;
+
+  const total = sessions.length;
+  const done = sessions.filter((s) => s.status === 'DONE').length;
+  const cancelled = sessions.filter((s) => s.status === 'CANCELLED').length;
+  const planned = sessions.filter((s) => s.status === 'PLANNED').length;
+  const missed = sessions.filter((s) => s.status === 'MISSED').length;
+  const decided = done + cancelled;
+  const completionRate = decided > 0 ? Math.round((done / decided) * 100) : null;
+
+  const thisWeekStart = weekStart(new Date());
+  const buckets = Array.from({ length: WEEKS }, (_, i) => {
+    const start = new Date(thisWeekStart);
+    start.setDate(start.getDate() - (WEEKS - 1 - i) * 7);
+    return { start, count: 0 };
+  });
+  for (const s of sessions) {
+    if (s.status !== 'DONE') continue;
+    const ws = weekStart(new Date(s.scheduledAt)).getTime();
+    const bucket = buckets.find((b) => b.start.getTime() === ws);
+    if (bucket) bucket.count += 1;
+  }
+  const values = buckets.map((b) => b.count);
+  const labels = buckets.map((b, i) => (i % 2 === 0 ? shortDate.format(b.start) : null));
+  const maxValue = Math.max(4, ...values);
+  const now = new Date().getTime();
+
+  if (total === 0 && plans.length === 0) {
+    return (
+      <EmptyState>
+        {isVi
+          ? 'Ngựa chưa có giáo án hay buổi tập nào — tiến độ sẽ hiện ở đây khi huấn luyện viên bắt đầu lên lịch.'
+          : 'No training plans or sessions yet — progress will appear here once scheduled.'}
+      </EmptyState>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-[15px] font-semibold">{t('session.heading')}</h2>
-      <KpiStrip items={[
-        { label: t('session.heading'), value: sessions.length },
-        { label: t('session.displayStatus.DONE'), value: completed.length },
-        { label: t('session.displayStatus.PLANNED'), value: planned.length },
-        { label: t('session.result', 'Results recorded'), value: metrics.length },
-      ]} />
-      <ErrorText err={error} />
-      {loading ? (
-        <p className="text-muted" role="status">{t('session.loading')}</p>
-      ) : sessions.length === 0 ? (
-        <EmptyState>{t('session.empty')}</EmptyState>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {sessions.map((session) => (
-            <Card key={session.id} className="p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="font-semibold">{session.type}</h3>
-                  <p className="mt-1 text-[12px] text-muted">{formatDateTime(session.scheduledAt)} · {session.trainer.name}</p>
-                </div>
-                <Badge tone={SESSION_TONE[session.status]}>{t(`session.displayStatus.${session.status}`)}</Badge>
-              </div>
-              {(session.resultMetric || session.resultValue != null) && (
-                <p className="mt-3 border-t border-line-soft pt-3 text-[13px]">
-                  {t('session.result')}: {session.resultMetric ?? '—'}{session.resultValue != null && <> · <strong className="num">{session.resultValue}</strong></>}
-                </p>
-              )}
-              {session.notes && <p className="mt-2 text-[13px] text-muted">{session.notes}</p>}
-            </Card>
-          ))}
-        </div>
+    <div className="flex flex-col gap-5">
+      {total > 0 && (
+        <KpiStrip items={[
+          { label: t('session.displayStatus.MISSED'), value: missed, tone: 'warn' },
+          {
+            label: isVi ? 'Tổng số buổi tập' : 'Total Sessions',
+            value: total,
+            sub: planned ? (isVi ? `${planned} buổi chưa diễn ra` : `${planned} upcoming`) : undefined,
+          },
+          { label: isVi ? 'Đã hoàn thành' : 'Completed', value: done },
+          { label: isVi ? 'Đã hủy' : 'Cancelled', value: cancelled, tone: cancelled > 0 ? 'warn' : undefined },
+          {
+            label: isVi ? 'Tỷ lệ hoàn thành' : 'Completion Rate',
+            value: completionRate ?? <span className="text-muted text-[16px] font-normal">—</span>,
+            unit: completionRate != null ? '%' : undefined,
+            lead: completionRate != null,
+          },
+        ]} />
       )}
+
+      <Card>
+        <CardHeader title={isVi ? 'Buổi tập hoàn thành theo tuần' : 'Weekly Completed Sessions'}>
+          <span className="text-[13px] text-muted">{isVi ? `${WEEKS} tuần gần nhất` : `Past ${WEEKS} weeks`}</span>
+        </CardHeader>
+        <div className="px-5 pt-3 pb-4">
+          {total === 0 ? (
+            <EmptyState>{isVi ? 'Chưa có buổi tập nào để thống kê.' : 'No sessions to display.'}</EmptyState>
+          ) : (
+            <div className="max-w-[960px]">
+              <LineChart
+                values={values}
+                labels={labels}
+                min={0}
+                max={maxValue}
+                ticks={[0, Math.round(maxValue / 2), maxValue]}
+                W={900}
+                H={230}
+                describe={isVi ? 'Số buổi tập hoàn thành mỗi tuần' : 'Completed training sessions per week'}
+              />
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title={isVi ? 'Tiến độ theo giáo án' : 'Progress by Training Plan'} />
+        {plans.length === 0 ? (
+          <div className="p-4">
+            <EmptyState>{t('plansPage.empty', 'Ngựa chưa có giáo án huấn luyện nào.')}</EmptyState>
+          </div>
+        ) : (
+          <ul className="list-none m-0 p-0">
+            {plans.map((p) => {
+              const start = new Date(p.startDate).getTime();
+              const end = p.endDate ? new Date(p.endDate).getTime() : null;
+              const pct = end != null && end > start ? Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100))) : null;
+              const over = end != null && now > end;
+              return (
+                <li key={p.id} className="px-5 py-3.5 border-b border-line-soft last:border-0">
+                  <div className="flex justify-between items-baseline gap-3">
+                    {/* User-entered plan goal is preserved as-is */}
+                    <span className="font-medium min-w-0 truncate">{p.goal}</span>
+                    <span className="num text-[13px] text-muted flex-none">
+                      {pct != null ? `${pct}%` : t('plansPage.openEnded', 'Dài hạn')}
+                    </span>
+                  </div>
+                  {pct != null && <Bar pct={pct} color={over ? '#9ca3af' : '#1a4b8a'} className="mt-2" />}
+                  <p className="num text-[12.5px] text-muted mt-1.5">
+                    {formatDate(p.startDate)} – {p.endDate ? formatDate(p.endDate) : t('plansPage.openEnded', 'không giới hạn')}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
     </div>
   );
 }

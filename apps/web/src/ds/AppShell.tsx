@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
 import type { Notification, Paginated, Role } from '../lib/types';
-import { HORSE_LOGO, Icon, SearchInput } from './ui';
+import { HORSE_LOGO, Icon } from './ui';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 interface NavItem {
@@ -19,18 +19,23 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: '/reports/finances', labelKey: 'raceFeatures.finances', defaultLabel: 'Costs & prize money', icon: 'flag', roles: ['MANAGER', 'OWNER'] },
+  { to: '/training/progress', labelKey: 'hai.clubProgress', defaultLabel: 'Club training progress', icon: 'plans', roles: ['MANAGER', 'TRAINER'] },
   { to: '/dashboard', labelKey: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: 'dashboard' },
   { to: '/horses', labelKey: 'nav.horses', defaultLabel: 'Ngựa đua', icon: 'horse' },
+  { to: '/stalls', labelKey: 'nav.stalls', defaultLabel: 'Sơ đồ chuồng trại', icon: 'reports' },
   { to: '/plans', labelKey: 'nav.plansTrainer', defaultLabel: 'Giáo án huấn luyện', icon: 'plans' },
   { to: '/races', labelKey: 'nav.races', defaultLabel: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
+  { to: '/supplies', labelKey: 'nav.supplies', defaultLabel: 'Vật tư', icon: 'box', roles: ['MANAGER', 'GROOM', 'VET', 'TRAINER'] },
 ];
 const HEALTH_NAV: NavItem[] = [
   { to: '/health-records', labelKey: 'nav.healthRecords', defaultLabel: 'Hồ sơ khám bệnh', icon: 'steth', roles: ['VET'] },
   { to: '/vaccinations', labelKey: 'nav.vaccinations', defaultLabel: 'Tiêm phòng & tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
+  { to: '/daily-care', labelKey: 'nav.dailyCare', defaultLabel: 'Chăm sóc hằng ngày', icon: 'check', roles: ['GROOM', 'MANAGER', 'TRAINER', 'VET', 'OWNER'] },
   { to: '/incidents', labelKey: 'nav.incidents', defaultLabel: 'Sự cố y tế', icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
 ];
 const ADMIN_NAV: NavItem[] = [
   { to: '/admin/users', labelKey: 'nav.users', defaultLabel: 'Phân quyền tài khoản', icon: 'user', roles: ['MANAGER'] },
+  { to: '/admin/audit-logs', labelKey: 'nav.auditLogs', defaultLabel: 'Nhật ký hệ thống', icon: 'eye', roles: ['MANAGER'] },
 ];
 
 const POLL_MS = 20_000;
@@ -121,7 +126,6 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
   const role = user?.role ?? null;
   const visible = (item: NavItem) => !item.roles || (role !== null && item.roles.includes(role));
 
-
   const handleLogout = async () => {
     if (!window.confirm(t('nav.logoutConfirm', 'Bạn chắc chắn muốn đăng xuất?'))) return;
     await logout();
@@ -131,7 +135,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
   return (
     <div className="flex flex-col h-full">
       <div className="px-0.5 pb-4"><Brand rail={rail} /></div>
-      <nav aria-label={t('dashboard.navigation')} className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+      <nav aria-label={t("dashboard.navigation")} className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex flex-col gap-0.5">
           {NAV.filter(visible).map(({ to, labelKey, defaultLabel, icon }) => {
             const label = t(labelKey, defaultLabel);
@@ -148,7 +152,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
               {rail && unread > 0 && <span aria-hidden className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-bad ring-2 ring-navy transition-opacity duration-150 group-hover/rail:opacity-0 group-focus-within/rail:opacity-0" />}
             </span>
             <span className={`flex-1 ${fade}`}>{t('nav.notifications', 'Thông báo')}</span>
-            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={t('nav.unreadCount', { count: unread })}>{unread}</span>}
+            {unread > 0 && <span className={`num min-w-[20px] h-5 px-1.5 rounded-full bg-bad text-white text-[11.5px] font-medium inline-flex items-center justify-center ${fade}`} aria-label={t('mergeUi.unreadCount', { count: unread })}>{unread}</span>}
           </NavLink>
         </div>
         <NavGroup title={t('nav.healthSection', 'Sức khỏe')} items={HEALTH_NAV.filter(visible)} rail={rail} />
@@ -180,8 +184,6 @@ export type Crumb = string | [string, string];
 interface Chrome {
   crumbs: Crumb[];
   wide: boolean;
-  search?: string;
-  onSearch?: (value: string) => void;
 }
 const DEFAULT_CHROME: Chrome = { crumbs: [], wide: true };
 const ChromeContext = createContext<{ setChrome: (c: Partial<Chrome>) => void } | null>(null);
@@ -252,7 +254,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <span className="flex-1 min-w-0 truncate text-[15px] font-semibold">{pageName || 'Racehorse Club'}</span>
           {unread > 0 && (
-            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={`${t('nav.notifications')}, ${t('nav.unreadCount', { count: unread })}`}>
+            <Link to="/notifications" className="relative w-10 h-10 inline-flex items-center justify-center rounded-btn text-white" aria-label={t('mergeUi.notificationCount', { count: unread })}>
               <Icon name="bell" className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-bad" />
             </Link>
@@ -273,13 +275,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
 
         <main className={`flex-1 min-w-0 flex flex-col gap-5 px-4 sm:px-6 lg:px-8 pt-5 md:pt-8 pb-14 w-full mx-auto ${chrome.wide ? 'max-w-[1320px]' : 'max-w-[1120px]'}`}>
-          {chrome.search && chrome.onSearch && (
-            <SearchInput
-              placeholder={chrome.search}
-              onChange={chrome.onSearch}
-              className="w-full sm:w-[280px] self-end"
-            />
-          )}
           {children}
         </main>
       </div>

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
+import i18n from '../i18n';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, HealthStatus, Paginated } from '../lib/types';
@@ -12,32 +12,122 @@ import { EditHorseModal } from '../components/horse/EditHorseModal';
 import { DeleteHorseModal } from '../components/horse/DeleteHorseModal';
 import { usePageChrome } from '../ds/AppShell';
 import {
-  Badge, Btn, Card, Chip, Cloth, HeroStats, Icon, LockBadge, Ring, Seg, Silk,
-  careerTone, fitColor, healthTone,
+  Btn, Card, CareerBadge, Chip, ChipCount, Cloth, EmptyState, HealthBadge, HorseAvatar, Icon, KpiStrip,
+  LockBadge, PageHeader, Pagination, Ring, Seg, fitColor, lockReasonText,
 } from '../ds/ui';
 
-function formatLockReason(reason: string | null | undefined, t: TFunction): string {
-  if (!reason) return t('horsePage.locked');
-  const prefix = 'Incident: ';
-  if (reason.startsWith(prefix)) {
-    return `${t('horsePage.incidentPrefix')}: ${reason.slice(prefix.length)}`;
-  }
-  return reason;
+
+function BadgeLegendPopover() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-btn border border-line bg-white text-[12.5px] font-medium text-muted hover:text-ink hover:bg-subtle transition-colors shadow-xs"
+        aria-label={t('badgeLegend.btnLabel', 'Chú thích nhãn')}
+      >
+        <Icon name="info" className="w-3.5 h-3.5 text-info" />
+        <span>{t('badgeLegend.btnLabel', 'Chú thích nhãn')}</span>
+      </button>
+
+      {open && (
+        <div
+          role="dialog"
+          aria-label={t('badgeLegend.title', 'Ý nghĩa các nhãn trạng thái')}
+          className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 z-50 w-[340px] rounded-card border border-line bg-white shadow-xl p-4 flex flex-col gap-3 text-ink"
+        >
+          <div className="flex items-center justify-between pb-2 border-b border-line-soft">
+            <span className="text-[13px] font-semibold text-ink flex items-center gap-1.5">
+              <Icon name="info" className="w-4 h-4 text-info" />
+              {t('badgeLegend.title', 'Ý nghĩa các nhãn trạng thái')}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="w-6 h-6 rounded-btn inline-flex items-center justify-center text-muted hover:bg-subtle hover:text-ink"
+              aria-label="Đóng"
+            >
+              <Icon name="x" className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">
+              {t('badgeLegend.careerTitle', 'Sự nghiệp (Career Status)')}
+            </p>
+            <div className="space-y-1.5 text-[12px]">
+              <div className="flex items-start gap-2">
+                <CareerBadge status="ACTIVE" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.careerActive', 'Đang thi đấu tích cực')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CareerBadge status="RESTING" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.careerResting', 'Đang trong giai đoạn nghỉ dưỡng')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CareerBadge status="RETIRED" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.careerRetired', 'Đã giải nghệ, kết thúc thi đấu')}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-line-soft">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">
+              {t('badgeLegend.healthTitle', 'Sức khỏe (Health Status)')}
+            </p>
+            <div className="space-y-1.5 text-[12px]">
+              <div className="flex items-start gap-2">
+                <HealthBadge status="FIT" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.healthFit', 'Khỏe mạnh, sẵn sàng huấn luyện & thi đấu')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <HealthBadge status="MONITORING" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.healthMonitoring', 'Cần theo dõi sát, hạn chế bài tập nặng')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <HealthBadge status="INJURED" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.healthInjured', 'Chấn thương, đang được bác sĩ thú y điều trị')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <HealthBadge status="QUARANTINED" />
+                <span className="text-muted leading-tight pt-0.5">{t('badgeLegend.healthQuarantined', 'Cách ly y tế, cấm hoàn toàn tập luyện')}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-line-soft">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">
+              {t('badgeLegend.lockTitle', 'Khóa tập (Training Lock)')}
+            </p>
+            <div className="flex items-start gap-2 text-[12px]">
+              <LockBadge />
+              <span className="text-muted leading-tight pt-0.5">
+                {t('badgeLegend.lockDesc', 'Bác sĩ thú y đã ban hành lệnh khóa tập. Không thể tạo giáo án hay buổi tập cho đến khi được mở khóa.')}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 type Filter = 'all' | 'locked' | 'injured' | 'mon';
-const FILTERS: [Filter, (h: Horse) => boolean][] = [
-  ['all', () => true],
-  ['locked', (h) => h.locked],
-  ['injured', (h) => h.healthStatus === 'INJURED' || h.healthStatus === 'QUARANTINED'],
-  ['mon', (h) => h.healthStatus === 'MONITORING'],
-];
-const HEALTH_DIST: { key: HealthStatus; color: string }[] = [
-  { key: 'FIT', color: '#6fae84' },
-  { key: 'MONITORING', color: '#e0b55a' },
-  { key: 'QUARANTINED', color: '#d98080' },
-  { key: 'INJURED', color: '#b94a4a' },
-];
 
 function calculateAge(birthDate: string | null): number | null {
   if (!birthDate) return null;
@@ -56,7 +146,10 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [healthFilter, setHealthFilter] = useState<HealthStatus | ''>('');
   const [view, setView] = useState<'cards' | 'table'>('cards');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 200);
@@ -69,6 +162,7 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 
   const queryParams = {
     limit: 100,
+    ...(healthFilter ? { healthStatus: healthFilter } : {}),
     ...(personal && isOwner && user?.id ? { ownerId: user.id } : {}),
   };
   const cacheKey = `horses:${JSON.stringify(queryParams)}`;
@@ -76,144 +170,175 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
     api.get<Paginated<Horse>>('/horses', { params: queryParams }).then((r) => r.data),
   );
   const all = data?.data ?? [];
-  const bySearch = debouncedSearch.trim()
-    ? all.filter((h) => h.name.toLowerCase().includes(debouncedSearch.trim().toLowerCase()))
-    : all;
-  const rows = [...bySearch].filter(FILTERS.find((f) => f[0] === filter)![1])
+  const q = debouncedSearch.trim().toLowerCase();
+  const bySearch = q ? all.filter((h) => h.name.toLowerCase().includes(q)) : all;
+
+  const filters: [Filter, string, (h: Horse) => boolean][] = [
+    ['all', t('horsesPage.all', 'Tất cả'), () => true],
+    ['locked', t('horsesPage.filterLocked', 'Khóa tập'), (h) => h.locked],
+    ['injured', t('horsesPage.filterInjured', 'Chấn thương / cách ly'), (h) => h.healthStatus === 'INJURED' || h.healthStatus === 'QUARANTINED'],
+    ['mon', t('horsesPage.filterMonitoring', 'Cần theo dõi'), (h) => h.healthStatus === 'MONITORING'],
+  ];
+
+  const rows = [...bySearch].filter(filters.find((f) => f[0] === filter)![2])
     .sort((a, b) => (b.fitnessScore ?? -1) - (a.fitnessScore ?? -1));
+
+  const totalPages = Math.ceil(rows.length / pageSize) || 1;
+  const paginatedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
   const locked = all.filter((h) => h.locked).length;
   const active = all.filter((h) => h.status === 'ACTIVE').length;
   const scored = all.filter((h) => h.fitnessScore != null);
-  const avgFit = scored.length ? (scored.reduce((s, h) => s + (h.fitnessScore ?? 0), 0) / scored.length).toFixed(1) : '—';
-  const healthCounts = HEALTH_DIST.map((d) => ({ ...d, n: all.filter((h) => h.healthStatus === d.key).length }));
+  const avgFit = scored.length ? (scored.reduce((s, h) => s + (h.fitnessScore ?? 0), 0) / scored.length).toFixed(1) : null;
+  const avgFitNum = avgFit != null ? Number(avgFit) : null;
 
-  const title = personal ? t('horsePage.personalTitle') : t('horsePage.stableTitle');
-  usePageChrome({ crumbs: [t('nav.horses'), title], search: t('horseFlow.searchPlaceholder'), onSearch: setSearch });
+  const title = personal ? t('horsesPage.myHorses', 'Ngựa của tôi') : t('horsesPage.title', 'Ngựa đua');
+  usePageChrome({ crumbs: [title] });
+
+  const sub = loading && all.length === 0
+    ? t('horsesPage.loading', 'Đang tải danh sách ngựa…')
+    : `${t('horsesPage.countSummary', { count: all.length })}${locked > 0 ? ` · ${t('horsesPage.countLocked', { count: locked })}` : ''}${personal ? ` ${t('horsesPage.countOwned', 'thuộc sở hữu của bạn')}` : ''}.`;
+
+  const genderText = (g: Horse['gender']) => (
+    g === 'MALE' ? t('horsesPage.genderMale', 'Đực') : g === 'FEMALE' ? t('horsesPage.genderFemale', 'Cái') : t('horsesPage.genderUnknown', 'Chưa rõ giới tính')
+  );
+  const ageText = (birthDate: string | null) => {
+    const age = calculateAge(birthDate);
+    return age != null ? t('horsesPage.age', { age }) : t('horsesPage.ageUnknown', 'Chưa rõ tuổi');
+  };
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div className="flex flex-wrap gap-6 items-end">
-          <div className="flex-[1_1_360px] min-w-0">
-            <div className="lbl">{t('horsePage.season')}</div>
-            <h1 className="disp text-[64px] mt-2">{title}</h1>
-            <p className="text-hero-muted mt-2.5 max-w-[520px]">
-              {isManager
-                ? t('horsePage.managerDescription')
-                : personal
-                  ? t('horsePage.personalDescription')
-                  : t('horsePage.defaultDescription')}
-            </p>
-          </div>
-          {isManager && (
-            <div className="flex flex-wrap gap-2">
-              <Btn v="light" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('horsePage.addHorse')}</Btn>
-            </div>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-y-6 items-end">
-          <HeroStats items={[
-            { label: t('horsePage.total'), value: all.length, small: t('horsePage.horsesUnit') },
-            { label: t('horsePage.racing'), value: active, small: `/ ${all.length}` },
-            { label: t('horsePage.fitnessAverage'), value: avgFit },
-            { label: t('horsePage.trainingLocked'), value: locked, small: t('horsePage.horsesUnit'), color: '#f3b4b4' },
-          ]} />
-          <div className="flex-[1_1_320px] min-w-[260px] pl-6 border-l border-white/10">
-            <span className="lbl">{t('horsePage.herdHealth')}</span>
-            <div className="flex gap-0.5 h-2.5 rounded overflow-hidden mt-2" role="img" aria-label={healthCounts.map((d) => `${t(`horseStatusBadge.${d.key}`)} ${d.n}`).join(', ')}>
-              {healthCounts.map((d) => (
-                <i key={d.key} className="block" style={{ width: all.length ? `${(d.n / all.length) * 100}%` : 0, background: d.color }} />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-x-3.5 gap-y-1 mt-2 text-[11.5px] text-hero-line">
-              {healthCounts.map((d) => (
-                <span key={d.key} className="flex gap-1.5 items-center"><i className="w-2 h-2 rounded-sm" style={{ background: d.color }} />{t(`horseStatusBadge.${d.key}`)} <b className="text-white">{d.n}</b></span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        title={title}
+        sub={sub}
+        search={{ placeholder: t('horsesPage.searchPlaceholder', 'Tìm theo tên ngựa'), value: search, onChange: (val) => { setSearch(val); setPage(1); } }}
+        actions={isManager ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('horsesPage.addHorse', 'Thêm ngựa')}</Btn> : undefined}
+      />
 
-      <div className="flex flex-wrap gap-2.5 items-center">
-        {FILTERS.map(([k, fn]) => (
-          <Chip key={k} on={filter === k} onClick={() => setFilter(k)}>{t(`horsePage.filters.${k === 'mon' ? 'monitoring' : k}`)} <span className={filter === k ? 'text-hero-line' : 'text-muted'}>{bySearch.filter(fn).length}</span></Chip>
+      <KpiStrip items={[
+        { label: t('horsesPage.kpiTotal', 'Tổng số ngựa'), value: all.length },
+        { label: t('horsesPage.kpiActive', 'Đang thi đấu'), value: active, unit: `/ ${all.length}` },
+        { label: t('horsesPage.kpiAvgFitness', 'Thể lực trung bình'), value: avgFitNum ?? '—', unit: avgFit ? '/100' : undefined, sub: scored.length < all.length ? t('horsesPage.evaluatedCount', { count: scored.length, total: all.length }) : undefined },
+        { label: t('horsesPage.kpiLocked', 'Đang khóa tập'), value: locked, tone: locked > 0 ? 'bad' : undefined },
+      ]} />
+
+      <div className="flex flex-wrap gap-2 items-center">
+        {filters.map(([k, l, fn]) => (
+          <Chip key={k} on={filter === k} onClick={() => { setFilter(k); setPage(1); }}>{l} <ChipCount n={bySearch.filter(fn).length} /></Chip>
         ))}
-        <div className="ml-auto flex gap-2.5 items-center">
-          <span className="cap">{t('horsePage.sortFitness')}</span>
-          <Seg options={ [['cards', t('horsePage.cards')], ['table', t('horsePage.table')]]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} />
+        <select className="h-9 w-auto rounded-btn border border-line-strong bg-white px-3" aria-label={i18n.t('ui.healthStatus')} value={healthFilter}
+          onChange={(e) => setHealthFilter(e.target.value as HealthStatus | '')}>
+          <option value="">{i18n.t('healthView.all')}</option>
+          {(['FIT', 'MONITORING', 'INJURED', 'QUARANTINED'] as const).map((status) => <option key={status} value={status}>{i18n.t('horseStatusBadge.' + status)}</option>)}
+        </select>
+        <div className="ml-auto flex items-center gap-2">
+          <BadgeLegendPopover />
+          <Seg options={[['cards', t('horsesPage.cards', 'Thẻ')], ['table', t('horsesPage.table', 'Bảng')]]} value={view} onChange={(v) => setView(v as 'cards' | 'table')} />
         </div>
       </div>
 
       <ErrorText err={loadErr} />
 
       {loading && rows.length === 0 ? (
-        <p className="cap">{t('horsePage.loading')}</p>
+        <p className="text-muted">{t('horsesPage.loading', 'Đang tải danh sách ngựa…')}</p>
       ) : rows.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <p className="cap">{t('horsePage.noMatchingHorse')}</p>
-        </Card>
+        <EmptyState action={filter !== 'all' || healthFilter || q ? <Btn sm onClick={() => { setFilter('all'); setHealthFilter(''); setSearch(''); }}>{t('horsesPage.clearFilters', 'Xóa bộ lọc')}</Btn> : undefined}>
+          {all.length === 0 ? t('horsesPage.emptyNone', 'Chưa có hồ sơ ngựa nào.') : t('horsesPage.emptyFilter', 'Không có ngựa nào khớp với bộ lọc hiện tại.')}
+        </EmptyState>
       ) : view === 'cards' ? (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))' }}>
-          {rows.map((h) => <HorseCard key={h.id} h={h} canManage={isManager} onEdit={() => setEditingHorse(h)} onDelete={() => setDeletingHorse(h)} />)}
+        <>
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(290px, 100%), 1fr))' }}>
+          {paginatedRows.map((h) => (
+            <HorseCard
+              key={h.id}
+              h={h}
+              canManage={isManager}
+              genderText={genderText(h.gender)}
+              ageText={ageText(h.birthDate)}
+              onEdit={() => setEditingHorse(h)}
+              onDelete={() => setDeletingHorse(h)}
+            />
+          ))}
         </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={rows.length}
+          pageSize={pageSize}
+          pageSizeOptions={[12, 24, 48]}
+          onPageChange={setPage}
+          onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+        />
+        </>
       ) : (
         <Card>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse">
+            <table className="w-full min-w-[960px] border-collapse">
               <thead>
-                <tr className="text-left">
-                  {[
-                    t('horsePage.columns.horse'),
-                    t('horsePage.columns.owner'),
-                    t('horsePage.columns.breed'),
-                    t('horsePage.columns.fitness'),
-                    t('horsePage.columns.status'),
-                    t('horsePage.columns.health'),
-                    t('horsePage.columns.trainingLock'),
-                    ...(isManager ? [t('horsePage.columns.actions')] : []),
-                  ].map((column) => (
-                    <th key={column} className="h-[42px] px-4 bg-cream lbl border-b border-line">{column}</th>
-                  ))}
+                <tr className="text-left text-[12px] text-muted">
+                  <th className="h-10 px-5 font-medium border-b border-line">{t('horsesPage.thHorse', 'Ngựa')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thOwner', 'Chủ sở hữu')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thBreed', 'Giống')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line text-right">{t('horsesPage.thFitness', 'Thể lực')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thRacing', 'Thi đấu')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thHealth', 'Sức khỏe')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('horsesPage.thLock', 'Khóa tập')}</th>
+                  {isManager && <th className="h-10 px-5 border-b border-line" aria-label={t('horsesPage.thActions', 'Thao tác')} />}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((h) => {
-                  const age = calculateAge(h.birthDate);
-                  return (
-                    <tr key={h.id} className={`border-b border-line-soft hover:bg-subtle ${h.locked ? 'bg-[#fdfbfb]' : ''}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Cloth n={h.saddleNumber ?? '—'} /><Silk owner={h.owner.id} />
-                          <div>
-                            <Link to={`/horses/${h.id}`} className="font-semibold text-ink no-underline">{h.name}</Link>
-                            <div className="cap num">{h.gender ? t(`horse.gender${h.gender === 'MALE' ? 'Male' : 'Female'}`) : '—'} · {age != null ? t('horsePage.age', { count: age }) : '—'}</div>
-                          </div>
+                {rows.map((h) => (
+                  <tr key={h.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 flex justify-center"><Cloth n={h.saddleNumber} /></span>
+                        <HorseAvatar src={getFileUrl(h.photoUrl)} name={h.name} size={32} />
+                        <div className="min-w-0">
+                          <Link to={`/horses/${h.id}`} className="font-medium text-ink no-underline hover:text-info">{h.name}</Link>
+                          <div className="text-[12.5px] text-muted">{genderText(h.gender)} · {ageText(h.birthDate)}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{h.owner.name}</td>
+                    <td className="px-4 py-3 text-muted">{h.breed ?? '—'}</td>
+                    <td className="px-4 py-3 text-right num">
+                      {h.fitnessScore != null ? <span className="font-semibold hop" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore}</span> : <span className="text-muted">—</span>}
+                    </td>
+                    <td className="px-4 py-3"><CareerBadge status={h.status} /></td>
+                    <td className="px-4 py-3"><HealthBadge status={h.healthStatus} /></td>
+                    <td className="px-4 py-3 max-w-[260px]">
+                      {h.locked
+                        ? <div className="flex flex-col gap-1 items-start"><LockBadge /><span className="text-[12.5px] text-muted line-clamp-1" title={lockReasonText(h.lockReason)}>{lockReasonText(h.lockReason)}</span></div>
+                        : <span className="text-muted">—</span>}
+                    </td>
+                    {isManager && (
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-1">
+                          <button type="button" aria-label={`${t('common.update', 'Sửa')} ${h.name}`} onClick={() => setEditingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
+                          <button type="button" aria-label={`${t('common.cancel', 'Xóa')} ${h.name}`} onClick={() => setDeletingHorse(h)} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
                         </div>
                       </td>
-                      <td className="px-4 py-3">{h.owner.name}</td>
-                      <td className="px-4 py-3">{h.breed ?? '—'}</td>
-                      <td className="px-4 py-3"><b className="num" style={{ color: fitColor(h.fitnessScore) }}>{h.fitnessScore ?? '—'}</b></td>
-                      <td className="px-4 py-3"><Badge tone={careerTone[h.status]}>{t(`horseStatusBadge.${h.status}`)}</Badge></td>
-                      <td className="px-4 py-3"><Badge tone={healthTone[h.healthStatus]}>{t(`horseStatusBadge.${h.healthStatus}`)}</Badge></td>
-                      <td className="px-4 py-3">{h.locked ? <LockBadge>{formatLockReason(h.lockReason, t)}</LockBadge> : <span className="cap">—</span>}</td>
-                      {isManager && (
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1.5">
-                            <Btn sm onClick={() => setEditingHorse(h)}><Icon name="edit" className="w-3.5 h-3.5" />{t('horsePage.edit')}</Btn>
-                            <Btn sm v="d" onClick={() => setDeletingHorse(h)}><Icon name="trash" className="w-3.5 h-3.5" />{t('horsePage.delete')}</Btn>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
+                    )}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
+          <div className="px-5 pb-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={rows.length}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              onPageChange={setPage}
+              onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+            />
+          </div>
         </Card>
       )}
-      <div className="flex items-center gap-3"><span className="cap">{t('horsePage.shownCount', { shown: rows.length, total: all.length })}</span></div>
+      {rows.length > 0 && <p className="text-[13px] text-muted">{i18n.t('mergeUi.horseRows', { count: rows.length, total: all.length })}</p>}
 
       <CreateHorseModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onCreated={load} />
       <EditHorseModal horse={editingHorse} isOpen={editingHorse !== null} onClose={() => setEditingHorse(null)} onUpdated={load} />
@@ -222,43 +347,66 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
   );
 }
 
-function HorseCard({ h, canManage, onEdit, onDelete }: { h: Horse; canManage: boolean; onEdit: () => void; onDelete: () => void }) {
+function HorseCard({
+  h,
+  canManage,
+  genderText,
+  ageText,
+  onEdit,
+  onDelete,
+}: {
+  h: Horse;
+  canManage: boolean;
+  genderText: string;
+  ageText: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const { t } = useTranslation();
-  const age = calculateAge(h.birthDate);
-  const photo = getFileUrl(h.photoUrl);
   return (
-    <div className={`relative flex flex-col rounded-xl border border-line overflow-hidden text-ink transition hover:border-line-strong hover:shadow-lift ${h.locked ? 'hatch' : 'bg-white'}`}>
-      {h.locked && <span className="lockband" aria-hidden="true">{t('horsePage.locked')}</span>}
-      <Link to={`/horses/${h.id}`} aria-label={t('horsePage.profileFor', { name: h.name })} className="flex gap-3 items-start p-4 pb-3 no-underline text-ink">
-        {photo ? (
-          <img src={photo} alt="" className="w-9 h-9 rounded-full object-cover flex-none border border-line" />
-        ) : (
-          <Cloth n={h.saddleNumber ?? '—'} />
-        )}
-        <Silk owner={h.owner.id} size={34} />
-        <div className="flex-1 min-w-0"><div className="disp text-2xl leading-6 truncate">{h.name}</div><div className="cap num mt-1">{h.breed ?? t('horsePage.breedUnknown')} · {age != null ? t('horsePage.age', { count: age }) : t('horsePage.ageUnknown')}</div></div>
+    <div className="group lift hover-hop flex flex-col bg-white rounded-card border border-line hover:border-line-strong">
+      <Link to={`/horses/${h.id}`} aria-label={`${t('horseFlow.openProfile', 'Hồ sơ')} ${h.name}`} className="flex gap-3 items-center px-4 pt-4 no-underline text-ink">
+        <HorseAvatar src={getFileUrl(h.photoUrl)} name={h.name} size={40} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[16px] font-semibold leading-5 truncate group-hover:text-info">{h.name}</span>
+            <Cloth n={h.saddleNumber} />
+          </div>
+          <div className="text-[12.5px] text-muted mt-0.5 truncate">{h.breed ?? t('horseFlow.breedNotSet', 'Chưa rõ giống')} · {genderText} · {ageText}</div>
+        </div>
       </Link>
-      <div className="flex items-center gap-3.5 px-4 pb-3.5">
-        <Ring value={h.fitnessScore ?? 0} color={fitColor(h.fitnessScore)} text={h.fitnessScore ?? '—'} label={`${t('horsePage.fitness')} ${h.fitnessScore ?? t('horsePage.fitnessUnrated')}`} />
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          <div className="flex justify-between items-baseline"><span className="lbl">{t('horsePage.fitness')}</span></div>
-          <span className="cap">{h.fitnessScore != null ? `${h.fitnessScore} / 100` : t('horsePage.fitnessUnrated')}</span>
-          <div className="flex items-center gap-2"><span className="lbl">{t('horsePage.gender')}</span><span className="cap">{h.gender ? t(`horse.gender${h.gender === 'MALE' ? 'Male' : 'Female'}`) : t('horsePage.genderUnknown')}</span></div>
+
+      <div className="flex items-center gap-3 px-4 pt-4">
+        <Ring value={h.fitnessScore ?? 0} size={44} color={fitColor(h.fitnessScore)} text={h.fitnessScore ?? '—'} label={`${t('horsesPage.thFitness', 'Thể lực')} ${h.fitnessScore ?? ''}`} />
+        <div className="min-w-0">
+          <div className="text-[13px] text-muted">{t('horsesPage.thFitness', 'Thể lực')}</div>
+          <div className="text-[13.5px]">
+            {h.fitnessScore != null ? (
+              <><span className="num font-medium">{h.fitnessScore}</span><span className="text-muted"> / 100</span></>
+            ) : (
+              <span className="text-muted">—</span>
+            )}
+          </div>
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5 px-4 pb-3.5">
-        <Badge tone={careerTone[h.status]}>{t(`horseStatusBadge.${h.status}`)}</Badge>
-        <Badge tone={healthTone[h.healthStatus]}>{t(`horseStatusBadge.${h.healthStatus}`)}</Badge>
-        {h.locked && <LockBadge>{formatLockReason(h.lockReason, t)}</LockBadge>}
+
+      <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+        <CareerBadge status={h.status} />
+        <HealthBadge status={h.healthStatus} />
+        {h.locked && <LockBadge />}
       </div>
-      <div className="mt-auto flex items-center gap-2 px-4 py-2.5 border-t border-line-soft bg-subtle">
-        <span className="cap flex-1 min-w-0 truncate">{t('horsePage.ownerLabel')} <b className="text-ink">{h.owner.name}</b></span>
-        {canManage && (
-          <div className="flex gap-1">
-            <button type="button" aria-label={t('horsePage.edit')} onClick={onEdit} className="w-7 h-7 rounded-btn inline-flex items-center justify-center text-muted hover:bg-white hover:text-ink"><Icon name="edit" className="w-3.5 h-3.5" /></button>
-            <button type="button" aria-label={t('horsePage.delete')} onClick={onDelete} className="w-7 h-7 rounded-btn inline-flex items-center justify-center text-muted hover:bg-white hover:text-bad"><Icon name="trash" className="w-3.5 h-3.5" /></button>
-          </div>
-        )}
+      {h.locked && <p className="px-4 pt-2 text-[12.5px] text-bad-ink line-clamp-2" title={lockReasonText(h.lockReason)}>{lockReasonText(h.lockReason)}</p>}
+
+      <div className="mt-auto pt-4">
+        <div className="flex items-center gap-2 px-4 h-11 border-t border-line-soft">
+          <span className="text-[13px] text-muted flex-1 min-w-0 truncate">{t('horsesPage.thOwner', 'Chủ sở hữu')} <span className="text-ink">{h.owner.name}</span></span>
+          {canManage && (
+            <div className="flex gap-0.5 -mr-1.5">
+              <button type="button" aria-label={`${t('common.update', 'Sửa')} ${h.name}`} onClick={onEdit} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-cream hover:text-ink"><Icon name="edit" /></button>
+              <button type="button" aria-label={`${t('common.cancel', 'Xóa')} ${h.name}`} onClick={onDelete} className="w-8 h-8 rounded-btn inline-flex items-center justify-center text-muted hover:bg-bad-bg hover:text-bad"><Icon name="trash" /></button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

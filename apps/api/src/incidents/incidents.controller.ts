@@ -25,7 +25,7 @@ import { FileStorageService } from '../files/file-storage.service';
 import {
   INCIDENT_PHOTO_KIND,
   SAFE_FILENAME,
-  buildIncidentPhotoMulterOptions,
+  buildImageMemoryMulterOptions,
 } from '../files/upload';
 import { IncidentsService } from './incidents.service';
 import {
@@ -66,6 +66,11 @@ export class HorseIncidentsController {
 export class IncidentsController {
   constructor(private readonly incidents: IncidentsService) {}
 
+  @Get()
+  listAll(@Query() q: ListIncidentsQueryDto, @CurrentUser() user: AuthUser) {
+    return this.incidents.listAll(q, user);
+  }
+
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     return this.incidents.get(id, user);
@@ -76,8 +81,9 @@ export class IncidentsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateIncidentDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.incidents.update(id, dto);
+    return this.incidents.update(id, dto, user);
   }
 
   @Post(':id/photo')
@@ -89,7 +95,7 @@ export class IncidentsController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @UseInterceptors(FileInterceptor('file', buildIncidentPhotoMulterOptions()))
+  @UseInterceptors(FileInterceptor('file', buildImageMemoryMulterOptions()))
   uploadPhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file?: Express.Multer.File,
@@ -97,10 +103,7 @@ export class IncidentsController {
     if (!file) {
       throw new AppException('VALIDATION_ERROR', 'A "file" field is required');
     }
-    return this.incidents.setPhoto(
-      id,
-      `${INCIDENT_PHOTO_KIND}/${file.filename}`,
-    );
+    return this.incidents.savePhoto(id, file);
   }
 }
 

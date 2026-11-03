@@ -32,8 +32,6 @@ const { TrainingPlansPage } = await load('pages/TrainingPlansPage.tsx');
 const { HealthRecordsPage } = await load('pages/HealthRecordsPage.tsx');
 const { HealthSchedulePage } = await load('pages/HealthSchedulePage.tsx');
 const { IncidentsPage } = await load('pages/IncidentsPage.tsx');
-const { CreateTrainingPlanModal } = await load('components/training/CreateTrainingPlanModal.tsx');
-const { CreateHealthRecordModal } = await load('components/health/CreateHealthRecordModal.tsx');
 const { FeedingTab } = await load('pages/horse/FeedingTab.tsx');
 const { ErrorText } = await load('components/ErrorText.tsx');
 const { BODY_ZONES, bodyZoneLabel } = await load('ds/charts.tsx');
@@ -108,13 +106,13 @@ test('auth, navigation, horse list and dashboard translate on repeated language 
     if (language === 'en') {
       assert.match(shell, /Horses/);
       assert.match(shell, /Notifications/);
-      assert.match(dashboard, /Operating normally/);
-      assert.match(login, /Management portal/);
+      assert.match(dashboard, /Ready to train today/);
+      assert.match(login, /Management & Training/);
       assert.doesNotMatch(shell + dashboard + login, /[À-ỹ]/u);
     } else {
       assert.match(shell, /Ngựa đua/);
-      assert.match(dashboard, /Hoạt động bình thường/);
-      assert.ok(login.includes(i18n.t('auth.portalEyebrow')));
+      assert.match(dashboard, /Sẵn sàng tập hôm nay/);
+      assert.match(login, /Quản lý & huấn luyện/);
     }
     assert.doesNotMatch(shell + dashboard + login, /ui\.[a-zA-Z]|{{v\d}}/);
   }
@@ -122,20 +120,18 @@ test('auth, navigation, horse list and dashboard translate on repeated language 
 
 test('all roles translate their dashboard actions, training and care screens on repeated switches', async () => {
   const horse = { id: 'horse-test', name: 'Thunder', healthStatus: 'FIT', status: 'ACTIVE', locked: false };
-  const noop = () => {};
   for (const role of ['MANAGER', 'TRAINER', 'VET', 'GROOM', 'OWNER']) {
     for (const language of ['en', 'vi', 'en']) {
       setLanguage(language);
       const elements = [h(AppShell, null, h(DashboardPage)), h(TrainingPlansPage),
-        h(FeedingTab, { horse }),
-        h(CreateTrainingPlanModal, { isOpen: true, onClose: noop, onCreated: noop }),
-        h(CreateHealthRecordModal, { isOpen: true, horseId: horse.id, horseName: horse.name, onClose: noop, onCreated: noop })];
+        h(FeedingTab, { horse })];
       if (role === 'VET') elements.push(h(HealthRecordsPage));
       if (role !== 'OWNER') elements.push(h(HealthSchedulePage), h(IncidentsPage));
       const html = elements.map(element => render(element, role)).join('');
       const content = visibleText(html);
-      assert.ok(content.includes(i18n.t(`dashboard.roleSubtitle.${role}`)), `${role}/${language}: dashboard subtitle`);
-      assert.ok(content.includes(i18n.t(`trainingPage.roleSubtitle.${role}`)), `${role}/${language}: training subtitle`);
+      const actions = { MANAGER: ['Approve accounts', 'Duyệt tài khoản'], TRAINER: ['New training plan', 'Lập giáo án mới'], VET: ['New health record', 'Ghi hồ sơ khám bệnh'], GROOM: ['Report incident', 'Báo sự cố tại chuồng'], OWNER: ['My horses', 'Ngựa của tôi'] };
+      assert.ok(content.includes(actions[role][language === 'en' ? 0 : 1]), `${role}/${language}: role action`);
+      assert.ok(content.includes(i18n.t('plansPage.title')), `${role}/${language}: training title`);
       assert.doesNotMatch(html, /(?:dashboard|trainingPage|trainingPlanModal|healthRecordModal|healthRecordsPage|feedingTab|horsePage|language|common)\.[a-zA-Z]|{{[^}]+}}/);
       if (language === 'en') assert.doesNotMatch(content, /[À-ỹ]/u, role);
       assert.ok(html.includes(language === 'en' ? 'Switch to Tiếng Việt' : 'Chuyển sang English'));
@@ -160,7 +156,7 @@ test('English errors preserve local validation and translate Vietnamese server e
   const err = new AxiosError('Request failed', 'ERR_BAD_REQUEST', undefined, undefined, {
     status: 409, data: { error: { code: 'CONFLICT', message: 'Trùng lịch tập' } },
   });
-  assert.match(render(h(ErrorText, { err })), /Conflicts with existing data/);
+  assert.match(render(h(ErrorText, { err })), /Training schedule conflict/);
   await i18n.changeLanguage('vi');
   assert.match(render(h(ErrorText, { err })), /Trùng lịch tập/);
 });

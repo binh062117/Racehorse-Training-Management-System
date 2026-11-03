@@ -74,6 +74,9 @@ cô, mở link API trước buổi demo ~2 phút để "đánh thức" server.
    | `MAIL_FROM` | `Racehorse Club <email-đã-verify>` — xem "Gửi email" bên dưới (⚠️ không bọc dấu `"` khi dán vào Render) |
    | `UPLOAD_DIR` | `./uploads` |
    | `UPLOAD_MAX_MB` | `5` |
+   | `CLOUDINARY_CLOUD_NAME` | Cloud Name từ Cloudinary Dashboard — xem "Lưu ảnh ngựa" bên dưới. ⚠️ **Bắt buộc trên Render**: ổ đĩa Render là tạm thời, bỏ trống thì ảnh ngựa upload lên sẽ biến mất mỗi lần deploy lại |
+   | `CLOUDINARY_API_KEY` | API Key từ Cloudinary Dashboard |
+   | `CLOUDINARY_API_SECRET` | API Secret từ Cloudinary Dashboard |
    | `NODE_ENV` | `production` |
    | `GOOGLE_CLIENT_ID` | Google OAuth Client ID — xem "Đăng nhập Google" bên dưới (bỏ trống thì nút Google trên web tự ẩn, không lỗi) |
 
@@ -230,6 +233,36 @@ hiệu lực gần như ngay lập tức, không cần tạo Client ID mới.
 | "The given origin is not allowed for the given client ID" | Domain đang mở web không khớp **Authorized JavaScript origins** (thiếu `https://`, sai domain, hoặc quên thêm domain Vercel) | Credentials → sửa lại Authorized JavaScript origins cho đúng domain đang chạy |
 | Nút Google không hiện ra trên web | `VITE_GOOGLE_CLIENT_ID` chưa set (Vercel) hoặc set nhưng chưa Redeploy | Kiểm tra Settings → Environment Variables trên Vercel, Redeploy lại |
 | Bấm nút Google xong báo "Lỗi hệ thống" | `GOOGLE_CLIENT_ID` chưa set bên Render, hoặc sai giá trị | Kiểm tra biến trên Render, xem log Render (tab Logs) lúc bấm thử |
+
+## Lưu ảnh ngựa — tạo Cloudinary (miễn phí)
+
+Dùng để lưu ảnh đại diện ngựa khi Manager bấm "Đổi ảnh".
+
+> ⚠️ **Bắt buộc phải làm bước này trên Render** — ổ đĩa của Render web
+> service là **tạm thời (ephemeral)**: nếu lưu ảnh thẳng vào ổ đĩa server
+> (`UPLOAD_DIR`), ảnh sẽ **biến mất mỗi lần Render deploy lại** (tức là mỗi
+> lần merge code mới vào `main`) hoặc service tự khởi động lại sau khi
+> "ngủ" (free tier). Database thì không mất (nằm riêng ở Neon), nên sau
+> khi ảnh biến mất, trang chi tiết ngựa vẫn hiện ảnh hỏng vì vẫn còn link
+> trỏ tới file không còn tồn tại. Thiếu 3 biến `CLOUDINARY_*` thì code tự
+> rơi về lưu local như cũ (không lỗi) — chỉ đủ dùng khi chạy ở máy cá nhân.
+
+1. Vào [cloudinary.com](https://cloudinary.com) → **Sign up for free**
+   (email hoặc Google), không cần thẻ tín dụng.
+2. Vào **Dashboard** (trang mặc định sau khi đăng nhập) → copy 3 giá trị
+   hiện sẵn ở đó: **Cloud Name**, **API Key**, **API Secret** (bấm icon mắt
+   hoặc "Copy" để hiện Secret).
+3. Điền vào Render → **Environment**:
+   - `CLOUDINARY_CLOUD_NAME` = Cloud Name vừa copy.
+   - `CLOUDINARY_API_KEY` = API Key vừa copy.
+   - `CLOUDINARY_API_SECRET` = API Secret vừa copy.
+4. Lưu biến trên Render → tự deploy lại. Vào web, mở 1 hồ sơ ngựa, bấm
+   "Đổi ảnh" thử — ảnh upload xong sẽ không bao giờ mất nữa dù Render có
+   deploy lại bao nhiêu lần.
+
+> Ảnh cũ đã upload trước khi làm bước này (nếu có) đã bị ổ đĩa Render xoá
+> mất và sẽ vẫn hiện ảnh hỏng — chỉ cần bấm "Đổi ảnh" upload lại 1 lần là
+> xong, lần sau trở đi an toàn.
 
 ## Gửi email — tạo Brevo API Key (miễn phí)
 

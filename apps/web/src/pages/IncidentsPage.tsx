@@ -1,26 +1,31 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import i18n from '../i18n';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
+import { InjuryLocationsSection } from '../components/health/InjuryLocationsSection';
 import { api, getFileUrl } from '../lib/api';
-import { formatDate, formatDateTime } from '../lib/format';
+import { formatDate, formatTime } from '../lib/format';
 import { useCachedResource } from '../lib/useCachedResource';
 import type {
+  CountedPage,
   Horse,
   Incident,
   IncidentSeverity,
   IncidentStatus,
   Paginated,
 } from '../lib/types';
+import { HealthRecordPicker } from '../components/health/HealthRecordPicker';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Field, HeroStats, Icon, Textarea, type Tone } from '../ds/ui';
+import { Alert, Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, ImageLightbox, Modal, ModalBody, ModalFoot, ModalHead, NativeSelect, PageHeader, Pager, Seg, Textarea, type Tone } from '../ds/ui';
 
-type IncidentFilter = 'ALL' | IncidentStatus;
-type IncidentData = { horses: Horse[]; incidents: Incident[]; errors: unknown[] };
+type StatusFilter = 'ALL' | IncidentStatus;
+type SeverityFilter = 'ALL' | IncidentSeverity;
+type SortOrder = 'severity' | 'newest';
 
-const EMPTY_INCIDENT_DATA: IncidentData = { horses: [], incidents: [], errors: [] };
-const FILTERS: IncidentFilter[] = ['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'];
-const INCIDENTS_PAGE_SIZE = 100;
+const STATUS_FILTERS: StatusFilter[] = ['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'];
+const SEVERITY_FILTERS: SeverityFilter[] = ['ALL', 'HIGH', 'MEDIUM', 'LOW'];
+const PAGE_SIZE = 15;
 
 const NEXT_STATUS: Record<IncidentStatus, IncidentStatus | null> = {
   OPEN: 'IN_PROGRESS',
@@ -31,176 +36,212 @@ const NEXT_STATUS: Record<IncidentStatus, IncidentStatus | null> = {
 const SEVERITY_TONE: Record<IncidentSeverity, Tone> = { LOW: 'neu', MEDIUM: 'warn', HIGH: 'bad' };
 const STATUS_TONE: Record<IncidentStatus, Tone> = { OPEN: 'bad', IN_PROGRESS: 'warn', RESOLVED: 'ok' };
 
-async function loadIncidentsForHorse(horseId: string): Promise<Incident[]> {
-  const incidents: Incident[] = [];
-  let page = 1;
-  while (true) {
-    const response = await api.get<Paginated<Incident>>(
-      `/horses/${horseId}/incidents`,
-      { params: { page, limit: INCIDENTS_PAGE_SIZE } },
-    );
-    incidents.push(...response.data.data);
-    if (page * response.data.meta.limit >= response.data.meta.total) break;
-    page += 1;
-  }
-  return incidents;
-}
-
-async function loadIncidentData(): Promise<IncidentData> {
-  const horseResponse = await api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } });
-  const horses = horseResponse.data.data;
-  const results = await Promise.all(
-    horses.map(async (horse) => {
-      try {
-        return { incidents: await loadIncidentsForHorse(horse.id), error: null };
-      } catch (error) {
-        return { incidents: [], error };
-      }
-    }),
-  );
-  const incidents = results.flatMap((result) => result.incidents);
-  incidents.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
-  return {
-    horses,
-    incidents,
-    errors: results.flatMap((result) => result.error ? [result.error] : []),
-  };
-}
-
 export function IncidentsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isGroom = user?.role === 'GROOM';
   const isVet = user?.role === 'VET';
-  const [filter, setFilter] = useState<IncidentFilter>('ALL');
+  const [status, setStatus] = useState<StatusFilter>('ALL');
+  const [severity, setSeverity] = useState<SeverityFilter>('ALL');
+  const [sort, setSort] = useState<SortOrder>('severity');
   const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
-  usePageChrome({ crumbs: [t('incidents.eyebrow'), t('incidents.title')], search: t('incidents.search'), onSearch: setSearch });
+  usePageChrome({ crumbs: [t('incidents.title')] });
 
+  // Search waits for a pause in typing, then starts again from page 1.
+  useEffect(() => {
+    const id = window.setTimeout(() => { setQuery(search.trim()); setPage(1); }, 300);
+    return () => window.clearTimeout(id);
+  }, [search]);
+
+  const params = {
+    page,
+    limit: PAGE_SIZE,
+    sort,
+    ...(status !== 'ALL' ? { status } : {}),
+    ...(severity !== 'ALL' ? { severity } : {}),
+    ...(query ? { q: query } : {}),
+  };
   const { data, loading, error, reload } = useCachedResource(
-    `health-incidents-${user?.id ?? 'anonymous'}`,
-    loadIncidentData,
+    `incidents:${user?.id ?? 'anonymous'}:${JSON.stringify(params)}`,
+    () => api.get<CountedPage<Incident>>('/incidents', { params }).then((r) => r.data),
   );
-  const incidentData = data ?? EMPTY_INCIDENT_DATA;
-  const filteredIncidents = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    return incidentData.incidents.filter((incident) => {
-      if (filter !== 'ALL' && incident.status !== filter) return false;
-      return !query ||
-        `${incident.horse.name} ${incident.description} ${incident.reportedBy.name}`
-          .toLocaleLowerCase()
-          .includes(query);
-    });
-  }, [filter, incidentData.incidents, search]);
+  // Keep the previous page on screen while the next one loads, so paging doesn't flash.
+  const [kept, setKept] = useState<CountedPage<Incident> | null>(data);
+  if (data && data !== kept) setKept(data);
+  const shown = data ?? kept;
 
-  const { counts, highSeverityCount } = useMemo(() => {
-    const summary = {
-      counts: { ALL: incidentData.incidents.length, OPEN: 0, IN_PROGRESS: 0, RESOLVED: 0 } satisfies Record<IncidentFilter, number>,
-      highSeverityCount: 0,
-    };
-    for (const incident of incidentData.incidents) {
-      summary.counts[incident.status] += 1;
-      if (incident.severity === 'HIGH' && incident.status !== 'RESOLVED') summary.highSeverityCount += 1;
-    }
-    return summary;
-  }, [incidentData.incidents]);
+  const { data: horses } = useCachedResource(`incident-horses:${user?.id ?? 'anonymous'}`, () =>
+    isGroom
+      ? api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } }).then((r) => r.data.data)
+      : Promise.resolve([] as Horse[]),
+  );
+
+  const counts = shown?.counts ?? {};
+  const statusCount = (s: StatusFilter) => (s === 'ALL' ? (counts.OPEN ?? 0) + (counts.IN_PROGRESS ?? 0) + (counts.RESOLVED ?? 0) : counts[s] ?? 0);
+  const severityCount = (s: SeverityFilter) => (s === 'ALL' ? (counts.HIGH ?? 0) + (counts.MEDIUM ?? 0) + (counts.LOW ?? 0) : counts[s] ?? 0);
+  const pick = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div>
-          <div className="lbl">{t('incidents.eyebrow')}</div>
-          <h1 className="disp text-[56px] mt-2">{t('incidents.title')}</h1>
-          <p className="text-hero-muted mt-2 max-w-[560px]">{isGroom ? t('incidents.groomDescription') : t('incidents.description')}</p>
+      <PageHeader
+        title={t('incidents.title')}
+        sub={!shown
+          ? t('incidents.loading')
+          : t('incidents.subServer', { high: counts.HIGH ?? 0, open: counts.OPEN ?? 0, inProgress: counts.IN_PROGRESS ?? 0 })}
+        search={{ placeholder: t('incidents.search'), value: search, onChange: setSearch }}
+      />
+
+      {isGroom && <CreateIncidentForm horses={horses ?? []} onCreated={reload} />}
+
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap gap-2 items-center" role="group" aria-label={t('incidents.filter')}>
+          <span className="text-[13px] text-muted w-[72px]">{t('incidents.statusLabel')}</span>
+          {STATUS_FILTERS.map((s) => (
+            <Chip key={s} on={status === s} onClick={() => pick(setStatus)(s)}>{t(`incidents.filters.${s}`)} <ChipCount n={statusCount(s)} /></Chip>
+          ))}
         </div>
-        <HeroStats items={[
-          { label: t('incidents.total'), value: loading && !data ? '…' : counts.ALL },
-          { label: t('incidents.highPriority'), value: loading && !data ? '…' : highSeverityCount, color: '#f3b4b4' },
-          { label: t('incidents.inProgress'), value: loading && !data ? '…' : counts.IN_PROGRESS, color: '#f3d29a' },
-          { label: t('incidents.resolved'), value: loading && !data ? '…' : counts.RESOLVED, color: '#9fd9b1' },
-        ]} />
-      </section>
-
-      {isGroom && <CreateIncidentForm horses={incidentData.horses} onCreated={reload} />}
-
-      <div className="flex flex-wrap gap-2.5 items-center" role="group" aria-label={t('incidents.filter')}>
-        {FILTERS.map((status) => (
-          <button key={status} type="button" onClick={() => setFilter(status)}
-            className={`inline-flex items-center h-[30px] px-3 rounded-full border text-[12.5px] font-medium ${filter === status ? 'bg-navy text-white border-navy' : 'bg-white text-ink border-line'}`}>
-            {t(`incidents.filters.${status}`)} ({counts[status]})
-          </button>
-        ))}
+        <div className="flex flex-wrap gap-2 items-center" role="group" aria-label={t('incidents.severity')}>
+          <span className="text-[13px] text-muted w-[72px]">{t('incidents.severity')}</span>
+          {SEVERITY_FILTERS.map((s) => (
+            <Chip key={s} on={severity === s} onClick={() => pick(setSeverity)(s)}>
+              {s === 'ALL' ? t('incidents.filters.ALL') : t(`incidents.severities.${s}`)} <ChipCount n={severityCount(s)} />
+            </Chip>
+          ))}
+          <span className="flex-1" />
+          <Seg value={sort} onChange={(k) => pick(setSort)(k as SortOrder)}
+            options={[['severity', t('incidents.sortSeverity')], ['newest', t('incidents.sortNewest')]]} />
+        </div>
       </div>
 
       <ErrorText err={error} />
-      {incidentData.errors.map((loadError, index) => <ErrorText key={index} err={loadError} />)}
 
-      {loading && !data ? (
-        <p className="cap">{t('incidents.loading')}</p>
-      ) : filteredIncidents.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <p className="cap">{incidentData.incidents.length === 0 ? t('incidents.emptyDescription') : t('incidents.noMatch')}</p>
-        </Card>
+      {!shown && loading ? (
+        <p className="text-muted">{t('incidents.loading')}</p>
+      ) : !shown || shown.data.length === 0 ? (
+        <EmptyState>{statusCount('ALL') === 0 && !query ? t('incidents.emptyDescription') : t('incidents.noMatch')}</EmptyState>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse">
-              <thead>
-                <tr className="text-left">
-                  {[t('incidents.reportedDate'), t('incidents.horse'), t('incidents.descriptionLabel'), t('incidents.severity'), t('incidents.statusLabel'), t('incidents.photo'), t('incidents.actions')].map((th) => (
-                    <th key={th} className="h-[42px] px-4 bg-cream lbl border-b border-line">{th}</th>
+        <>
+          <Card className={loading ? 'opacity-70 transition-opacity' : 'transition-opacity'}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] border-collapse">
+                <thead>
+                  <tr className="text-left text-[12px] text-muted">
+                    <th className="h-10 px-5 font-medium border-b border-line">{t('incidents.reportedDate')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.horse')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.descriptionLabel')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.severity')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.statusLabel')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.photoCol')}</th>
+                    <th className="h-10 px-4 font-medium border-b border-line">{t('incidents.detailCol')}</th>
+                    <th className="h-10 px-5 font-medium border-b border-line" aria-label={t('incidents.actions')} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.data.map((incident) => (
+                    <IncidentRow key={incident.id} incident={incident} canAdvance={isVet} isVet={isVet} isGroom={isGroom} onChanged={reload} />
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredIncidents.map((incident) => (
-                  <IncidentRow key={incident.id} incident={incident} canAdvance={isVet} onChanged={reload} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                </tbody>
+              </table>
+            </div>
+          </Card>
+          <Pager page={page} total={shown.meta.total} limit={PAGE_SIZE} onPage={setPage}
+            label={t('incidents.pageLabel', { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, shown.meta.total), total: shown.meta.total })} />
+        </>
       )}
-      {loading && data && <p className="cap">{t('incidents.refreshing')}</p>}
     </>
+  );
+}
+
+// UC-19 — mirrors the API's image rule (jpg/png/webp, UPLOAD_MAX_MB = 5) so a
+// wrong file is caught before the report is sent, not after.
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const PHOTO_MAX_MB = 5;
+function photoProblem(file: File): string | null {
+  if (!PHOTO_TYPES.includes(file.type)) return 'Chỉ nhận ảnh JPEG, PNG hoặc WebP.';
+  if (file.size > PHOTO_MAX_MB * 1024 * 1024) return `Ảnh nặng ${(file.size / 1024 / 1024).toFixed(1)} MB — tối đa ${PHOTO_MAX_MB} MB.`;
+  return null;
+}
+async function uploadIncidentPhoto(incidentId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  await api.post(`/incidents/${incidentId}/photo`, formData);
+}
+
+/** File picker with a preview of the chosen photo and an inline check of type and size. */
+function PhotoPicker({ file, onChange, disabled }: { file: File | null; onChange: (f: File | null) => void; disabled?: boolean }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  const pick = (f: File | undefined) => {
+    if (!f) return;
+    const p = photoProblem(f);
+    setProblem(p);
+    onChange(p ? null : f);
+    if (p && inputRef.current) inputRef.current.value = '';
+  };
+  const clear = () => { onChange(null); setProblem(null); if (inputRef.current) inputRef.current.value = ''; };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {file && preview ? (
+        <div className="flex items-center gap-3 rounded-btn border border-line p-2 pr-3 bg-subtle">
+          <img src={preview} alt="Ảnh sẽ gửi kèm" className="w-16 h-16 rounded-badge object-cover flex-none" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[13.5px] font-medium truncate">{file.name}</div>
+            <div className="num text-[12.5px] text-muted">{(file.size / 1024).toFixed(0)} KB</div>
+          </div>
+          <Btn sm v="g" onClick={clear} disabled={disabled}><Icon name="x" className="w-3.5 h-3.5" />Bỏ ảnh</Btn>
+        </div>
+      ) : (
+        <input ref={inputRef} type="file" accept={PHOTO_TYPES.join(',')} disabled={disabled}
+          onChange={(e) => pick(e.target.files?.[0])} aria-label="Chọn ảnh minh chứng" />
+      )}
+      {problem && <p className="text-bad font-medium text-[13px]" role="alert">{problem}</p>}
+    </div>
   );
 }
 
 function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated: () => Promise<void> }) {
   const { t } = useTranslation();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [horseId, setHorseId] = useState('');
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState<IncidentSeverity>('LOW');
+  const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [photoError, setPhotoError] = useState<unknown>(null);
+  const [sent, setSent] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     setPhotoError(null);
+    setSent(null);
     setSaving(true);
     try {
       const response = await api.post<Incident>(`/horses/${horseId}/incidents`, {
         description: description.trim(),
         severity,
       });
-      const file = fileRef.current?.files?.[0];
-      setDescription('');
-      setSeverity('LOW');
-      setHorseId('');
-
-      if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
+      const horseName = horses.find((h) => h.id === horseId)?.name ?? '';
+      if (photo) {
         try {
-          await api.post(`/incidents/${response.data.id}/photo`, formData);
+          await uploadIncidentPhoto(response.data.id, photo);
         } catch (reason) {
+          // The report itself is saved; the photo can be added again from its row.
           setPhotoError(reason);
         }
       }
-      if (fileRef.current) fileRef.current.value = '';
+      setDescription('');
+      setSeverity('LOW');
+      setHorseId('');
+      setPhoto(null);
+      setSent(horseName);
       await onCreated();
     } catch (reason) {
       setError(reason);
@@ -218,35 +259,31 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
         </div>
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
           <Field label={t('incidents.horse')}>
-            <select
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-              value={horseId} onChange={(event) => setHorseId(event.target.value)} required
-            >
+            <NativeSelect value={horseId} onChange={(event) => setHorseId(event.target.value)} required>
               <option value="">{t('incidents.chooseHorse')}</option>
               {horses.map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
-            </select>
+            </NativeSelect>
           </Field>
-          <Field label={t('incidents.severity')}>
-            <select
-              className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
-              value={severity} onChange={(event) => setSeverity(event.target.value as IncidentSeverity)}
-            >
+          <Field label={t('incidents.severity')} hint={severity === 'HIGH' ? t('incidents.highSeverityHint') : undefined} err={severity === 'HIGH'}>
+            <NativeSelect value={severity} onChange={(event) => setSeverity(event.target.value as IncidentSeverity)}>
               {(['LOW', 'MEDIUM', 'HIGH'] as const).map((level) => <option key={level} value={level}>{t(`incidents.severities.${level}`)}</option>)}
-            </select>
+            </NativeSelect>
           </Field>
         </div>
         <Field label={t('incidents.descriptionLabel')}>
           <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={2000} required placeholder={t('incidents.descriptionPlaceholder')} />
         </Field>
         <Field label={t('incidents.photo')} hint={t('incidents.photoHint')}>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="text-[12.5px]" />
+          <PhotoPicker file={photo} onChange={setPhoto} disabled={saving} />
         </Field>
         <ErrorText err={error} />
-        {photoError && (
-          <div role="alert" className="flex flex-col gap-1">
-            <span className="text-[12.5px] text-bad font-semibold">{t('incidents.reportSavedPhotoFailed')}</span>
-            <ErrorText err={photoError} />
-          </div>
+        {sent != null && !photoError && (
+          <Alert tone="ok" icon="check">Đã gửi báo cáo sự cố{sent ? ` cho ${sent}` : ''} — bác sĩ thú y đã được thông báo.</Alert>
+        )}
+        {photoError != null && (
+          <Alert tone="warn" icon="alert" title={t('incidents.reportSavedPhotoFailed')}>
+            Bấm “Thêm ảnh” ở dòng sự cố vừa gửi trong bảng bên dưới để tải lại.
+          </Alert>
         )}
         <Btn v="p" type="submit" disabled={saving || !horseId || horses.length === 0} className="self-start">
           <Icon name="send" />{saving ? t('incidents.sending') : t('incidents.submitReport')}
@@ -256,15 +293,69 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
   );
 }
 
-function IncidentRow({ incident, canAdvance, onChanged }: { incident: Incident; canAdvance: boolean; onChanged: () => Promise<void> }) {
+/** The evidence photo: a thumbnail that opens full size, plus add/replace for the groom while the case is open. */
+function IncidentPhotoCell({ incident, photoUrl, canUpload, onChanged }: { incident: Incident; photoUrl: string | null; canUpload: boolean; onChanged: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<unknown>(null);
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    const p = photoProblem(file);
+    if (p) { setProblem(new Error(p)); return; }
+    setProblem(null);
+    setBusy(true);
+    try {
+      await uploadIncidentPhoto(incident.id, file);
+      await onChanged();
+    } catch (reason) {
+      setProblem(reason);
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      {photoUrl ? (
+        <>
+          <button type="button" onClick={() => setOpen(true)} aria-label={t('incidents.openPhoto')}
+            className="w-12 h-12 rounded-badge overflow-hidden border border-line cursor-zoom-in flex-none">
+            <img src={photoUrl} alt={t('incidents.photoAlt', { horse: incident.horse.name })} className="w-full h-full object-cover" loading="lazy" />
+          </button>
+          <ImageLightbox src={photoUrl} alt={t('incidents.photoAlt', { horse: incident.horse.name })} open={open} onClose={() => setOpen(false)} />
+        </>
+      ) : !canUpload && <span className="text-muted">{t('mergeUi.no')}</span>}
+      {canUpload && (
+        <>
+          <input ref={inputRef} type="file" accept={PHOTO_TYPES.join(',')} className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
+          <Btn sm v="g" disabled={busy} onClick={() => inputRef.current?.click()} className="-ml-2">
+            <Icon name="camera" className="w-3.5 h-3.5" />{busy ? i18n.t("treatmentPlans.loading") : photoUrl ? i18n.t("ui.changePhoto") : 'Thêm ảnh'}
+          </Btn>
+        </>
+      )}
+      {problem != null && (problem instanceof Error && !('response' in problem)
+        ? <p className="text-bad text-[12.5px] font-medium max-w-[160px]" role="alert">{problem.message}</p>
+        : <ErrorText err={problem} />)}
+    </div>
+  );
+}
+
+function IncidentRow({ incident, canAdvance, isVet, isGroom, onChanged }: { incident: Incident; canAdvance: boolean; isVet: boolean; isGroom: boolean; onChanged: () => Promise<void> }) {
   const { t } = useTranslation();
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [injuriesOpen, setInjuriesOpen] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const next = NEXT_STATUS[incident.status];
   const photoUrl = getFileUrl(incident.photoUrl);
 
   const advance = async () => {
     if (!next) return;
+    if (next === 'RESOLVED') { setResolving(true); return; }
     setError(null);
     setBusy(true);
     try {
@@ -280,29 +371,96 @@ function IncidentRow({ incident, canAdvance, onChanged }: { incident: Incident; 
   return (
     <>
       <tr className="border-b border-line-soft hover:bg-subtle align-top">
-        <td className="px-4 py-3">
-          <div className="text-[13px]">{formatDate(incident.createdAt)}</div>
-          <div className="cap">{formatDateTime(incident.createdAt)}</div>
+        <td className="px-5 py-3 whitespace-nowrap num">
+          <div>{formatDate(incident.createdAt)}</div>
+          <div className="text-[12.5px] text-muted">{formatTime(incident.createdAt)}</div>
         </td>
         <td className="px-4 py-3">
-          <strong>{incident.horse.name}</strong>
-          <div className="cap">{t('incidents.reportedBy', { name: incident.reportedBy.name })}</div>
+          <span className="font-medium whitespace-nowrap">{incident.horse.name}</span>
+          <div className="text-[12.5px] text-muted whitespace-nowrap">{t('incidents.reportedBy', { name: incident.reportedBy.name })}</div>
         </td>
-        <td className="px-4 py-3 max-w-[280px]">{incident.description}</td>
+        <td className="px-4 py-3 min-w-[220px] max-w-[320px]">{incident.description}</td>
         <td className="px-4 py-3"><Badge tone={SEVERITY_TONE[incident.severity]}>{t(`incidents.severities.${incident.severity}`)}</Badge></td>
         <td className="px-4 py-3"><Badge tone={STATUS_TONE[incident.status]}>{t(`incidents.status.${incident.status}`)}</Badge></td>
         <td className="px-4 py-3">
-          {photoUrl ? <a href={photoUrl} target="_blank" rel="noreferrer" className="font-semibold text-info">{t('incidents.openPhoto')}</a> : <span className="cap">—</span>}
+          <IncidentPhotoCell incident={incident} photoUrl={photoUrl} canUpload={isGroom && incident.status !== 'RESOLVED'} onChanged={onChanged} />
         </td>
         <td className="px-4 py-3">
+          <Btn sm v="g" onClick={() => setInjuriesOpen((v) => !v)}><Icon name={injuriesOpen ? 'chevDown' : 'chevRight'} className="w-3.5 h-3.5" />{t('incidents.details')}</Btn>
+          {incident.horse.locked && incident.horse.lockIncidentId === incident.id && (
+            <div className="mt-1"><Badge tone="lock"><Icon name="lock" className="w-3 h-3" />{t('incidents.lockingHorse')}</Badge></div>
+          )}
+        </td>
+        <td className="pl-4 pr-5 py-3 text-right">
           {canAdvance && next ? (
             <Btn sm disabled={busy} onClick={() => void advance()}>
               {busy ? t('incidents.updating') : t('incidents.moveTo', { status: t(`incidents.status.${next}`) })}
             </Btn>
-          ) : <span className="cap">{formatDate(incident.updatedAt)}</span>}
+          ) : <span className="num text-[12.5px] text-muted whitespace-nowrap">{t('incidents.updatedOn', { date: formatDate(incident.updatedAt) })}</span>}
         </td>
       </tr>
-      {error && <tr><td colSpan={7} className="px-4 pb-3"><ErrorText err={error} /></td></tr>}
+      {injuriesOpen && (
+        <tr className="border-b border-line-soft bg-subtle">
+          <td colSpan={8} className="px-4 py-3">
+            {incident.healthRecord && (
+              <p className="text-[13px] mb-3">
+                <span className="text-muted">{t('incidents.linkedExam')}: </span>
+                <span className="num">{formatDate(incident.healthRecord.examDate)}</span> — {incident.healthRecord.diagnosis}
+              </p>
+            )}
+            <InjuryLocationsSection basePath={`/incidents/${incident.id}`} isVet={isVet} />
+          </td>
+        </tr>
+      )}
+      {error && <tr><td colSpan={8} className="px-4 pb-3"><ErrorText err={error} /></td></tr>}
+      {resolving && <tr className="hidden"><td><ResolveIncidentModal incident={incident} onClose={() => setResolving(false)} onDone={onChanged} /></td></tr>}
     </>
+  );
+}
+
+/**
+ * Closing an incident: the vet picks the exam that goes with it. If this
+ * incident is what locked the horse, an exam concluding "healthy" also lifts
+ * the lock; any other lock on the horse is left alone.
+ */
+function ResolveIncidentModal({ incident, onClose, onDone }: { incident: Incident; onClose: () => void; onDone: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const [recordId, setRecordId] = useState(incident.healthRecord?.id ?? '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<unknown>(null);
+  const lockedByThis = !!incident.horse.locked && incident.horse.lockIncidentId === incident.id;
+  const lockedOther = !!incident.horse.locked && !lockedByThis;
+
+  const submit = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.patch(`/incidents/${incident.id}`, { status: 'RESOLVED', healthRecordId: recordId });
+      await onDone();
+      onClose();
+    } catch (e) {
+      setErr(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={() => !busy && onClose()} labelledBy={`resolve-${incident.id}`} width={600}>
+      <ModalHead id={`resolve-${incident.id}`} title={t('incidents.resolveTitle')} sub={`${incident.horse.name} — ${incident.description}`} onClose={() => !busy && onClose()} />
+      <ModalBody>
+        {lockedByThis && <Alert tone="warn" icon="lock">{t('incidents.resolveUnlocksHint')}</Alert>}
+        {lockedOther && <Alert tone="info" icon="info">{t('incidents.resolveOtherLockHint')}</Alert>}
+        <div>
+          <div className="text-[13px] font-medium mb-1.5">{t('incidents.resolveExam')} <span className="text-bad">*</span></div>
+          <HealthRecordPicker horseId={incident.horseId} horseName={incident.horse.name} value={recordId} onChange={setRecordId} canCreate />
+        </div>
+        <ErrorText err={err} />
+      </ModalBody>
+      <ModalFoot>
+        <Btn onClick={onClose} disabled={busy}>{t('common.cancel')}</Btn>
+        <Btn v="p" onClick={() => void submit()} disabled={busy || !recordId}>{busy ? t('incidents.updating') : t('incidents.resolveConfirm')}</Btn>
+      </ModalFoot>
+    </Modal>
   );
 }

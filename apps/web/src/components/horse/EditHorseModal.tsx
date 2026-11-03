@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
+import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import type { Paginated, User, Horse, HorseGender, HorseStatus } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -13,19 +14,24 @@ interface EditHorseModalProps {
 }
 
 export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseModalProps) {
-  const { t } = useTranslation();
+  useTranslation();
   const [owners, setOwners] = useState<User[]>([]);
+  const [trainers, setTrainers] = useState<User[]>([]);
+  const [grooms, setGrooms] = useState<User[]>([]);
   const [allHorses, setAllHorses] = useState<Horse[]>([]);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<HorseGender | ''>('');
   const [breed, setBreed] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [ownerId, setOwnerId] = useState('');
+  const [trainerId, setTrainerId] = useState('');
+  const [groomId, setGroomId] = useState('');
   const [status, setStatus] = useState<HorseStatus>('ACTIVE');
   const [sireId, setSireId] = useState('');
   const [damId, setDamId] = useState('');
   const [fitnessScore, setFitnessScore] = useState<string>('');
   const [saddleNumber, setSaddleNumber] = useState<string>('');
+  const [stallNumber, setStallNumber] = useState<string>('');
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -37,17 +43,32 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
     setBreed(horse.breed ?? '');
     setBirthDate(horse.birthDate ? horse.birthDate.slice(0, 10) : '');
     setOwnerId(horse.ownerId);
+    setTrainerId(horse.trainerId ?? '');
+    setGroomId(horse.groomId ?? '');
     setStatus(horse.status);
     setSireId(horse.sireId ?? '');
     setDamId(horse.damId ?? '');
     setFitnessScore(horse.fitnessScore != null ? String(horse.fitnessScore) : '');
     setSaddleNumber(horse.saddleNumber != null ? String(horse.saddleNumber) : '');
+    setStallNumber(horse.stallNumber ?? '');
 
     // Fetch owners
     api
       .get<Paginated<User>>('/users', { params: { role: 'OWNER', limit: 100 } })
       .then((r) => setOwners(r.data.data))
       .catch(() => setOwners([]));
+
+    // Fetch trainers
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'TRAINER', limit: 100 } })
+      .then((r) => setTrainers(r.data.data))
+      .catch(() => setTrainers([]));
+
+    // Fetch grooms
+    api
+      .get<Paginated<User>>('/users', { params: { role: 'GROOM', limit: 100 } })
+      .then((r) => setGrooms(r.data.data))
+      .catch(() => setGrooms([]));
 
     // Fetch horses for pedigree selection (exclude self)
     api
@@ -66,7 +87,7 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
 
     // Front-end validate pedigree
     if (sireId && damId && sireId === damId) {
-      setErr(new Error(t('horseModal.parentsMustDiffer')));
+      setErr(new Error(i18n.t("ui.theSireAndDamCannotBeTheSameHorse")));
       return;
     }
 
@@ -83,6 +104,9 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
         damId: damId ? damId : null,
         fitnessScore: fitnessScore !== '' ? Number(fitnessScore) : null,
         saddleNumber: saddleNumber !== '' ? Number(saddleNumber) : null,
+        stallNumber: stallNumber.trim() ? stallNumber.trim() : null,
+        trainerId: trainerId ? trainerId : null,
+        groomId: groomId ? groomId : null,
       };
 
       await api.patch(`/horses/${horse.id}`, payload);
@@ -95,69 +119,86 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
     }
   };
 
-  const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
+  const selectCls = 'h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15';
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} labelledBy="edit-horse-title">
-      <ModalHead icon="edit" title={t('horseModal.editTitle')} id="edit-horse-title" onClose={() => !busy && onClose()} />
+      <ModalHead icon="edit" title={i18n.t("ui.editHorseProfile")} id="edit-horse-title" onClose={() => !busy && onClose()} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
-          <Field label={t('horseModal.name')} req>
+          <Field label={i18n.t("ui.horseName")} req>
             <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
           </Field>
 
-          <Field label={t('horseModal.owner')} req>
+          <Field label={i18n.t("ui.owner2")} req>
             <select className={selectCls} value={ownerId} onChange={(e) => setOwnerId(e.target.value)} required>
               {owners.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.email})</option>)}
             </select>
           </Field>
 
-          <Field label={t('horseModal.gender')}>
+          <Field label={i18n.t("horse.gender")}>
             <select className={selectCls} value={gender} onChange={(e) => setGender(e.target.value as HorseGender | '')}>
-              <option value="">{t('horseModal.unknown')}</option>
-              <option value="MALE">{t('horse.genderMale')}</option>
-              <option value="FEMALE">{t('horse.genderFemale')}</option>
+              <option value="">{i18n.t("ui.unknown")}</option>
+              <option value="MALE">{i18n.t("horse.genderMale")}</option>
+              <option value="FEMALE">{i18n.t("horse.genderFemale")}</option>
             </select>
           </Field>
 
           <div className="grid grid-cols-2 gap-3.5">
-            <Field label={t('horseModal.breed')}>
+            <Field label={i18n.t("ui.breed")}>
               <Input value={breed} onChange={(e) => setBreed(e.target.value)} maxLength={120} />
             </Field>
-            <Field label={t('horseModal.birthDate')}>
+            <Field label={i18n.t("horse.birthDate")}>
               <Input type="date" max={todayStr} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3.5">
-              <Field label={t('horseModal.status')}>
+            <Field label={i18n.t("user.status")}>
               <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as HorseStatus)}>
-                  {(['ACTIVE', 'RESTING', 'RETIRED'] as const).map((value) => (
-                    <option key={value} value={value}>{t(`horseFlow.status.${value}`)}</option>
-                  ))}
+                <option value="ACTIVE">{i18n.t("ui.active")}</option>
+                <option value="RESTING">{i18n.t("ui.resting2")}</option>
+                <option value="RETIRED">{i18n.t("ui.retired")}</option>
               </select>
             </Field>
-              <Field label={t('horseModal.fitness')}>
-                <Input type="number" min={0} max={100} placeholder={t('horseModal.fitnessUnknown')} value={fitnessScore} onChange={(e) => setFitnessScore(e.target.value)} />
+            <Field label={i18n.t("ui.fitnessScore0100")}>
+              <Input type="number" min={0} max={100} placeholder={i18n.t("ui.notAssessed")} value={fitnessScore} onChange={(e) => setFitnessScore(e.target.value)} />
             </Field>
           </div>
 
-          <Field label={t('horseModal.saddleNumber')} hint={t('horseModal.saddleHint')}>
-            <Input type="number" min={0} max={999} placeholder={t('horseModal.exampleNumber')} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
+          <Field label={i18n.t("ui.saddleNumberOptional")} hint="Số hiển thị trên yếm số (saddle cloth)">
+            <Input type="number" min={0} max={999} placeholder={i18n.t("ui.eG7")} value={saddleNumber} onChange={(e) => setSaddleNumber(e.target.value)} />
           </Field>
+          <div className="grid gap-3.5 sm:grid-cols-3">
+             <Field label={i18n.t('assignment.stall')} hint={i18n.t('assignment.stallHint')}>
+               <Input placeholder="A-01" value={stallNumber} onChange={(e) => setStallNumber(e.target.value)} maxLength={50} />
+             </Field>
+             <Field label={i18n.t('assignment.trainer')}>
+               <select className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15" value={trainerId} onChange={(e) => setTrainerId(e.target.value)}>
+                 <option value="">{i18n.t('assignment.none')}</option>
+                 {trainers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+               </select>
+             </Field>
+             <Field label={i18n.t('assignment.groom')}>
+               <select className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15" value={groomId} onChange={(e) => setGroomId(e.target.value)}>
+                 <option value="">{i18n.t('assignment.none')}</option>
+                 {grooms.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+               </select>
+             </Field>
+            </div>
 
           <div className="p-3 rounded-card border border-line bg-subtle">
-            <div className="lbl text-navy mb-2">{t('horseModal.pedigree')}</div>
+            <div className="lbl text-navy mb-2">Phả hệ (Pedigree)</div>
             <div className="grid grid-cols-2 gap-3.5">
-              <Field label={t('horseModal.sire')}>
+              <Field label="Ngựa cha (Sire)">
                 <select className={selectCls} value={sireId} onChange={(e) => setSireId(e.target.value)}>
-                  <option value="">{t('horseModal.noSelection')}</option>
+                  <option value="">{i18n.t("ui.none")}</option>
                   {allHorses.filter((h) => h.id !== damId).map((h) => <option key={h.id} value={h.id}>{h.name} ({h.breed ?? '—'})</option>)}
                 </select>
               </Field>
-              <Field label={t('horseModal.dam')}>
+              <Field label="Ngựa mẹ (Dam)">
                 <select className={selectCls} value={damId} onChange={(e) => setDamId(e.target.value)}>
-                  <option value="">{t('horseModal.noSelection')}</option>
+                  <option value="">{i18n.t("ui.none")}</option>
                   {allHorses.filter((h) => h.id !== sireId).map((h) => <option key={h.id} value={h.id}>{h.name} ({h.breed ?? '—'})</option>)}
                 </select>
               </Field>
@@ -168,8 +209,8 @@ export function EditHorseModal({ horse, isOpen, onClose, onUpdated }: EditHorseM
         </ModalBody>
 
         <ModalFoot>
-          <Btn onClick={onClose} disabled={busy}>{t('horseModal.cancel')}</Btn>
-          <Btn v="p" type="submit" disabled={busy}>{busy ? t('horseModal.saving') : t('horseModal.save')}</Btn>
+          <Btn onClick={onClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
+          <Btn v="p" type="submit" disabled={busy}>{busy ? i18n.t("races.saving") : i18n.t("ui.saveChanges")}</Btn>
         </ModalFoot>
       </form>
     </Modal>

@@ -1,4 +1,8 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Pagination } from '../../components/Pagination';
+import { GroomSelect } from '../../components/GroomSelect';
+import { usePagedResource } from '../../lib/usePagedResource';
+import { scheduleError } from '../../lib/sessionSchedule';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
@@ -13,7 +17,7 @@ const sessionTime = new Intl.DateTimeFormat('vi-VN', {
   timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit',
 });
 
-const STATUS_TONE: Record<TrainingSession['status'], Tone> = { PLANNED: 'info', DONE: 'ok', CANCELLED: 'neu' };
+const STATUS_TONE: Record<TrainingSession['status'], Tone> = { PLANNED: 'info', DONE: 'ok', CANCELLED: 'neu', MISSED: 'warn' };
 
 interface Props {
   horseId: string;
@@ -72,39 +76,11 @@ function SessionsContent({ horseId, isLocked }: Props) {
     setPlansErr(null);
     setAttempt((value) => value + 1);
   };
-  const [sessions, setSessions] = useState<(TrainingSession & { planId?: string | null })[]>([]);
-  const [err, setErr] = useState<unknown>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const all: (TrainingSession & { planId?: string | null })[] = [];
-      let page = 1;
-      while (!signal?.aborted) {
-        const res = await api.get<Paginated<TrainingSession & { planId?: string | null }>>(
-          `/horses/${horseId}/sessions`,
-          { params: { page, limit: 100 }, signal },
-        );
-        all.push(...res.data.data);
-        if (res.data.meta.page * res.data.meta.limit >= res.data.meta.total) break;
-        page += 1;
-      }
-      if (!signal?.aborted) {
-        setSessions([...new Map(all.map((session) => [session.id, session])).values()]);
-        setErr(null);
-      }
-    } catch (error) {
-      if (!signal?.aborted) setErr(error);
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, [horseId]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
+  const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState('');
+  const { data: sessions, total, loading, error: err, refresh: load } = usePagedResource<TrainingSession>(
+    '/horses/' + horseId + '/sessions', page, filter ? { status: filter } : {},
+  );
 
   // Group display dates only; API ordering and stored timestamps are unchanged.
   const days = new Map<string, typeof sessions>();
@@ -121,7 +97,7 @@ function SessionsContent({ horseId, isLocked }: Props) {
       <div className="flex justify-between items-center flex-wrap gap-2.5">
         <div>
           <h2 className="text-[15px] font-semibold">{t('session.heading')}</h2>
-          {isLocked && <p className="text-[13px] text-muted mt-0.5">{t('session.lockedSchedule')}</p>}
+          {isLocked && <p className="text-[13px] text-muted mt-0.5">{t('hai.locked')}</p>}
         </div>
         {canCreate && !isLocked && (
           <Btn v="p" onClick={() => { setCreated(false); setCreating(true); }}><Icon name="plus" />{t('session.openSchedule')}</Btn>
@@ -129,6 +105,7 @@ function SessionsContent({ horseId, isLocked }: Props) {
       </div>
       {created && <div role="status"><Badge tone="ok" className="h-auto py-1.5 px-3"><Icon name="check" className="w-3.5 h-3.5" />{t('session.saved')}</Badge></div>}
 
+      <Field label={t('session.status')}><NativeSelect value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }}><option value="">{t('healthRecordsPage.all')}</option>{['PLANNED', 'DONE', 'CANCELLED', 'MISSED'].map((status) => <option key={status} value={status}>{t('session.displayStatus.' + status)}</option>)}</NativeSelect></Field>
       <CreateSessionForm
         open={canCreate && !isLocked && creating}
         horseId={horseId} sessions={sessions} plans={plans} plansLoading={plansLoading}
@@ -157,6 +134,7 @@ function SessionsContent({ horseId, isLocked }: Props) {
                     planLabel={s.planId ? plans.find((plan) => plan.id === s.planId)?.goal ?? t('session.planUnavailable') : t('session.noPlan')}
                     canUpdate={canUpdate}
                     isTrainer={role === 'TRAINER'}
+                    plans={plans}
                     allSessions={sessions}
                     onChanged={load}
                   />
@@ -166,6 +144,7 @@ function SessionsContent({ horseId, isLocked }: Props) {
           ))}
         </div>
       )}
+      <Pagination page={page} total={total} onPage={setPage} disabled={loading} />
     </div>
   );
 }
@@ -189,9 +168,8 @@ function ClashWarning({ clash }: { clash: TrainingSession | null }) {
   const { t } = useTranslation();
   if (!clash) return null;
   return (
-    <Alert tone="warn" icon="alert" title={t('session.clashTitle')}>
-      {t('session.clashDetails', { type: clash.type, time: `${sessionTime.format(new Date(clash.scheduledAt))} ${formatDate(clash.scheduledAt)}` })}
-      {' '}{t('session.clashHint', { minutes: CONFLICT_WINDOW_MIN })}
+    <Alert tone="warn" icon="alert" title={t('mergeUi.scheduleClash')}>
+      {t('errorDetails.sessionClash', { type: clash.type, time: `${sessionTime.format(new Date(clash.scheduledAt))} ${formatDate(clash.scheduledAt)}`, minutes: CONFLICT_WINDOW_MIN })}
     </Alert>
   );
 }
@@ -212,8 +190,11 @@ function CreateSessionForm({
   const { t } = useTranslation();
   const [scheduledAt, setScheduledAt] = useState('');
   const [type, setType] = useState('');
+  const [distanceM, setDistanceM] = useState('');
+  const [surface, setSurface] = useState('');
   const [notes, setNotes] = useState('');
   const [planId, setPlanId] = useState('');
+  const [groomId, setGroomId] = useState('');
   const [err, setErr] = useState<unknown>(null);
   const [validation, setValidation] = useState('');
   const [busy, setBusy] = useState(false);
@@ -228,6 +209,8 @@ function CreateSessionForm({
       setValidation('session.invalidDate');
       return;
     }
+    const timeError = scheduleError(scheduledAt, plans.find((p) => p.id === planId));
+    if (timeError) { setValidation(timeError); return; }
     if (!type.trim() || type.trim().length > 80 || notes.length > 2000) {
       setValidation('session.invalidFields');
       return;
@@ -237,13 +220,19 @@ function CreateSessionForm({
       await api.post(`/horses/${horseId}/sessions`, {
         scheduledAt: fromDateTimeLocal(scheduledAt),
         type: type.trim(),
+        ...(distanceM ? { distanceM: Number(distanceM) } : {}),
+        ...(surface ? { surface: surface.trim() } : {}),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
         ...(planId ? { planId } : {}),
+        groomId: groomId || null,
       });
       setScheduledAt('');
       setType('');
+      setDistanceM('');
+      setSurface('');
       setNotes('');
       setPlanId('');
+      setGroomId('');
       onCreated();
     } catch (error) {
       setErr(error);
@@ -258,7 +247,7 @@ function CreateSessionForm({
       <form onSubmit={submit} aria-label={t('session.new')}>
         <ModalBody>
           <Field label={t('session.scheduledAt')} hint={t('session.localTime', { zone: Intl.DateTimeFormat().resolvedOptions().timeZone })}>
-            <Input type="datetime-local" autoFocus value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} disabled={busy} required err={!!clash} />
+            <Input type="datetime-local" min={toDateTimeLocal(new Date().toISOString())} autoFocus value={scheduledAt} onChange={(e) => { e.currentTarget.setCustomValidity(''); setScheduledAt(e.target.value); }} onInvalid={(e) => { if (e.currentTarget.validity.rangeUnderflow) e.currentTarget.setCustomValidity(t('hai.pastTime')); }} disabled={busy} required err={!!clash} />
           </Field>
           <ClashWarning clash={clash} />
           <Field label={t('session.plan')}>
@@ -275,9 +264,37 @@ function CreateSessionForm({
               <Btn sm disabled={busy} onClick={retryPlans}>{t('session.retry')}</Btn>
             </div>
           )}
+          {open && <GroomSelect value={groomId} onChange={setGroomId} disabled={busy} />}
           <Field label={t('session.type')}>
-            <Input value={type} onChange={(e) => setType(e.target.value)} placeholder={t('session.typePlaceholder')} maxLength={80} disabled={busy} required />
+            <Input value={type} onChange={(e) => setType(e.target.value)} placeholder={t('hai.typePlaceholder')} maxLength={80} disabled={busy} required />
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Cự ly (mét)">
+              <input
+                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+                type="number"
+                value={distanceM}
+                onChange={(e) => setDistanceM(e.target.value)}
+                placeholder="vd: 1200, 1600"
+                min={100}
+                max={10000}
+                disabled={busy}
+              />
+            </Field>
+            <Field label="Mặt sân">
+              <select
+                className="h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+                value={surface}
+                onChange={(e) => setSurface(e.target.value)}
+                disabled={busy}
+              >
+                <option value="">Chọn mặt sân</option>
+                <option value="TURF">Cỏ (Turf)</option>
+                <option value="DIRT">Cát (Dirt)</option>
+                <option value="SYNTHETIC">Nhân tạo (Synthetic)</option>
+              </select>
+            </Field>
+          </div>
           <Field label={t('session.notes')}>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} disabled={busy} rows={2} />
           </Field>
@@ -293,13 +310,14 @@ function CreateSessionForm({
   );
 }
 
-function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSessions, onChanged }: {
+function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSessions, plans, onChanged }: {
   session: TrainingSession;
   planLabel: string;
   hasPlan: boolean;
   canUpdate: boolean;
   isTrainer: boolean;
   allSessions: TrainingSession[];
+  plans: TrainingPlan[];
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
@@ -308,6 +326,9 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
   const [resultMetric, setResultMetric] = useState(session.resultMetric ?? '');
   const [resultValue, setResultValue] = useState(session.resultValue?.toString() ?? '');
   const [notes, setNotes] = useState(session.notes ?? '');
+  const [groomId, setGroomId] = useState(session.groomId ?? '');
+  const [planId, setPlanId] = useState(session.planId ?? '');
+  const [validation, setValidation] = useState('');
   const originalTime = toDateTimeLocal(session.scheduledAt);
   const [when, setWhen] = useState(originalTime);
   const [err, setErr] = useState<unknown>(null);
@@ -320,10 +341,17 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    if (clash) return;
+    if (busy || clash) return;
+    setValidation('');
+    if (moving || planId !== (session.planId ?? '')) {
+      const timeError = scheduleError(when, plans.find((p) => p.id === planId));
+      if (timeError) { setValidation(timeError); return; }
+    }
     setErr(null);
     setBusy(true);
     const body: Record<string, unknown> = {};
+    if (isTrainer && groomId !== (session.groomId ?? '')) body.groomId = groomId || null;
+    if (isTrainer && planId !== (session.planId ?? '')) body.planId = planId || null;
     if (moving && when) body.scheduledAt = fromDateTimeLocal(when);
     if (status) body.status = status;
     if (resultMetric.trim()) body.resultMetric = resultMetric.trim();
@@ -348,7 +376,11 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
         </time>
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start gap-3 flex-wrap">
-            <div className="font-semibold leading-6">{session.type}</div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-semibold leading-6">{session.type}</span>
+              {session.distanceM != null && <Badge tone="neu"><span className="num">{session.distanceM} m</span></Badge>}
+              {session.surface && <Badge tone="info">{session.surface === 'TURF' ? t('races.surfaceTurf', 'Cỏ') : session.surface === 'DIRT' ? t('races.surfaceDirt', 'Cát') : session.surface}</Badge>}
+            </div>
             <Badge tone={STATUS_TONE[session.status]}>{t(`session.displayStatus.${session.status}`)}</Badge>
           </div>
           <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[13px]">
@@ -356,9 +388,10 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
             <dd className={hasPlan ? '' : 'text-muted'}>{planLabel}</dd>
             <dt className="text-muted">{t('session.trainer')}</dt>
             <dd>{session.trainer.name}</dd>
+            <dt className="text-muted">{t('hai.assignedGroom')}</dt><dd>{session.groom?.name ?? t('hai.unassigned')}</dd>
             {session.notes && <><dt className="text-muted">{t('session.notes')}</dt><dd>{session.notes}</dd></>}
             {(session.resultMetric || session.resultValue != null) && (
-              <><dt className="text-muted">{t('session.result')}</dt><dd className="num">{session.resultMetric ?? t('session.resultMetric')}: <strong>{session.resultValue ?? t('common.noData')}</strong></dd></>
+              <><dt className="text-muted">{t('session.result')}</dt><dd className="num">{session.resultMetric ?? t('hai.metric')}: <strong>{session.resultValue ?? t('hai.noResult')}</strong></dd></>
             )}
           </dl>
 
@@ -384,14 +417,22 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
             </Field>
             {isTrainer && !status && (
               <>
-                <Field label={t('session.scheduledAt')} hint={t('session.rescheduleHint')}>
-                  <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} err={!!clash} required />
+                <Field label={t('session.scheduledAt')} hint={t('hai.rescheduleHint')}>
+                  <Input type="datetime-local" min={toDateTimeLocal(new Date().toISOString())} value={when} onChange={(e) => { e.currentTarget.setCustomValidity(''); setWhen(e.target.value); }} onInvalid={(e) => { if (e.currentTarget.validity.rangeUnderflow) e.currentTarget.setCustomValidity(t('hai.pastTime')); }} err={!!clash} required />
                 </Field>
                 <ClashWarning clash={clash} />
               </>
             )}
+            {isTrainer && <>
+              <GroomSelect value={groomId} onChange={setGroomId} disabled={busy} />
+              <Field label={t('session.plan')}><NativeSelect value={planId} onChange={(e) => setPlanId(e.target.value)} disabled={busy}>
+                <option value="">{t('session.noPlan')}</option>
+                {plans.map((p) => <option key={p.id} value={p.id}>{p.goal}</option>)}
+              </NativeSelect></Field>
+            </>}
+            {validation && <p role="alert" className="text-bad">{t(validation)}</p>}
             <Field label={t('session.resultMetric')}>
-              <Input value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} placeholder={t('session.metricPlaceholder')} />
+              <Input value={resultMetric} onChange={(e) => setResultMetric(e.target.value)} />
             </Field>
             <Field label={t('session.resultValue')}>
               <Input type="number" step="any" value={resultValue} onChange={(e) => setResultValue(e.target.value)} />

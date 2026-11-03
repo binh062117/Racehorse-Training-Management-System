@@ -16,6 +16,10 @@ import {
 import { SessionStatus } from '@prisma/client';
 
 export class CreateSessionDto {
+  @IsOptional()
+  @IsUUID()
+  groomId?: string | null;
+
   @IsISO8601()
   scheduledAt!: string;
 
@@ -23,6 +27,18 @@ export class CreateSessionDto {
   @IsNotEmpty()
   @MaxLength(80)
   type!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(10000)
+  distanceM?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  surface?: string;
 
   @IsOptional()
   @IsString()
@@ -37,6 +53,14 @@ export class CreateSessionDto {
 
 export class UpdateSessionDto {
   @IsOptional()
+  @IsUUID()
+  groomId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  planId?: string | null;
+
+  @IsOptional()
   @IsISO8601()
   scheduledAt?: string;
 
@@ -45,6 +69,18 @@ export class UpdateSessionDto {
   @IsNotEmpty()
   @MaxLength(80)
   type?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(10000)
+  distanceM?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  surface?: string;
 
   @IsOptional()
   @IsString()
@@ -93,7 +129,7 @@ export class ListSessionsQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(500)
   limit = 20;
 }
 

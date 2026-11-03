@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
+import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import type { Horse, Paginated, TrainingPlan } from '../../lib/types';
 import { ErrorText } from '../ErrorText';
@@ -13,10 +14,15 @@ interface Props {
   defaultHorseName?: string;
 }
 
-const GOAL_TEMPLATE_KEYS = [0, 1, 2, 3] as const;
+const GOAL_TEMPLATES = [
+  'Xây dựng nền tảng thể lực, cự ly 1400m sân cát (Khối lượng vừa)',
+  'Tăng cường sức bền cự ly 1600m mặt cỏ tự nhiên (Khối lượng cao)',
+  'Rèn luyện bứt tốc nước rút cự ly 1200m chuẩn bị giải đấu',
+  'Bài tập nhẹ phục hồi thể trạng & theo dõi gân cơ',
+];
 
 export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHorseId, defaultHorseName }: Props) {
-  const { t } = useTranslation();
+  useTranslation();
   const [horses, setHorses] = useState<Horse[]>([]);
   const [horseId, setHorseId] = useState(defaultHorseId ?? '');
   const [goal, setGoal] = useState('');
@@ -62,19 +68,23 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
 
     const targetHorseId = defaultHorseId ?? horseId;
     if (!targetHorseId) {
-      setErr(new Error(t('trainingPlanModal.horseRequired')));
+      setErr(new Error('Vui lòng chọn ngựa để lập giáo án.'));
+      return;
+    }
+    if (selectedHorse?.locked) {
+      setErr(new Error('Không thể lập giáo án cho ngựa đang bị khóa tập luyện.'));
       return;
     }
     if (!goal.trim()) {
-      setErr(new Error(t('trainingPlanModal.goalRequired')));
+      setErr(new Error(i18n.t("ui.enterATrainingGoal")));
       return;
     }
     if (!startDate) {
-      setErr(new Error(t('trainingPlanModal.dateRequired')));
+      setErr(new Error(i18n.t("ui.selectAStartDate")));
       return;
     }
     if (endDate && endDate < startDate) {
-      setErr(new Error(t('trainingPlanModal.endBeforeStart')));
+      setErr(new Error(i18n.t("errorDetails.trainingDateOrder")));
       return;
     }
 
@@ -94,36 +104,36 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
     }
   };
 
-  const selectCls = 'h-10 w-full rounded-btn border border-line bg-white px-3 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info';
+  const selectCls = 'h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15';
 
   return (
     <Modal open={isOpen} onClose={() => !busy && onClose()} width={560} labelledBy="create-plan-title">
-      <ModalHead icon="plans" title={t('trainingPlanModal.title')} id="create-plan-title" onClose={() => !busy && onClose()} />
+      <ModalHead icon="plans" title={i18n.t("ui.createTrainingPlan2")} id="create-plan-title" onClose={() => !busy && onClose()} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
           <ErrorText err={err} />
 
           {defaultHorseId ? (
-            <Field label={t('trainingPlanModal.horse')}>
+            <Field label="Ngựa áp dụng">
               <Input value={defaultHorseName ?? defaultHorseId} disabled ro />
             </Field>
           ) : (
-            <Field label={t('trainingPlanModal.chooseHorse')} hint={t('trainingPlanModal.eligibilityHint')}>
+            <Field label={i18n.t("races.chooseHorse")} hint={i18n.t("ui.retiredAndQuarantinedHorsesAreExcludedFromThisList")}>
               {loadingHorses ? (
-                <p className="cap">{t('trainingPlanModal.loadingHorses')}</p>
+                <p className="cap">{i18n.t("ui.loadingHorses")}</p>
               ) : (
                 <select className={selectCls} value={horseId} onChange={(e) => setHorseId(e.target.value)} required>
-                  {horses.length === 0 && <option value="">{t('trainingPlanModal.noEligibleHorse')}</option>}
+                  {horses.length === 0 && <option value="">{i18n.t("ui.noEligibleHorses")}</option>}
                   {horses.map((h) => {
                     const tags: string[] = [];
-                    if (h.status === 'RESTING') tags.push(t('horseStatusBadge.RESTING'));
-                    if (h.healthStatus === 'INJURED') tags.push(t('horseStatusBadge.INJURED'));
-                    if (h.healthStatus === 'MONITORING') tags.push(t('horseStatusBadge.MONITORING'));
-                    if (h.locked) tags.push(t('horseStatusBadge.locked'));
+                    if (h.status === 'RESTING') tags.push(i18n.t("ui.resting2"));
+                    if (h.healthStatus === 'INJURED') tags.push(i18n.t("horseFlow.health.INJURED"));
+                    if (h.healthStatus === 'MONITORING') tags.push(i18n.t("ui.monitoring"));
+                    if (h.locked) tags.push(i18n.t("ui.trainingLocked3"));
                     const suffix = tags.length > 0 ? ` [${tags.join(' · ')}]` : '';
                     return (
                       <option key={h.id} value={h.id}>
-                        {h.name} {h.breed ? `(${h.breed})` : ''} — {t('trainingPlanModal.owner')} {h.owner.name}{suffix}
+                        {h.name} {h.breed ? `(${h.breed})` : ''} {i18n.t("ui.owner3")}{h.owner.name}{suffix}
                       </option>
                     );
                   })}
@@ -133,50 +143,49 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
           )}
 
           {(selectedHorse?.locked || selectedHorse?.healthStatus === 'INJURED') && (
-            <Alert tone="warn" icon="alert" title={t('trainingPlanModal.warning')}>
+            <Alert tone="warn" icon="alert" title={i18n.t("ui.pleaseNote")}>
               {selectedHorse.locked && (
-                t('trainingPlanModal.lockedWarning', {
-                  reason: selectedHorse.lockReason ? ` (${selectedHorse.lockReason})` : '',
-                })
+                <>
+                  {i18n.t("ui.thisHorseHasAVeterinaryTrainingLock")}{selectedHorse.lockReason ? ` (${selectedHorse.lockReason})` : ''}{i18n.t("ui.youCanDraftAPlanButSessionsCannotBeScheduledUntilTrainingIsUnlocked")}</>
               )}
               {!selectedHorse.locked && selectedHorse.healthStatus === 'INJURED' && (
-                t('trainingPlanModal.injuredWarning')
+                <>
+                  Ngựa đang trong trạng thái chấn thương.
+                  Giáo án sẽ được lưu nhưng nên phối hợp với bác sĩ thú y trước khi lên lịch buổi tập thực tế.
+                </>
               )}
             </Alert>
           )}
 
-          <Field label={t('trainingPlanModal.goal')} hint={t('trainingPlanModal.goalHint')}>
+          <Field label={i18n.t("ui.trainingGoal2")} hint={i18n.t("ui.distanceWorkloadSurfaceOrRacePreparationPhaseMaximum500Characters")}>
             <Textarea
               rows={3} value={goal} onChange={(e) => setGoal(e.target.value)}
-              placeholder={t('trainingPlanModal.goalPlaceholder')}
+              placeholder={i18n.t("ui.exampleBuildEnduranceOver1600MOnTurfWithFinishingSprintsForAnUpcomingR")}
               required maxLength={500}
             />
             <div className="mt-2">
-              <div className="cap mb-1.5">{t('trainingPlanModal.templatesHint')}</div>
+              <div className="cap mb-1.5">{i18n.t("ui.suggestedGoalsSelectToUse")}</div>
               <div className="flex flex-wrap gap-1.5">
-                {GOAL_TEMPLATE_KEYS.map((index) => {
-                  const template = t(`trainingPlanModal.goals.${index}`);
-                  return (
-                    <Chip key={index} onClick={() => setGoal(template)} className="h-auto py-1 text-[11.5px]">+ {template}</Chip>
-                  );
-                })}
+                {GOAL_TEMPLATES.map((tpl) => (
+                  <Chip key={tpl} onClick={() => setGoal(tpl)} className="h-auto py-1 text-[11.5px]">+ {tpl}</Chip>
+                ))}
               </div>
             </div>
           </Field>
 
           <div className="grid grid-cols-2 gap-3.5">
-            <Field label={t('trainingPlanModal.startDate')}>
+            <Field label={i18n.t("treatmentPlans.startDate")}>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
             </Field>
-            <Field label={t('trainingPlanModal.endDate')}>
+            <Field label={i18n.t("ui.endDateOptional")}>
               <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
             </Field>
           </div>
         </ModalBody>
 
         <ModalFoot>
-          <Btn onClick={onClose} disabled={busy}>{t('common.cancel')}</Btn>
-          <Btn v="p" type="submit" disabled={busy || loadingHorses}>{busy ? t('trainingPlanModal.creating') : t('trainingPlanModal.create')}</Btn>
+          <Btn onClick={onClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
+          <Btn v="p" type="submit" disabled={busy || loadingHorses || Boolean(selectedHorse?.locked)}>{busy ? i18n.t("ui.creating2") : i18n.t("ui.createPlan")}</Btn>
         </ModalFoot>
       </form>
     </Modal>

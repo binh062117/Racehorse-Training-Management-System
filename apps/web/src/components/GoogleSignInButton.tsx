@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEffect, useRef } from 'react';
 
 interface GoogleCredentialResponse {
   credential: string;
@@ -27,29 +27,37 @@ export function GoogleSignInButton({
 }) {
   const { i18n } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
-  const onTokenRef = useRef(onToken);
-  const initializedRef = useRef(false);
-  const [googleReady, setGoogleReady] = useState(false);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as
     | string
     | undefined;
-  const language = i18n.resolvedLanguage === 'en' ? 'en' : 'vi';
-
-  useEffect(() => {
-    onTokenRef.current = onToken;
-  }, [onToken]);
 
   useEffect(() => {
     if (!clientId || !ref.current) return;
     let cancelled = false;
 
+    const render = () => {
+      if (cancelled || !window.google || !ref.current) return;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => onToken(response.credential),
+      });
+      window.google.accounts.id.renderButton(ref.current, {
+        locale: i18n.language,
+        theme: 'outline',
+        size: 'large',
+        shape: 'rectangular',
+        // GSI draws at a fixed pixel width (max 400): match the form column so it lines up with the inputs.
+        width: Math.min(400, Math.max(200, ref.current.offsetWidth)),
+      });
+    };
+
     if (window.google) {
-      setGoogleReady(true);
+      render();
     } else {
       const timer = window.setInterval(() => {
         if (window.google) {
           window.clearInterval(timer);
-          if (!cancelled) setGoogleReady(true);
+          render();
         }
       }, 100);
       return () => {
@@ -60,29 +68,8 @@ export function GoogleSignInButton({
     return () => {
       cancelled = true;
     };
-  }, [clientId]);
-
-  useEffect(() => {
-    if (!clientId || !googleReady || !window.google || initializedRef.current) return;
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: (response) => onTokenRef.current(response.credential),
-    });
-    initializedRef.current = true;
-  }, [clientId, googleReady]);
-
-  useEffect(() => {
-    if (!clientId || !googleReady || !window.google || !ref.current) return;
-    ref.current.replaceChildren();
-    window.google.accounts.id.renderButton(ref.current, {
-      theme: 'outline',
-      size: 'large',
-      width: 320,
-      locale: language,
-    });
-    return () => ref.current?.replaceChildren();
-  }, [clientId, googleReady, language]);
+  }, [clientId, onToken, i18n.language]);
 
   if (!clientId) return null;
-  return <div ref={ref} />;
+  return <div ref={ref} className="w-full flex justify-center min-h-[44px]" />;
 }

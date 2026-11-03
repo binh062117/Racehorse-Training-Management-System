@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { useState, type InputHTMLAttributes } from 'react';
 import { Icon } from '../ds/ui';
 
@@ -5,6 +7,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
 /** Password input with a show/hide toggle button. */
 export function PasswordInput(props: Props) {
+  useTranslation();
   const [visible, setVisible] = useState(false);
 
   return (
@@ -12,12 +15,12 @@ export function PasswordInput(props: Props) {
       <input
         {...props}
         type={visible ? 'text' : 'password'}
-        className="h-10 w-full rounded-btn border border-line bg-white pl-3 pr-10 text-[13px] outline-none focus:border-info focus:ring-1 focus:ring-info"
+        className="h-10 w-full rounded-btn border border-line-strong bg-white pl-3 pr-10 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
       />
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-label={visible ? i18n.t("ui.hidePassword") : i18n.t("ui.showPassword")}
         tabIndex={-1}
         className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-muted hover:text-ink"
       >

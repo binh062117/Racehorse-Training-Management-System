@@ -103,7 +103,7 @@ export function HealthSchedulePage() {
           </div>
         </Card>
       )}
-      <Pagination page={page} total={result?.meta.total ?? 0} limit={20} onChange={setPage} />
+      <Pagination page={page} totalItems={result?.meta.total ?? 0} totalPages={Math.max(1, Math.ceil((result?.meta.total ?? 0) / 20))} pageSize={20} onPageChange={setPage} />
     </>
   );
 }

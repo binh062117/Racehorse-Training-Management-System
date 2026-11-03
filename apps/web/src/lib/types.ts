@@ -1,7 +1,7 @@
 export type Role = 'MANAGER' | 'TRAINER' | 'VET' | 'GROOM' | 'OWNER';
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'DISABLED';
 export type HorseStatus = 'ACTIVE' | 'RESTING' | 'RETIRED';
-export type SessionStatus = 'PLANNED' | 'DONE' | 'CANCELLED';
+export type SessionStatus = 'PLANNED' | 'DONE' | 'CANCELLED' | 'MISSED';
 export type RaceEntryStatus = 'PENDING' | 'COMPLETED' | 'WITHDRAWN' | 'DID_NOT_START';
 
 export interface User {
@@ -35,10 +35,17 @@ export interface Horse {
   healthStatus: HealthStatus;
   fitnessScore: number | null;
   saddleNumber: number | null;
+  stallNumber: string | null;
+  trainerId?: string | null;
+  trainer?: UserRef | null;
+  groomId?: string | null;
+  groom?: UserRef | null;
   sireId: string | null;
   damId: string | null;
   locked: boolean;
   lockReason: string | null;
+  /** The HIGH incident that set the current lock, if any. */
+  lockIncidentId?: string | null;
   photoPath: string | null;
   photoUrl: string | null;
   createdAt: string;
@@ -121,6 +128,9 @@ export interface TrainingPlan {
 }
 
 export interface TrainingSession {
+  planId: string | null;
+  groomId: string | null;
+  groom: { id: string; name: string } | null;
   id: string;
   horseId: string;
   horse: { id: string; name: string; ownerId: string };
@@ -128,12 +138,36 @@ export interface TrainingSession {
   trainer: UserRef;
   scheduledAt: string;
   type: string;
+  distanceM?: number | null;
+  surface?: string | null;
   status: SessionStatus;
   resultMetric: string | null;
   resultValue: number | null;
   notes: string | null;
   resultRecordedBy?: { id: string; name: string; role: Role } | null;
   resultConfirmed?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DailyCareTask =
+  | 'FEEDING'
+  | 'CLEANING'
+  | 'BATHING'
+  | 'ICE_SOAK'
+  | 'HEALTH_CHECK';
+
+export interface DailyCareLog {
+  id: string;
+  horseId: string;
+  horse: { id: string; name: string; ownerId: string };
+  groomId: string;
+  groom: UserRef;
+  date: string;
+  taskType: DailyCareTask;
+  completed: boolean;
+  completedAt: string | null;
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -147,8 +181,32 @@ export interface HealthRecord {
   examDate: string;
   diagnosis: string;
   treatment: string | null;
+  /** The exam's conclusion — a FIT one is what an unlock needs. */
+  healthStatus: HealthStatus | null;
   attachmentPath: string | null;
   attachmentUrl: string | null;
+  createdAt: string;
+}
+
+export interface TreatmentPlan {
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  id: string;
+  healthRecordId: string;
+  description: string;
+  startDate: string;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Medication {
+  id: string;
+  healthRecordId: string;
+  treatmentPlanId: string | null;
+  name: string;
+  dosage: string | null;
+  startDate: string | null;
+  endDate: string | null;
   createdAt: string;
 }
 
@@ -161,6 +219,8 @@ export interface FeedingRecord {
   feedType: string;
   quantityKg: number;
   notes: string | null;
+  supplyItemId?: string | null;
+  supplyItem?: { id: string; name: string; unit: string } | null;
   createdAt: string;
 }
 
@@ -170,7 +230,8 @@ export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
 export interface Incident {
   id: string;
   horseId: string;
-  horse: { id: string; name: string; ownerId: string };
+  horse: { id: string; name: string; ownerId: string; locked?: boolean; lockIncidentId?: string | null };
+  healthRecord?: { id: string; examDate: string; diagnosis: string; healthStatus: HealthStatus | null } | null;
   reportedById: string;
   reportedBy: UserRef;
   description: string;
@@ -265,4 +326,95 @@ export interface FinanceReportResult {
   };
   horses: HorseFinanceSummary[];
   transactions: FinanceTransaction[];
+}
+
+export interface HorseLockEvent {
+  id: string;
+  horseId: string;
+  locked: boolean;
+  reason: string;
+  createdAt: string;
+  actor: { id: string; name: string; role: Role | null } | null;
+  healthRecord: { id: string; examDate: string; diagnosis: string; healthStatus: HealthStatus | null } | null;
+  incidentReport: { id: string; description: string; severity: IncidentSeverity; status: IncidentStatus } | null;
+}
+
+export type SupplyCategory = 'FEED' | 'MEDICINE' | 'EQUIPMENT';
+export type SupplyRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface SupplyItem {
+  id: string;
+  name: string;
+  category: SupplyCategory;
+  unit: string;
+  quantity: number;
+  minQuantity: number;
+  notes: string | null;
+  low: boolean;
+  pendingRequests: number;
+  pendingQuantity: number;
+  updatedAt: string;
+}
+
+export interface SupplyRequest {
+  id: string;
+  itemId: string;
+  item: { id: string; name: string; unit: string; category: SupplyCategory; quantity: number };
+  quantity: number;
+  note: string | null;
+  status: SupplyRequestStatus;
+  requestedBy: { id: string; name: string };
+  reviewedBy: { id: string; name: string } | null;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+/** A page plus per-filter counts, as returned by GET /incidents and GET /users. */
+export type CountedPage<T> = Paginated<T> & { counts: Record<string, number> };
+
+export interface AuditLog {
+  id: string;
+  actorId: string | null;
+  actor: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role | null;
+  } | null;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  description: string;
+  diff: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditStats {
+  totalLogs: number;
+  todayLogs: number;
+  authEventsToday: number;
+  uniqueActorsCount: number;
+  topActions: { action: string; count: number }[];
+}
+
+export interface FitnessAssessmentItem {
+  id: string;
+  horseId: string;
+  assessedById: string;
+  assessedBy?: {
+    id: string;
+    name: string;
+    role: Role | null;
+  } | null;
+  speedScore: number;
+  staminaScore: number;
+  conditionScore: number;
+  recoveryScore: number;
+  moraleScore: number;
+  totalScore: number;
+  notes: string | null;
+  createdAt: string;
 }

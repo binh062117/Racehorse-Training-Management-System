@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { FileStorageService } from './file-storage.service';
+import { CloudinaryService } from './cloudinary.service';
 import { buildMulterOptions } from './upload';
 
 @Module({
@@ -12,7 +13,7 @@ import { buildMulterOptions } from './upload';
       useFactory: (config: ConfigService) => buildMulterOptions(config),
     }),
   ],
-  providers: [FileStorageService],
-  exports: [FileStorageService, MulterModule],
+  providers: [FileStorageService, CloudinaryService],
+  exports: [FileStorageService, CloudinaryService, MulterModule],
 })
 export class FilesModule {}

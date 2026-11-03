@@ -1,7 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Horse, NotificationType, Prisma, Role } from '@prisma/client';
+import {
+  HealthStatus,
+  Horse,
+  NotificationType,
+  Prisma,
+  Role,
+} from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileStorageService } from '../files/file-storage.service';
+import { CloudinaryService } from '../files/cloudinary.service';
+import { HORSE_PHOTO_KIND, MIME_TO_EXT } from '../files/upload';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
   AiService,
@@ -11,17 +20,31 @@ import {
 import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { CreateTrialVideoDto } from './dto/trial-video.dto';
+import { AuditService } from '../audit/audit.service';
 import {
   CreateHorseDto,
   ListHorsesQueryDto,
   LockHorseDto,
   UpdateHorseDto,
+  CreateFitnessAssessmentDto,
 } from './dto/horses.dto';
 
 const OWNER_SELECT = { id: true, name: true, email: true } as const;
+const USER_REF_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+} as const;
+
+const HORSE_INCLUDE = {
+  owner: { select: OWNER_SELECT },
+  trainer: { select: USER_REF_SELECT },
+  groom: { select: USER_REF_SELECT },
+} as const;
 
 type HorseWithOwner = Prisma.HorseGetPayload<{
-  include: { owner: { select: typeof OWNER_SELECT } };
+  include: typeof HORSE_INCLUDE;
 }>;
 
 export interface HorseView extends HorseWithOwner {
@@ -43,15 +66,19 @@ export class HorsesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: FileStorageService,
+    private readonly cloudinary: CloudinaryService,
     private readonly notifications: NotificationsService,
     private readonly ai: AiService,
+    private readonly audit: AuditService,
   ) {}
 
   private toView(horse: HorseWithOwner): HorseView {
     return {
       ...horse,
       photoUrl: horse.photoPath
-        ? `${API_PREFIX}/files/${horse.photoPath}`
+        ? horse.photoPath.startsWith('http')
+          ? horse.photoPath
+          : `${API_PREFIX}/files/${horse.photoPath}`
         : null,
     };
   }
@@ -134,7 +161,7 @@ export class HorsesService {
     return date;
   }
 
-  async create(dto: CreateHorseDto): Promise<HorseView> {
+  async create(dto: CreateHorseDto, actorId?: string): Promise<HorseView> {
     await this.assertOwner(dto.ownerId);
     const horse = await this.prisma.horse.create({
       data: {
@@ -144,9 +171,20 @@ export class HorsesService {
         breed: dto.breed?.trim() ?? null,
         birthDate: this.parseBirthDate(dto.birthDate) ?? null,
         saddleNumber: dto.saddleNumber ?? null,
+        stallNumber: dto.stallNumber?.trim() || null,
+        trainerId: dto.trainerId ?? null,
+        groomId: dto.groomId ?? null,
         ...(dto.status ? { status: dto.status } : {}),
       },
-      include: { owner: { select: OWNER_SELECT } },
+      include: HORSE_INCLUDE,
+    });
+    await this.audit.record({
+      actorId,
+      action: 'HORSE_CREATE',
+      entity: 'HORSE',
+      entityId: horse.id,
+      description: `Thêm mới hồ sơ ngựa đua "${horse.name}"`,
+      diff: { name: horse.name, ownerId: horse.ownerId, breed: horse.breed },
     });
     return this.toView(horse);
   }
@@ -169,8 +207,8 @@ export class HorsesService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.horse.findMany({
         where,
-        include: { owner: { select: OWNER_SELECT } },
-        orderBy: { createdAt: 'desc' },
+        include: HORSE_INCLUDE,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),
@@ -187,16 +225,20 @@ export class HorsesService {
   async get(id: string): Promise<HorseView> {
     const horse = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
-      include: { owner: { select: OWNER_SELECT } },
+      include: HORSE_INCLUDE,
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
     return this.toView(horse);
   }
 
-  async update(id: string, dto: UpdateHorseDto): Promise<HorseView> {
+  async update(
+    id: string,
+    dto: UpdateHorseDto,
+    actorId?: string,
+  ): Promise<HorseView> {
     const existing = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!existing) throw new AppException('NOT_FOUND', 'Horse not found');
     if (dto.ownerId) await this.assertOwner(dto.ownerId);
@@ -223,65 +265,300 @@ export class HorsesService {
         : { disconnect: true };
     if (dto.fitnessScore !== undefined) data.fitnessScore = dto.fitnessScore;
     if (dto.saddleNumber !== undefined) data.saddleNumber = dto.saddleNumber;
+    if (dto.stallNumber !== undefined)
+      data.stallNumber = dto.stallNumber?.trim() || null;
+    if (dto.trainerId !== undefined) {
+      data.trainer = dto.trainerId
+        ? { connect: { id: dto.trainerId } }
+        : { disconnect: true };
+    }
+    if (dto.groomId !== undefined) {
+      data.groom = dto.groomId
+        ? { connect: { id: dto.groomId } }
+        : { disconnect: true };
+    }
 
     const horse = await this.prisma.horse.update({
       where: { id },
       data,
-      include: { owner: { select: OWNER_SELECT } },
+      include: HORSE_INCLUDE,
+    });
+    await this.audit.record({
+      actorId,
+      action: 'HORSE_UPDATE',
+      entity: 'HORSE',
+      entityId: horse.id,
+      description: `Cập nhật hồ sơ ngựa đua "${horse.name}"`,
+      diff: dto as Record<string, unknown>,
     });
     return this.toView(horse);
   }
 
-  /** Training Lock (Phase 7) — VET-only, checked by HorseOwnershipGuard on the route. */
-  async lock(id: string, dto: LockHorseDto): Promise<HorseView> {
-    const existing = await this.prisma.horse.findFirst({
+  /**
+   * Training Lock — VET-only route (PATCH /horses/:id/lock).
+   * - Locking needs a reason.
+   * - Unlocking needs a health record of this horse, written after the lock
+   *   began, whose conclusion is FIT — the vet's evidence the horse is well.
+   * Every change is kept in HorseLockEvent, so an unlock never erases why the
+   * horse was locked.
+   */
+  async lock(
+    id: string,
+    dto: LockHorseDto,
+    actor?: AuthUser,
+  ): Promise<HorseView> {
+    const horse = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true, name: true, ownerId: true, locked: true },
+      select: { id: true, locked: true },
     });
-    if (!existing) throw new AppException('NOT_FOUND', 'Horse not found');
+    if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
 
-    const horse = await this.prisma.horse.update({
-      where: { id },
-      data: {
-        locked: dto.locked,
-        // Unlocking always clears the reason — no lock-history table in this phase.
-        lockReason: dto.locked ? (dto.reason?.trim() ?? null) : null,
-      },
-      include: { owner: { select: OWNER_SELECT } },
-    });
-
-    // Notify (Phase 8) — only when the value actually changed, so repeat
-    // calls with the same `locked` don't spam. Shared by the manual VET
-    // route (Phase 7) and the auto-lock/unlock triggered by IncidentReport.
-    if (existing.locked !== dto.locked) {
-      const managerIds = await this.notifications.managerIds();
-      const recipients = [existing.ownerId, ...managerIds];
-      const message = dto.locked
-        ? `${existing.name} đã bị khoá tập luyện${horse.lockReason ? `: ${horse.lockReason}` : ''}`
-        : `${existing.name} đã được mở khoá tập luyện`;
-      await this.notifications.notifyUsers(
-        recipients,
-        dto.locked
-          ? NotificationType.TRAINING_LOCKED
-          : NotificationType.TRAINING_UNLOCKED,
-        message,
-      );
+    if (dto.locked) {
+      const reason = dto.reason?.trim();
+      if (!reason) {
+        throw new AppException(
+          'VALIDATION_ERROR',
+          'Cần ghi lý do khi khóa tập ngựa.',
+        );
+      }
+      if (horse.locked) {
+        throw new AppException(
+          'VALIDATION_ERROR',
+          'Ngựa đang bị khóa tập rồi.',
+        );
+      }
+      return this.applyLock(id, {
+        locked: true,
+        reason,
+        actorId: actor?.id ?? null,
+      });
     }
 
+    if (!horse.locked) {
+      throw new AppException('VALIDATION_ERROR', 'Ngựa không bị khóa tập.');
+    }
+    if (!dto.healthRecordId) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Cần chọn hồ sơ khám kết luận ngựa đã khỏe để mở khóa tập.',
+      );
+    }
+    await this.assertFitRecord(id, dto.healthRecordId);
+    return this.applyLock(id, {
+      locked: false,
+      reason: dto.reason?.trim() || 'Bác sĩ thú y mở khóa sau khi khám',
+      actorId: actor?.id ?? null,
+      healthRecordId: dto.healthRecordId,
+    });
+  }
+
+  /**
+   * The unlock evidence rule: the record belongs to this horse, concludes FIT
+   * and was written after the current lock began (an old "healthy" exam from
+   * before the problem proves nothing).
+   */
+  async assertFitRecord(
+    horseId: string,
+    healthRecordId: string,
+  ): Promise<void> {
+    const [record, lockedSince] = await Promise.all([
+      this.prisma.healthRecord.findUnique({
+        where: { id: healthRecordId },
+        select: { horseId: true, healthStatus: true, createdAt: true },
+      }),
+      this.prisma.horseLockEvent.findFirst({
+        where: { horseId, locked: true },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+    ]);
+    if (!record || record.horseId !== horseId) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Hồ sơ khám không thuộc ngựa này.',
+      );
+    }
+    if (record.healthStatus !== HealthStatus.FIT) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Hồ sơ khám chưa kết luận ngựa khỏe mạnh — chưa thể mở khóa tập.',
+      );
+    }
+    if (lockedSince && record.createdAt < lockedSince.createdAt) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Cần một lần khám mới, ghi sau thời điểm ngựa bị khóa tập.',
+      );
+    }
+  }
+
+  /** Lock triggered by a HIGH incident. A horse already locked keeps its own lock untouched. */
+  async lockForIncident(
+    horseId: string,
+    incidentId: string,
+    description: string,
+    actorId: string,
+  ): Promise<boolean> {
+    const horse = await this.prisma.horse.findUnique({
+      where: { id: horseId },
+      select: { locked: true },
+    });
+    if (!horse || horse.locked) return false;
+    await this.applyLock(horseId, {
+      locked: true,
+      reason: `Sự cố: ${description}`,
+      actorId,
+      incidentReportId: incidentId,
+    });
+    return true;
+  }
+
+  /** Unlock once the incident that locked the horse is resolved with a FIT exam. */
+  async unlockForIncident(
+    horseId: string,
+    incidentId: string,
+    healthRecordId: string,
+    actorId: string | null,
+  ): Promise<void> {
+    await this.applyLock(horseId, {
+      locked: false,
+      reason: 'Sự cố đã xử lý xong, hồ sơ khám kết luận khỏe mạnh',
+      actorId,
+      healthRecordId,
+      incidentReportId: incidentId,
+    });
+  }
+
+  async lockHistory(horseId: string) {
+    return this.prisma.horseLockEvent.findMany({
+      where: { horseId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        actor: { select: { id: true, name: true, role: true } },
+        healthRecord: {
+          select: {
+            id: true,
+            examDate: true,
+            diagnosis: true,
+            healthStatus: true,
+          },
+        },
+        incidentReport: {
+          select: { id: true, description: true, severity: true, status: true },
+        },
+      },
+    });
+  }
+
+  private async applyLock(
+    id: string,
+    e: {
+      locked: boolean;
+      reason: string;
+      actorId: string | null;
+      healthRecordId?: string;
+      incidentReportId?: string;
+    },
+  ): Promise<HorseView> {
+    const [horse] = await this.prisma.$transaction([
+      this.prisma.horse.update({
+        where: { id },
+        data: {
+          locked: e.locked,
+          lockReason: e.locked ? e.reason : null,
+          lockIncidentId: e.locked ? (e.incidentReportId ?? null) : null,
+        },
+        include: HORSE_INCLUDE,
+      }),
+      this.prisma.horseLockEvent.create({
+        data: {
+          horseId: id,
+          locked: e.locked,
+          reason: e.reason,
+          actorId: e.actorId,
+          healthRecordId: e.healthRecordId ?? null,
+          incidentReportId: e.incidentReportId ?? null,
+        },
+      }),
+    ]);
+
+    // Owner, managers and the trainers working with this horse all need to
+    // know training is (no longer) allowed.
+    const [managerIds, trainerIds] = await Promise.all([
+      this.notifications.managerIds(),
+      this.notifications.trainerIdsForHorse(id),
+    ]);
+    const message = e.locked
+      ? `${horse.name} đã bị khóa tập luyện: ${e.reason}`
+      : `${horse.name} đã được mở khóa tập luyện — ${e.reason}`;
+    await this.notifications.notifyUsers(
+      [horse.ownerId, ...managerIds, ...trainerIds],
+      e.locked
+        ? NotificationType.TRAINING_LOCKED
+        : NotificationType.TRAINING_UNLOCKED,
+      message,
+    );
+    // Audit trail (Tân): every lock change — manual or from an incident — lands here.
+    await this.audit.record({
+      actorId: e.actorId ?? undefined,
+      action: e.locked ? 'HORSE_LOCK' : 'HORSE_UNLOCK',
+      entity: 'HORSE',
+      entityId: id,
+      description: e.locked
+        ? `Khóa tập luyện ngựa "${horse.name}": ${e.reason}`
+        : `Mở khóa tập luyện ngựa "${horse.name}" — ${e.reason}`,
+      diff: {
+        locked: e.locked,
+        reason: e.reason,
+        healthRecordId: e.healthRecordId ?? null,
+        incidentReportId: e.incidentReportId ?? null,
+      },
+    });
     return this.toView(horse);
   }
 
-  async remove(id: string): Promise<{ message: string }> {
+  async remove(id: string, actorId?: string): Promise<{ message: string }> {
     const existing = await this.prisma.horse.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!existing) throw new AppException('NOT_FOUND', 'Horse not found');
     await this.prisma.horse.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+    await this.audit.record({
+      actorId,
+      action: 'HORSE_DELETE',
+      entity: 'HORSE',
+      entityId: id,
+      description: `Xóa hồ sơ ngựa đua "${existing.name}"`,
+      diff: { name: existing.name },
+    });
     return { message: 'Horse deleted' };
+  }
+
+  /**
+   * Uploads to Cloudinary when configured (survives a Render redeploy);
+   * falls back to local disk otherwise (fine for local dev only — see
+   * CloudinaryService).
+   */
+  async savePhoto(id: string, file: Express.Multer.File): Promise<HorseView> {
+    const ext = MIME_TO_EXT[file.mimetype];
+    const publicId = `${id}-${randomBytes(4).toString('hex')}`;
+    let photoPath: string;
+    if (this.cloudinary.enabled) {
+      photoPath = await this.cloudinary.uploadBuffer(
+        file.buffer,
+        HORSE_PHOTO_KIND,
+        publicId,
+      );
+    } else {
+      const filename = `${publicId}.${ext}`;
+      this.storage.saveBuffer(HORSE_PHOTO_KIND, filename, file.buffer);
+      photoPath = `${HORSE_PHOTO_KIND}/${filename}`;
+    }
+    return this.setPhoto(id, photoPath);
   }
 
   async setPhoto(id: string, photoPath: string): Promise<HorseView> {
@@ -292,10 +569,14 @@ export class HorsesService {
     const horse = await this.prisma.horse.update({
       where: { id },
       data: { photoPath },
-      include: { owner: { select: OWNER_SELECT } },
+      include: HORSE_INCLUDE,
     });
     if (current?.photoPath && current.photoPath !== photoPath) {
-      this.storage.removeQuietly(current.photoPath);
+      if (current.photoPath.startsWith('http')) {
+        void this.cloudinary.destroyByUrl(current.photoPath);
+      } else {
+        this.storage.removeQuietly(current.photoPath);
+      }
     }
     return this.toView(horse);
   }
@@ -553,6 +834,90 @@ export class HorsesService {
     if (!video) throw new AppException('NOT_FOUND', 'Trial video not found');
     await this.prisma.trialVideo.delete({ where: { id: videoId } });
     return { success: true };
+  }
+
+  async assessFitness(
+    horseId: string,
+    dto: CreateFitnessAssessmentDto,
+    currentUser: AuthUser,
+  ) {
+    const horse = await this.prisma.horse.findFirst({
+      where: { id: horseId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
+
+    const totalScore =
+      dto.speedScore +
+      dto.staminaScore +
+      dto.conditionScore +
+      dto.recoveryScore +
+      dto.moraleScore;
+
+    const [assessment, updatedHorse] = await this.prisma.$transaction([
+      this.prisma.fitnessAssessment.create({
+        data: {
+          horseId,
+          assessedById: currentUser.id,
+          speedScore: dto.speedScore,
+          staminaScore: dto.staminaScore,
+          conditionScore: dto.conditionScore,
+          recoveryScore: dto.recoveryScore,
+          moraleScore: dto.moraleScore,
+          totalScore,
+          notes: dto.notes?.trim() || null,
+        },
+        include: {
+          assessedBy: { select: { id: true, name: true, role: true } },
+        },
+      }),
+      this.prisma.horse.update({
+        where: { id: horseId },
+        data: { fitnessScore: totalScore },
+        include: HORSE_INCLUDE,
+      }),
+    ]);
+
+    return {
+      assessment,
+      horse: this.toView(updatedHorse),
+    };
+  }
+
+  async getFitnessAssessments(horseId: string) {
+    return this.prisma.fitnessAssessment.findMany({
+      where: { horseId },
+      include: {
+        assessedBy: { select: { id: true, name: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
+  async getStallMap() {
+    const horses = await this.prisma.horse.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        stallNumber: true,
+        saddleNumber: true,
+        photoPath: true,
+        status: true,
+        healthStatus: true,
+        locked: true,
+        lockReason: true,
+        fitnessScore: true,
+        breed: true,
+        owner: { select: { id: true, name: true } },
+      },
+      orderBy: [{ stallNumber: 'asc' }, { name: 'asc' }],
+    });
+    return horses.map((h) => ({
+      ...h,
+      photoUrl: h.photoPath ? `${API_PREFIX}/horses/${h.id}/photo` : null,
+    }));
   }
 }
 

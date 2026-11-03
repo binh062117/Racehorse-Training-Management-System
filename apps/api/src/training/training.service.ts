@@ -6,6 +6,7 @@ import {
   Prisma,
   Role,
   SessionStatus,
+  UserStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -46,6 +47,7 @@ const PLAN_INCLUDE = {
 type PlanView = Prisma.TrainingPlanGetPayload<{ include: typeof PLAN_INCLUDE }>;
 
 const SESSION_INCLUDE = {
+  groom: { select: { id: true, name: true } },
   trainer: { select: { id: true, name: true, email: true } },
   horse: { select: { id: true, name: true, ownerId: true } },
   resultRecordedBy: { select: { id: true, name: true, role: true } },
@@ -61,7 +63,11 @@ export interface Paginated<T> {
 }
 
 const GROOM_ALLOWED_FIELDS = new Set(['status', 'resultMetric', 'resultValue']);
-const TERMINAL: SessionStatus[] = [SessionStatus.DONE, SessionStatus.CANCELLED];
+const TERMINAL: SessionStatus[] = [
+  SessionStatus.DONE,
+  SessionStatus.CANCELLED,
+  SessionStatus.MISSED,
+];
 
 @Injectable()
 export class TrainingService {
@@ -160,18 +166,11 @@ export class TrainingService {
       );
     }
 
-    if (dto.planId) {
-      const plan = await this.prisma.trainingPlan.findUnique({
-        where: { id: dto.planId },
-        select: { horseId: true },
-      });
-      if (!plan || plan.horseId !== horseId) {
-        throw new AppException(
-          'VALIDATION_ERROR',
-          'planId must reference a training plan for this horse',
-        );
-      }
-    }
+    const scheduledAt = new Date(dto.scheduledAt);
+    this.assertFuture(scheduledAt);
+    await this.assertPlanWindow(horseId, dto.planId, scheduledAt);
+    await this.assertGroom(dto.groomId);
+    await this.reconcileMissed(new Date(), horseId);
 
     await this.assertNoScheduleConflict(horseId, new Date(dto.scheduledAt));
 
@@ -179,9 +178,12 @@ export class TrainingService {
       data: {
         horseId,
         trainerId: trainer.id,
+        groomId: dto.groomId ?? null,
         planId: dto.planId ?? null,
         scheduledAt: new Date(dto.scheduledAt),
         type: dto.type.trim(),
+        distanceM: dto.distanceM ?? null,
+        surface: dto.surface?.trim() ?? null,
         notes: dto.notes?.trim() ?? null,
       },
       include: SESSION_INCLUDE,
@@ -192,6 +194,7 @@ export class TrainingService {
     horseId: string,
     q: ListSessionsQueryDto,
   ): Promise<Paginated<SessionView>> {
+    await this.reconcileMissed(new Date(), horseId);
     const scheduledAt: Prisma.DateTimeFilter = {};
     if (q.from) scheduledAt.gte = new Date(q.from);
     if (q.to) scheduledAt.lte = new Date(q.to);
@@ -206,7 +209,7 @@ export class TrainingService {
       this.prisma.trainingSession.findMany({
         where,
         include: SESSION_INCLUDE,
-        orderBy: { scheduledAt: 'asc' },
+        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),
@@ -222,7 +225,11 @@ export class TrainingService {
     });
     if (!session) throw new AppException('NOT_FOUND', 'Session not found');
     this.assertHorseVisible(session.horse, user);
-    return session;
+    await this.reconcileMissed(new Date(), session.horseId);
+    return this.prisma.trainingSession.findUniqueOrThrow({
+      where: { id },
+      include: SESSION_INCLUDE,
+    });
   }
 
   async update(
@@ -248,6 +255,7 @@ export class TrainingService {
       );
     }
 
+    await this.reconcileMissed(new Date(), undefined, id);
     const session = await this.prisma.trainingSession.findUnique({
       where: { id },
       include: { horse: { select: { ownerId: true } } },
@@ -285,10 +293,33 @@ export class TrainingService {
       );
     }
 
-    const data: Prisma.TrainingSessionUpdateInput = {};
+    if (dto.status === SessionStatus.MISSED) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'MISSED is assigned automatically',
+      );
+    }
+    const scheduledAt =
+      dto.scheduledAt !== undefined
+        ? new Date(dto.scheduledAt)
+        : session.scheduledAt;
+    if (dto.scheduledAt !== undefined) this.assertFuture(scheduledAt);
+    if (dto.scheduledAt !== undefined || dto.planId !== undefined) {
+      await this.assertPlanWindow(
+        session.horseId,
+        dto.planId !== undefined ? dto.planId : session.planId,
+        scheduledAt,
+      );
+    }
+    await this.assertGroom(dto.groomId);
+    const data: Prisma.TrainingSessionUncheckedUpdateManyInput = {};
+    if (dto.groomId !== undefined) data.groomId = dto.groomId;
+    if (dto.planId !== undefined) data.planId = dto.planId;
     if (dto.scheduledAt !== undefined)
       data.scheduledAt = new Date(dto.scheduledAt);
     if (dto.type !== undefined) data.type = dto.type.trim();
+    if (dto.distanceM !== undefined) data.distanceM = dto.distanceM;
+    if (dto.surface !== undefined) data.surface = dto.surface?.trim() ?? null;
     if (dto.notes !== undefined) data.notes = dto.notes?.trim() ?? null;
     if (dto.resultMetric !== undefined)
       data.resultMetric = dto.resultMetric.trim();
@@ -312,7 +343,7 @@ export class TrainingService {
       throw new AppException('FORBIDDEN', 'Only a trainer can confirm results');
     }
     if (dto.resultMetric !== undefined || dto.resultValue !== undefined) {
-      data.resultRecordedBy = { connect: { id: user.id } };
+      data.resultRecordedById = user.id;
       data.resultConfirmed = false;
     }
     if (dto.status === SessionStatus.DONE) {
@@ -325,7 +356,7 @@ export class TrainingService {
           'resultMetric and resultValue are required to mark a session DONE',
         );
       }
-      data.resultRecordedBy = { connect: { id: user.id } };
+      data.resultRecordedById = user.id;
       if (user.role === Role.TRAINER) {
         data.resultConfirmed = dto.resultConfirmed ?? true;
       } else {
@@ -333,9 +364,23 @@ export class TrainingService {
       }
     }
 
-    const updated = await this.prisma.trainingSession.update({
-      where: { id },
+    // Do not reopen a session closed by a concurrent request or the overdue job.
+    const changed = await this.prisma.trainingSession.updateMany({
+      where: {
+        id,
+        status: SessionStatus.PLANNED,
+        scheduledAt: { gte: new Date() },
+      },
       data,
+    });
+    if (changed.count !== 1) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Only a planned session can be edited',
+      );
+    }
+    const updated = await this.prisma.trainingSession.findUniqueOrThrow({
+      where: { id },
       include: SESSION_INCLUDE,
     });
 
@@ -344,6 +389,147 @@ export class TrainingService {
     }
 
     return updated;
+  }
+
+  private clubDay(date: Date): string {
+    return new Date(date.getTime() + 7 * 60 * 60_000)
+      .toISOString()
+      .slice(0, 10);
+  }
+
+  private assertFuture(at: Date): void {
+    if (!Number.isFinite(at.getTime()) || at.getTime() < Date.now()) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Session time cannot be in the past',
+      );
+    }
+  }
+
+  private async assertPlanWindow(
+    horseId: string,
+    planId: string | null | undefined,
+    at: Date,
+  ) {
+    if (!planId) return;
+    const plan = await this.prisma.trainingPlan.findUnique({
+      where: { id: planId },
+    });
+    if (!plan || plan.horseId !== horseId) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'planId must reference a training plan for this horse',
+      );
+    }
+    const day = this.clubDay(at);
+    if (
+      day < this.clubDay(plan.startDate) ||
+      (plan.endDate && day > this.clubDay(plan.endDate))
+    ) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Session time must fall within the training plan dates',
+      );
+    }
+  }
+
+  private async assertGroom(id: string | null | undefined) {
+    if (!id) return;
+    const groom = await this.prisma.user.findFirst({
+      where: {
+        id,
+        role: Role.GROOM,
+        status: UserStatus.ACTIVE,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (!groom)
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Assigned groom must be an active GROOM',
+      );
+  }
+
+  async listGrooms(q: ListTrainingPlansQueryDto) {
+    const where = {
+      role: Role.GROOM,
+      status: UserStatus.ACTIVE,
+      deletedAt: null,
+    };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        select: { id: true, name: true },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        skip: (q.page - 1) * q.limit,
+        take: q.limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return { data, meta: { page: q.page, limit: q.limit, total } };
+  }
+
+  reconcileMissed(now = new Date(), horseId?: string, id?: string) {
+    return this.prisma.trainingSession.updateMany({
+      where: {
+        status: SessionStatus.PLANNED,
+        scheduledAt: { lt: now },
+        ...(horseId ? { horseId } : {}),
+        ...(id ? { id } : {}),
+      },
+      data: { status: SessionStatus.MISSED },
+    });
+  }
+
+  async overview(user: AuthUser, now = new Date()) {
+    if (user.role !== Role.MANAGER && user.role !== Role.TRAINER) {
+      throw new AppException('FORBIDDEN', 'Insufficient role');
+    }
+    await this.reconcileMissed(now);
+    // Monday buckets in club time: current week plus seven prior weeks.
+    const club = new Date(now.getTime() + 7 * 60 * 60_000);
+    club.setUTCHours(0, 0, 0, 0);
+    club.setUTCDate(club.getUTCDate() - ((club.getUTCDay() + 6) % 7) - 49);
+    const start = new Date(club.getTime() - 7 * 60 * 60_000);
+    const end = new Date(start.getTime() + 56 * 86400000);
+    const groupsQuery = this.prisma.trainingSession.groupBy({
+      by: ['status'],
+      orderBy: { status: 'asc' },
+      where: { horse: { deletedAt: null } },
+      _count: { _all: true },
+    });
+    const [groups, trend] = await this.prisma.$transaction([
+      groupsQuery,
+      this.prisma.$queryRaw<
+        { week: Date; status: SessionStatus; count: bigint }[]
+      >`
+        SELECT date_trunc('week', s."scheduledAt" + interval '7 hours') AS week,
+               s.status, COUNT(*) AS count
+        FROM "TrainingSession" s JOIN "Horse" h ON h.id = s."horseId"
+        WHERE h."deletedAt" IS NULL AND s."scheduledAt" >= ${start} AND s."scheduledAt" < ${end}
+        GROUP BY week, s.status ORDER BY week
+      `,
+    ]);
+    const counts = { PLANNED: 0, DONE: 0, CANCELLED: 0, MISSED: 0 };
+    for (const group of groups) counts[group.status] = group._count._all;
+    const weeks = Array.from({ length: 8 }, (_, i) => {
+      const week = new Date(club.getTime() + i * 7 * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      const bucket = { week, PLANNED: 0, DONE: 0, CANCELLED: 0, MISSED: 0 };
+      for (const row of trend)
+        if (row.week.toISOString().slice(0, 10) === week)
+          bucket[row.status] = Number(row.count);
+      return bucket;
+    });
+    const decided = counts.DONE + counts.CANCELLED;
+    return {
+      counts,
+      total: Object.values(counts).reduce((a, b) => a + b, 0),
+      completion: decided ? Math.round((counts.DONE / decided) * 100) : null,
+      weeks,
+    };
   }
 
   // --- Training plans (Phase 7) ---
@@ -395,9 +581,13 @@ export class TrainingService {
       );
     }
 
-    // Note: locked horses (Training Lock) are allowed to have plans created —
-    // a plan is a strategic document, not an active session. The lock only
-    // prevents scheduling concrete training sessions (see createSession).
+    // BR-3: Cannot create training plan for a locked horse (Training Lock)
+    if (horse.locked) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `${horse.name} đang bị khóa tập luyện (Training Lock), không thể lập giáo án huấn luyện mới.`,
+      );
+    }
 
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : null;
@@ -469,7 +659,15 @@ export class TrainingService {
     });
     if (!plan) throw new AppException('NOT_FOUND', 'Training plan not found');
     this.assertHorseVisible(plan.horse, user);
-    return plan;
+    await this.reconcileMissed(new Date(), plan.horseId);
+    return {
+      ...plan,
+      sessions: await this.prisma.trainingSession.findMany({
+        where: { planId: id },
+        select: { id: true, scheduledAt: true, type: true, status: true },
+        orderBy: { scheduledAt: 'asc' },
+      }),
+    };
   }
 
   async updatePlan(id: string, dto: UpdateTrainingPlanDto): Promise<PlanView> {

@@ -1,6 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Paginated, TrainingPlan } from '../lib/types';
@@ -9,7 +9,18 @@ import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
 import { CreateTrainingPlanModal } from '../components/training/CreateTrainingPlanModal';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Chip, HeroStats, Icon } from '../ds/ui';
+import { Badge, Bar, Btn, Card, Chip, ChipCount, EmptyState, Icon, PageHeader, Pagination } from '../ds/ui';
+
+type Filter = 'ALL' | 'ACTIVE' | 'COMPLETED';
+
+/** Share of the plan's window already elapsed, at the true ratio; null for open-ended plans. */
+function elapsed(plan: TrainingPlan, now: number): number | null {
+  if (!plan.endDate) return null;
+  const start = new Date(plan.startDate).getTime();
+  const end = new Date(plan.endDate).getTime();
+  if (end <= start) return 100;
+  return Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100)));
+}
 
 export function TrainingPlansPage() {
   const { t } = useTranslation();
@@ -20,8 +31,10 @@ export function TrainingPlansPage() {
   const canCreate = role === 'TRAINER';
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<Filter>('ALL');
   const [createOpen, setCreateOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
 
   useEffect(() => {
     if (searchParams.get('action') === 'create' && canCreate) {
@@ -32,111 +45,126 @@ export function TrainingPlansPage() {
   }, [searchParams, setSearchParams, canCreate]);
 
   const { data, loading, error: loadErr, reload: loadPlans } = useCachedResource('training-plans', () =>
-    api.get<Paginated<TrainingPlan>>('/training-plans', { params: { limit: 100 } }).then((r) => r.data),
+    api.get<Paginated<TrainingPlan>>('/training-plans', { params: { limit: 500 } }).then((r) => r.data),
   );
   const plans = data?.data ?? [];
 
-  usePageChrome({ crumbs: [t('nav.plans'), t('trainingPage.title')], search: t('trainingPage.search'), onSearch: setSearch });
+  usePageChrome({ crumbs: [t('plansPage.title', 'Giáo án huấn luyện')] });
 
-  const now = new Date();
-  const totalCount = plans.length;
-  const activeCount = plans.filter((p) => !p.endDate || new Date(p.endDate).getTime() >= now.getTime()).length;
-  const completedCount = plans.filter((p) => p.endDate && new Date(p.endDate).getTime() < now.getTime()).length;
-  const uniqueHorsesCount = new Set(plans.map((p) => p.horseId)).size;
+  const now = new Date().getTime();
+  const isOngoing = (p: TrainingPlan) => !p.endDate || new Date(p.endDate).getTime() >= now;
+  const activeCount = plans.filter(isOngoing).length;
+  const completedCount = plans.length - activeCount;
+  const horsesOnPlan = new Set(plans.filter(isOngoing).map((p) => p.horseId)).size;
 
+  const q = search.trim().toLowerCase();
   const filteredPlans = plans.filter((p) => {
-    const isOngoing = !p.endDate || new Date(p.endDate).getTime() >= now.getTime();
-    if (statusFilter === 'ACTIVE' && !isOngoing) return false;
-    if (statusFilter === 'COMPLETED' && isOngoing) return false;
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      const matchHorse = p.horse?.name?.toLowerCase().includes(q);
-      const matchGoal = p.goal.toLowerCase().includes(q);
-      const matchTrainer = p.trainer?.name?.toLowerCase().includes(q);
-      if (!matchHorse && !matchGoal && !matchTrainer) return false;
+    if (statusFilter === 'ACTIVE' && !isOngoing(p)) return false;
+    if (statusFilter === 'COMPLETED' && isOngoing(p)) return false;
+    if (q) {
+      return Boolean(p.horse?.name?.toLowerCase().includes(q) || p.goal.toLowerCase().includes(q) || p.trainer?.name?.toLowerCase().includes(q));
     }
     return true;
   });
 
-  const subtitle = t(`trainingPage.roleSubtitle.${role ?? 'default'}`);
+  const totalPages = Math.ceil(filteredPlans.length / pageSize) || 1;
+  const paginatedPlans = filteredPlans.slice((page - 1) * pageSize, page * pageSize);
+
+  const sub = loading && plans.length === 0
+    ? t('plansPage.loading', 'Đang tải giáo án…')
+    : plans.length === 0
+      ? t('plansPage.empty', 'Chưa có giáo án nào.')
+      : `${activeCount} ${t('plansPage.active', 'đang áp dụng')} (${horsesOnPlan} ${t('horsesPage.title', 'ngựa')}) · ${completedCount} ${t('plansPage.completed', 'đã kết thúc')}.`;
 
   return (
     <>
-      <section className="hero px-8 py-7 flex flex-col gap-6">
-        <div className="flex flex-wrap gap-6 items-end">
-          <div className="flex-[1_1_360px] min-w-0">
-            <div className="lbl">{t('trainingPage.season')}</div>
-            <h1 className="disp text-[56px] mt-2">{t('trainingPage.title')}</h1>
-            <p className="text-hero-muted mt-2.5 max-w-[520px]">{subtitle}</p>
-          </div>
-          {canCreate && (
-            <Btn v="light" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('trainingPage.create')}</Btn>
-          )}
-        </div>
-        <HeroStats items={[
-          { label: t('trainingPage.total'), value: totalCount },
-          { label: t('trainingPage.active'), value: activeCount, color: '#9fd9b1' },
-          { label: t('trainingPage.completed'), value: completedCount },
-          { label: t('trainingPage.horsesWithPlans'), value: uniqueHorsesCount },
-        ]} />
-      </section>
+      <PageHeader
+        title={t('plansPage.title', 'Giáo án huấn luyện')}
+        sub={sub}
+        search={{ placeholder: t('plansPage.searchPlaceholder', 'Tìm theo mục tiêu, tên ngựa'), value: search, onChange: (val) => { setSearch(val); setPage(1); } }}
+        actions={canCreate ? <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('plansPage.newPlan', 'Tạo giáo án')}</Btn> : undefined}
+      />
 
-      <div className="flex flex-wrap gap-2.5 items-center">
-        <Chip on={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')}>{t('trainingPage.all')} <span className="text-muted">{totalCount}</span></Chip>
-        <Chip on={statusFilter === 'ACTIVE'} onClick={() => setStatusFilter('ACTIVE')}>{t('trainingPage.active')} <span className="text-muted">{activeCount}</span></Chip>
-        <Chip on={statusFilter === 'COMPLETED'} onClick={() => setStatusFilter('COMPLETED')}>{t('trainingPage.completedFilter')} <span className="text-muted">{completedCount}</span></Chip>
+      <div className="flex flex-wrap gap-2 items-center">
+        <Chip on={statusFilter === 'ALL'} onClick={() => { setStatusFilter('ALL'); setPage(1); }}>{t('plansPage.all', 'Tất cả')} <ChipCount n={plans.length} /></Chip>
+        <Chip on={statusFilter === 'ACTIVE'} onClick={() => { setStatusFilter('ACTIVE'); setPage(1); }}>{t('plansPage.active', 'Đang áp dụng')} <ChipCount n={activeCount} /></Chip>
+        <Chip on={statusFilter === 'COMPLETED'} onClick={() => { setStatusFilter('COMPLETED'); setPage(1); }}>{t('plansPage.completed', 'Đã kết thúc')} <ChipCount n={completedCount} /></Chip>
       </div>
 
       {loading && plans.length === 0 ? (
-        <p className="cap">{t('trainingPage.loading')}</p>
+        <p className="text-muted">{t('plansPage.loading', 'Đang tải giáo án…')}</p>
       ) : loadErr ? (
         <ErrorText err={loadErr} />
       ) : filteredPlans.length === 0 ? (
-        <Card className="px-5 py-10 text-center flex flex-col items-center gap-3">
-          <Icon name="plans" className="w-7 h-7 text-muted" />
-          <p className="cap">{plans.length === 0 ? t('trainingPage.empty') : t('trainingPage.noMatch')}</p>
-          {canCreate && plans.length === 0 && (
-            <Btn v="p" onClick={() => setCreateOpen(true)}><Icon name="plus" />{t('trainingPage.createFirst')}</Btn>
-          )}
-        </Card>
+        <EmptyState action={canCreate && plans.length === 0 ? <Btn sm v="p" onClick={() => setCreateOpen(true)}>{t('plansPage.newPlan', 'Tạo giáo án')}</Btn> : undefined}>
+          {plans.length === 0 ? t('plansPage.empty', 'Chưa có giáo án huấn luyện nào.') : t('plansPage.emptyFilter', 'Không có giáo án nào khớp với bộ lọc.')}
+        </EmptyState>
       ) : (
         <Card>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse">
+            <table className="w-full min-w-[860px] border-collapse">
               <thead>
-                <tr className="text-left">
-                  {[t('trainingPage.horse'), t('trainingPage.goal'), t('trainingPage.trainer'), t('trainingPage.period'), t('trainingPage.status'), ''].map((heading) => (
-                    <th key={heading} className="h-[42px] px-4 bg-cream lbl border-b border-line">{heading}</th>
-                  ))}
+                <tr className="text-left text-[12px] text-muted">
+                  <th className="h-10 px-5 font-medium border-b border-line w-[18%]">{t('plansPage.colHorse', 'Ngựa')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('plansPage.colGoal', 'Mục tiêu')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('plansPage.colTrainer', 'Huấn luyện viên')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line">{t('plansPage.colTime', 'Thời gian')}</th>
+                  <th className="h-10 px-4 font-medium border-b border-line w-[180px]">{t('plansPage.colProgress', 'Tiến độ')}</th>
+                  <th className="h-10 px-5 font-medium border-b border-line">{t('horse.status', 'Trạng thái')}</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredPlans.map((plan) => {
-                  const isOngoing = !plan.endDate || new Date(plan.endDate).getTime() >= now.getTime();
+                {paginatedPlans.map((plan) => {
+                  const ongoing = isOngoing(plan);
+                  const pct = elapsed(plan, now);
                   return (
-                    <tr key={plan.id} className="border-b border-line-soft hover:bg-subtle">
-                      <td className="px-4 py-3">
-                        <Link to={`/horses/${plan.horseId}`} className="font-semibold text-navy no-underline">{plan.horse?.name ?? '—'}</Link>
-                        {plan.horse?.breed && <div className="cap">{plan.horse.breed}</div>}
+                    <tr key={plan.id} className="border-b border-line-soft last:border-0 hover:bg-subtle align-top">
+                      <td className="px-5 py-3">
+                        <Link to={`/horses/${plan.horseId}?tab=plans`} className="font-medium text-ink no-underline hover:text-info">{plan.horse?.name ?? '—'}</Link>
+                        {plan.horse?.breed && <div className="text-[12.5px] text-muted">{plan.horse.breed}</div>}
                       </td>
-                      <td className="px-4 py-3 max-w-[360px]">{plan.goal}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium">{plan.trainer?.name ?? '—'}</div>
-                        <div className="cap">{plan.trainer?.email}</div>
+                      {/* User-entered goal is preserved as-is */}
+                      <td className="px-4 py-3 max-w-[380px]">{plan.goal}</td>
+                      <td className="px-4 py-3">{plan.trainer?.name ?? '—'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap num">
+                        <div>{formatDate(plan.startDate)}</div>
+                        <div className="text-[12.5px] text-muted">
+                          {plan.endDate ? `${t('common.to', 'đến')} ${formatDate(plan.endDate)}` : t('plansPage.openEnded', 'không giới hạn')}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-[13px]">{formatDate(plan.startDate)}</div>
-                        <div className="cap">{t('trainingPage.until')} {plan.endDate ? formatDate(plan.endDate) : t('trainingPage.longTerm')}</div>
+                        {pct == null ? (
+                          <span className="text-[13px] text-muted">{t('plansPage.openEnded', 'Dài hạn')}</span>
+                        ) : (
+                          <div className="flex items-center gap-2.5 pt-1.5">
+                            <Bar pct={pct} color={ongoing ? '#1a4b8a' : '#9ca3af'} className="flex-1" />
+                            <span className="num text-[12.5px] text-muted w-9 text-right">{pct}%</span>
+                          </div>
+                        )}
                       </td>
-                      <td className="px-4 py-3">
-                        {isOngoing ? <Badge tone="ok"><Icon name="check" className="w-3.5 h-3.5" />{t('trainingPage.active')}</Badge> : <Badge tone="neu">{t('trainingPage.completed')}</Badge>}
+                      <td className="px-5 py-3">
+                        {ongoing ? (
+                          <Badge tone="ok">{t('plansPage.active', 'Đang áp dụng')}</Badge>
+                        ) : (
+                          <Badge tone="neu">{t('plansPage.completed', 'Đã kết thúc')}</Badge>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-right"><Btn sm to={`/horses/${plan.horseId}`}>{t('trainingPage.horseProfile')} ›</Btn></td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="px-5 pb-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={filteredPlans.length}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 15, 25, 50]}
+              onPageChange={setPage}
+              onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+            />
           </div>
         </Card>
       )}
