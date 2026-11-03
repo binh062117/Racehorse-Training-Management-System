@@ -21,6 +21,7 @@ import { AdminUsersPage } from './pages/AdminUsersPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TrainingPlansPage } from './pages/TrainingPlansPage';
 import { TrainingOverviewPage } from './pages/TrainingOverviewPage';
+import { ReportsPage } from './pages/ReportsPage';
 import { HealthSchedulePage } from './pages/HealthSchedulePage';
 import { HealthRecordsPage } from './pages/HealthRecordsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
@@ -126,6 +127,7 @@ const router = createBrowserRouter([
       { path: '/horses/:id/ownership', element: <HorseOwnershipPage /> },
       { path: '/plans', element: <TrainingPlansPage /> },
       { path: '/training/progress', element: <RequireAuth roles={['MANAGER', 'TRAINER']}><TrainingOverviewPage /></RequireAuth> },
+      { path: '/reports', element: <RequireAuth roles={['OWNER', 'MANAGER']}><ReportsPage /></RequireAuth> },
       {
         path: '/supplies',
         element: (

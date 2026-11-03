@@ -17,6 +17,7 @@ import { FitnessAssessmentModal } from '../components/horse/FitnessAssessmentMod
 import { PhotoUploadModal } from '../components/horse/PhotoUploadModal';
 import { PedigreeTab } from './horse/PedigreeTab';
 import { LockHorseModal } from '../components/horse/LockHorseModal';
+import { HorseStatusLine } from '../components/horse/HorseStatusLine';
 import { usePageChrome } from '../ds/AppShell';
 import {
   Alert, Btn, Card, CountUp, Cloth, HealthBadge, CareerBadge, HorseAvatar, Icon, ImageLightbox, KpiStrip, LockBadge,
@@ -44,6 +45,7 @@ export function HorseDetailPage() {
   const isManager = user?.role === 'MANAGER';
   const isVet = user?.role === 'VET';
   const isTrainer = user?.role === 'TRAINER';
+  // Only the vet scores fitness; trainer and manager can read the history.
   const canAssessFitness = isVet || isTrainer || isManager;
 
   const [params, setParams] = useSearchParams();
@@ -168,6 +170,7 @@ export function HorseDetailPage() {
             <p className="text-[14px] text-muted mt-0.5">
               {facts} · {t('horsesPage.thOwner', 'Chủ sở hữu')} <span className="text-ink">{horse.owner.name}</span>
             </p>
+            <HorseStatusLine horse={horse} role={user?.role} />
             <div className="flex flex-wrap gap-1.5 mt-2.5">
               <CareerBadge status={horse.status} />
               <HealthBadge status={horse.healthStatus} />
@@ -180,7 +183,7 @@ export function HorseDetailPage() {
             {canAssessFitness && (
               <Btn onClick={() => setFitnessModalOpen(true)}>
                 <Icon name="heart" />
-                {isVi ? 'Chấm điểm thể lực' : 'Assess Fitness'}
+                {isVet ? (isVi ? 'Chấm điểm thể lực' : 'Assess Fitness') : (isVi ? 'Lịch sử thể lực' : 'Fitness history')}
               </Btn>
             )}
             {isVet && (
@@ -327,6 +330,7 @@ export function HorseDetailPage() {
         onClose={() => setFitnessModalOpen(false)}
         horse={horse}
         onUpdated={() => void loadHorse()}
+        readOnly={!isVet}
       />
       {photo && <ImageLightbox src={photo} alt={horse.name} open={photoViewerOpen} onClose={() => setPhotoViewerOpen(false)} />}
     </>

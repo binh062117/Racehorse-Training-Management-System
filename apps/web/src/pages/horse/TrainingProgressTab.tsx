@@ -4,7 +4,8 @@ import { api } from '../../lib/api';
 import type { Paginated, TrainingPlan, TrainingSession } from '../../lib/types';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate } from '../../lib/format';
-import { Bar, Card, CardHeader, EmptyState, KpiStrip } from '../../ds/ui';
+import { Card, CardHeader, EmptyState, KpiStrip } from '../../ds/ui';
+import { PlanProgressCell, PlanStateBadge } from '../../components/training/PlanProgress';
 import { LineChart } from '../../ds/charts';
 
 const WEEKS = 8;
@@ -89,7 +90,6 @@ function ProgressContent({ horseId }: { horseId: string }) {
   const values = buckets.map((b) => b.count);
   const labels = buckets.map((b, i) => (i % 2 === 0 ? shortDate.format(b.start) : null));
   const maxValue = Math.max(4, ...values);
-  const now = new Date().getTime();
 
   if (total === 0 && plans.length === 0) {
     return (
@@ -155,20 +155,14 @@ function ProgressContent({ horseId }: { horseId: string }) {
         ) : (
           <ul className="list-none m-0 p-0">
             {plans.map((p) => {
-              const start = new Date(p.startDate).getTime();
-              const end = p.endDate ? new Date(p.endDate).getTime() : null;
-              const pct = end != null && end > start ? Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100))) : null;
-              const over = end != null && now > end;
               return (
                 <li key={p.id} className="px-5 py-3.5 border-b border-line-soft last:border-0">
                   <div className="flex justify-between items-baseline gap-3">
                     {/* User-entered plan goal is preserved as-is */}
                     <span className="font-medium min-w-0 truncate">{p.goal}</span>
-                    <span className="num text-[13px] text-muted flex-none">
-                      {pct != null ? `${pct}%` : t('plansPage.openEnded', 'Dài hạn')}
-                    </span>
+                    <PlanStateBadge plan={p} />
                   </div>
-                  {pct != null && <Bar pct={pct} color={over ? '#9ca3af' : '#1a4b8a'} className="mt-2" />}
+                  <div className="mt-2"><PlanProgressCell plan={p} /></div>
                   <p className="num text-[12.5px] text-muted mt-1.5">
                     {formatDate(p.startDate)} – {p.endDate ? formatDate(p.endDate) : t('plansPage.openEnded', 'không giới hạn')}
                   </p>

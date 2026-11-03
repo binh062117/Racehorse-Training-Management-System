@@ -116,9 +116,26 @@ export interface TrainingPlan {
   goal: string;
   startDate: string;
   endDate: string | null;
+  /** Target distance (m) for the plan, e.g. 1600. */
+  targetDistanceM?: number | null;
   createdAt: string;
   updatedAt: string;
   sessions?: TrainingSession[];
+  /** Progress measured by sessions (complete = every session DONE). */
+  progress?: PlanProgress;
+}
+
+export interface PlanProgress {
+  total: number;
+  done: number;
+  planned: number;
+  missed: number;
+  cancelled: number;
+  pct: number;
+  complete: boolean;
+  overdue: boolean;
+  maxDoneDistanceM: number | null;
+  distanceShort: boolean;
 }
 
 export interface TrainingSession {
@@ -137,6 +154,9 @@ export interface TrainingSession {
   status: SessionStatus;
   resultMetric: string | null;
   resultValue: number | null;
+  finishTimeSec?: number | null;
+  recoveryHeartRate?: number | null;
+  muscleResponse?: 'NORMAL' | 'TIGHT' | 'SORE' | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -213,6 +233,7 @@ export interface FeedingRecord {
   notes: string | null;
   supplyItemId?: string | null;
   supplyItem?: { id: string; name: string; unit: string } | null;
+  costVnd?: number | null;
   createdAt: string;
 }
 
@@ -286,6 +307,7 @@ export interface SupplyItem {
   unit: string;
   quantity: number;
   minQuantity: number;
+  unitPrice?: number | null;
   notes: string | null;
   low: boolean;
   pendingRequests: number;
@@ -354,4 +376,56 @@ export interface FitnessAssessmentItem {
   totalScore: number;
   notes: string | null;
   createdAt: string;
+}
+
+export interface TrainingMedia {
+  id: string;
+  horseId: string;
+  sessionId: string | null;
+  kind: 'IMAGE' | 'VIDEO';
+  url: string;
+  caption: string | null;
+  createdAt: string;
+  uploadedBy: { id: string; name: string; role: Role | null } | null;
+  session?: { id: string; type: string; scheduledAt: string } | null;
+}
+
+export interface RaceReadiness {
+  horseId: string;
+  horseName: string;
+  ready: boolean;
+  reasons: string[];
+  fitnessScore: number | null;
+  latestPlan: { id: string; goal: string; done: number; total: number; complete: boolean } | null;
+}
+
+export interface TaskItem {
+  key: string;
+  count: number;
+  to: string;
+  tone: 'bad' | 'warn' | 'info' | 'ok';
+}
+
+export interface HorseReport {
+  month: string;
+  horse: {
+    id: string; name: string; breed: string | null; status: HorseStatus; healthStatus: HealthStatus;
+    locked: boolean; lockReason: string | null; fitnessScore: number | null;
+    owner: { id: string; name: string }; trainer: { id: string; name: string } | null; groom: { id: string; name: string } | null;
+  };
+  health: {
+    exams: { id: string; examDate: string; diagnosis: string; treatment: string | null; healthStatus: HealthStatus | null; vet: { id: string; name: string } }[];
+    vets: string[];
+    incidents: { id: string; description: string; severity: IncidentSeverity; status: IncidentStatus; createdAt: string }[];
+    openIncidents: number;
+  };
+  feeding: { totalCostVnd: number; totalKg: number; meals: number; uncostedMeals: number; byFeed: { feedType: string; kg: number; costVnd: number; meals: number }[] };
+  training: {
+    sessions: number; done: number; missed: number; avgFinishTimeSec: number | null;
+    plans: { id: string; goal: string; trainer: string; endDate: string | null; targetDistanceM: number | null; progress: PlanProgress }[];
+    assessments: { totalScore: number; createdAt: string; assessedBy: { name: string } }[];
+  };
+  races: { id: string; position: number | null; time: string | null; race: { id: string; name: string; date: string; venue: string | null; distance: number | null } }[];
+  readiness: RaceReadiness;
+  media: TrainingMedia[];
 }

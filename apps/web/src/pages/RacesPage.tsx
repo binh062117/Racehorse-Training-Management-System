@@ -7,13 +7,14 @@ import { ErrorText } from '../components/ErrorText';
 import { api } from '../lib/api';
 import { formatDate, toDateInput } from '../lib/format';
 import { useCachedResource } from '../lib/useCachedResource';
-import type { Horse, Paginated, Race, RaceDetail, RaceEntry } from '../lib/types';
+import type { Paginated, Race, RaceDetail, RaceEntry, RaceReadiness } from '../lib/types';
+import { OwnerResultsPanel, ReadinessPanel } from '../components/races/ReadinessPanel';
 import { usePageChrome } from '../ds/AppShell';
 import { Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, Input, NativeSelect, PageHeader } from '../ds/ui';
 
 type RaceFilter = 'ALL' | 'UPCOMING' | 'PAST';
 const EMPTY_RACES: Race[] = [];
-const EMPTY_HORSES: Horse[] = [];
+const EMPTY_READINESS: RaceReadiness[] = [];
 
 function isUpcomingRace(race: Pick<Race, 'date'>, today: string): boolean {
   return toDateInput(race.date) >= today;
@@ -51,6 +52,9 @@ export function RacesPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const canManage = user?.role === 'MANAGER';
+  // Manager and trainer enter horses; the owner sees how their own horses stand.
+  const canEnter = canManage || user?.role === 'TRAINER';
+  const seesReadiness = canEnter || user?.role === 'OWNER';
   const [selectedRace, setSelectedRace] = useState<RaceDetail | null>(null);
   const [chosenFilter, setFilter] = useState<RaceFilter | null>(null);
   const [search, setSearch] = useState('');
@@ -62,17 +66,17 @@ export function RacesPage() {
   usePageChrome({ crumbs: [t('races.title')] });
 
   const { data: raceData, loading, error, reload: loadRaces } = useCachedResource(
-    `race-management-${user?.id ?? 'anonymous'}-${canManage}`,
+    `race-management-${user?.id ?? 'anonymous'}-${user?.role}`,
     async () => {
-      const [raceResponse, horseResponse] = await Promise.all([
+      const [raceResponse, readinessResponse] = await Promise.all([
         api.get<Paginated<Race>>('/races', { params: { limit: 100 } }),
-        canManage ? api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } }) : Promise.resolve(null),
+        seesReadiness ? api.get<RaceReadiness[]>('/races/readiness') : Promise.resolve(null),
       ]);
-      return { races: raceResponse.data.data, horses: horseResponse?.data.data ?? [] };
+      return { races: raceResponse.data.data, readiness: readinessResponse?.data ?? [] };
     },
   );
   const races = raceData?.races ?? EMPTY_RACES;
-  const horses = raceData?.horses ?? EMPTY_HORSES;
+  const readiness = raceData?.readiness ?? EMPTY_READINESS;
 
   const today = toDateInput(new Date().toISOString());
   const summary = useMemo(() => summarizeRaces(races, today), [races, today]);
@@ -109,6 +113,7 @@ export function RacesPage() {
 
   const onEntrySaved = async () => {
     if (selectedRace) await openRace(selectedRace);
+    await loadRaces();
   };
 
   const nextRace = useMemo(
@@ -145,6 +150,11 @@ export function RacesPage() {
       )}
 
       <ErrorText err={error} />
+
+      {seesReadiness && readiness.length > 0 && (
+        <ReadinessPanel items={readiness} title={user?.role === 'OWNER' ? t('readiness.ownerTitle') : t('readiness.title')} />
+      )}
+      {user?.role === 'OWNER' && <OwnerResultsPanel horses={readiness} />}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(340px,1fr)] items-start">
         <Card className="min-w-0">
@@ -215,8 +225,8 @@ export function RacesPage() {
                 <dt className="text-muted">{t('races.prizePool')}</dt><dd className="m-0 num">{selectedRace.prizePool == null ? <span className="text-muted">—</span> : `${selectedRace.prizePool.toLocaleString('vi-VN')} ₫`}</dd>
               </dl>
 
-              {canManage && (
-                <AddEntryForm horses={horses} enteredHorseIds={selectedRace.entries.map((entry) => entry.horseId)} onAdded={onEntrySaved} raceId={selectedRace.id} />
+              {canEnter && isUpcomingRace(selectedRace, today) && (
+                <AddEntryForm readiness={readiness} enteredHorseIds={selectedRace.entries.map((entry) => entry.horseId)} onAdded={onEntrySaved} raceId={selectedRace.id} />
               )}
 
               <div className="flex items-center gap-2 mt-5 mb-2">
@@ -311,12 +321,12 @@ function RaceForm({ race, onCancel, onSaved }: { race: Race | null; onCancel: ()
   );
 }
 
-function AddEntryForm({ horses, enteredHorseIds, onAdded, raceId }: { horses: Horse[]; enteredHorseIds: string[]; onAdded: () => Promise<void>; raceId: string }) {
+function AddEntryForm({ readiness, enteredHorseIds, onAdded, raceId }: { readiness: RaceReadiness[]; enteredHorseIds: string[]; onAdded: () => Promise<void>; raceId: string }) {
   const { t } = useTranslation();
   const enteredHorseIdSet = new Set(enteredHorseIds);
-  const eligibleHorses = horses.filter((horse) => (
-    horse.status !== 'RETIRED' && horse.healthStatus !== 'QUARANTINED' && !horse.locked && !enteredHorseIdSet.has(horse.id)
-  ));
+  const candidates = readiness.filter((r) => !enteredHorseIdSet.has(r.horseId));
+  const eligibleHorses = candidates.filter((r) => r.ready);
+  const blocked = candidates.filter((r) => !r.ready);
   const [horseId, setHorseId] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
@@ -342,11 +352,17 @@ function AddEntryForm({ horses, enteredHorseIds, onAdded, raceId }: { horses: Ho
       <div className="flex gap-2">
         <NativeSelect className="flex-1" value={horseId} onChange={(event) => setHorseId(event.target.value)} required>
           <option value="">{t('races.chooseHorse')}</option>
-          {eligibleHorses.map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
+          {eligibleHorses.map((horse) => <option key={horse.horseId} value={horse.horseId}>{horse.horseName}</option>)}
+          {blocked.length > 0 && (
+            <optgroup label={t('readiness.notReady')}>
+              {blocked.map((horse) => <option key={horse.horseId} value={horse.horseId} disabled>{horse.horseName} — {horse.reasons[0]}</option>)}
+            </optgroup>
+          )}
         </NativeSelect>
         <Btn v="p" type="submit" disabled={saving || !horseId}>{saving ? t('races.saving') : t('races.register')}</Btn>
       </div>
       {eligibleHorses.length === 0 && <p className="cap mt-2">{t('races.noEligibleHorses')}</p>}
+      <p className="text-[12px] text-muted mt-2">{t('readiness.rule')}</p>
       <ErrorText err={error} />
     </form>
   );

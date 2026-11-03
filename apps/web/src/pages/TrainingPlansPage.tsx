@@ -7,20 +7,13 @@ import type { Paginated, TrainingPlan } from '../lib/types';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
+import { PlanProgressCell, PlanStateBadge, planState } from '../components/training/PlanProgress';
 import { CreateTrainingPlanModal } from '../components/training/CreateTrainingPlanModal';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Bar, Btn, Card, Chip, ChipCount, EmptyState, Icon, PageHeader, Pagination } from '../ds/ui';
+import { Btn, Card, Chip, ChipCount, EmptyState, Icon, PageHeader, Pagination } from '../ds/ui';
 
-type Filter = 'ALL' | 'ACTIVE' | 'COMPLETED';
+type Filter = 'ALL' | 'ACTIVE' | 'OVERDUE' | 'COMPLETED';
 
-/** Share of the plan's window already elapsed, at the true ratio; null for open-ended plans. */
-function elapsed(plan: TrainingPlan, now: number): number | null {
-  if (!plan.endDate) return null;
-  const start = new Date(plan.startDate).getTime();
-  const end = new Date(plan.endDate).getTime();
-  if (end <= start) return 100;
-  return Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100)));
-}
 
 export function TrainingPlansPage() {
   const { t } = useTranslation();
@@ -31,7 +24,7 @@ export function TrainingPlansPage() {
   const canCreate = role === 'TRAINER';
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<Filter>('ALL');
+  const [statusFilter, setStatusFilter] = useState<Filter>(() => { const s = searchParams.get('status'); return s === 'ACTIVE' || s === 'OVERDUE' || s === 'COMPLETED' ? s : 'ALL'; });
   const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
@@ -45,22 +38,24 @@ export function TrainingPlansPage() {
   }, [searchParams, setSearchParams, canCreate]);
 
   const { data, loading, error: loadErr, reload: loadPlans } = useCachedResource('training-plans', () =>
-    api.get<Paginated<TrainingPlan>>('/training-plans', { params: { limit: 500 } }).then((r) => r.data),
+    api.get<Paginated<TrainingPlan>>('/training-plans', { params: { limit: 100 } }).then((r) => r.data),
   );
   const plans = data?.data ?? [];
 
   usePageChrome({ crumbs: [t('plansPage.title', 'Giáo án huấn luyện')] });
 
-  const now = new Date().getTime();
-  const isOngoing = (p: TrainingPlan) => !p.endDate || new Date(p.endDate).getTime() >= now;
-  const activeCount = plans.filter(isOngoing).length;
-  const completedCount = plans.length - activeCount;
+  // Progress is measured by sessions (complete = every session DONE), not by the calendar.
+  const isOngoing = (p: TrainingPlan) => planState(p) !== 'COMPLETE';
+  const activeCount = plans.filter((p) => planState(p) === 'ACTIVE').length;
+  const overdueCount = plans.filter((p) => planState(p) === 'OVERDUE').length;
+  const completedCount = plans.filter((p) => planState(p) === 'COMPLETE').length;
   const horsesOnPlan = new Set(plans.filter(isOngoing).map((p) => p.horseId)).size;
 
   const q = search.trim().toLowerCase();
   const filteredPlans = plans.filter((p) => {
-    if (statusFilter === 'ACTIVE' && !isOngoing(p)) return false;
-    if (statusFilter === 'COMPLETED' && isOngoing(p)) return false;
+    if (statusFilter === 'ACTIVE' && planState(p) !== 'ACTIVE') return false;
+    if (statusFilter === 'OVERDUE' && planState(p) !== 'OVERDUE') return false;
+    if (statusFilter === 'COMPLETED' && planState(p) !== 'COMPLETE') return false;
     if (q) {
       return Boolean(p.horse?.name?.toLowerCase().includes(q) || p.goal.toLowerCase().includes(q) || p.trainer?.name?.toLowerCase().includes(q));
     }
@@ -74,7 +69,7 @@ export function TrainingPlansPage() {
     ? t('plansPage.loading', 'Đang tải giáo án…')
     : plans.length === 0
       ? t('plansPage.empty', 'Chưa có giáo án nào.')
-      : `${activeCount} ${t('plansPage.active', 'đang áp dụng')} (${horsesOnPlan} ${t('horsesPage.title', 'ngựa')}) · ${completedCount} ${t('plansPage.completed', 'đã kết thúc')}.`;
+      : t('planProgress.sub', { active: activeCount, horses: horsesOnPlan, overdue: overdueCount, done: completedCount });
 
   return (
     <>
@@ -88,7 +83,8 @@ export function TrainingPlansPage() {
       <div className="flex flex-wrap gap-2 items-center">
         <Chip on={statusFilter === 'ALL'} onClick={() => { setStatusFilter('ALL'); setPage(1); }}>{t('plansPage.all', 'Tất cả')} <ChipCount n={plans.length} /></Chip>
         <Chip on={statusFilter === 'ACTIVE'} onClick={() => { setStatusFilter('ACTIVE'); setPage(1); }}>{t('plansPage.active', 'Đang áp dụng')} <ChipCount n={activeCount} /></Chip>
-        <Chip on={statusFilter === 'COMPLETED'} onClick={() => { setStatusFilter('COMPLETED'); setPage(1); }}>{t('plansPage.completed', 'Đã kết thúc')} <ChipCount n={completedCount} /></Chip>
+        <Chip on={statusFilter === 'OVERDUE'} onClick={() => { setStatusFilter('OVERDUE'); setPage(1); }}>{t('planProgress.overdue')} <ChipCount n={overdueCount} /></Chip>
+        <Chip on={statusFilter === 'COMPLETED'} onClick={() => { setStatusFilter('COMPLETED'); setPage(1); }}>{t('planProgress.complete')} <ChipCount n={completedCount} /></Chip>
       </div>
 
       {loading && plans.length === 0 ? (
@@ -115,8 +111,6 @@ export function TrainingPlansPage() {
               </thead>
               <tbody>
                 {paginatedPlans.map((plan) => {
-                  const ongoing = isOngoing(plan);
-                  const pct = elapsed(plan, now);
                   return (
                     <tr key={plan.id} className="border-b border-line-soft last:border-0 hover:bg-subtle align-top">
                       <td className="px-5 py-3">
@@ -132,23 +126,8 @@ export function TrainingPlansPage() {
                           {plan.endDate ? `${t('common.to', 'đến')} ${formatDate(plan.endDate)}` : t('plansPage.openEnded', 'không giới hạn')}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        {pct == null ? (
-                          <span className="text-[13px] text-muted">{t('plansPage.openEnded', 'Dài hạn')}</span>
-                        ) : (
-                          <div className="flex items-center gap-2.5 pt-1.5">
-                            <Bar pct={pct} color={ongoing ? '#1a4b8a' : '#9ca3af'} className="flex-1" />
-                            <span className="num text-[12.5px] text-muted w-9 text-right">{pct}%</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-3">
-                        {ongoing ? (
-                          <Badge tone="ok">{t('plansPage.active', 'Đang áp dụng')}</Badge>
-                        ) : (
-                          <Badge tone="neu">{t('plansPage.completed', 'Đã kết thúc')}</Badge>
-                        )}
-                      </td>
+                      <td className="px-4 py-3"><PlanProgressCell plan={plan} /></td>
+                      <td className="px-5 py-3"><PlanStateBadge plan={plan} /></td>
                     </tr>
                   );
                 })}

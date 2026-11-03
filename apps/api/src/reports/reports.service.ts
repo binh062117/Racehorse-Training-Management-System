@@ -422,7 +422,7 @@ export class ReportsService {
           'overduePlans',
           myPlans.filter((p) => planProgress(p, p.sessions, now).overdue)
             .length,
-          '/plans',
+          '/plans?status=OVERDUE',
           'bad',
         );
         add(
@@ -488,7 +488,7 @@ export class ReportsService {
         add(
           'overduePlans',
           plans.filter((p) => planProgress(p, p.sessions, now).overdue).length,
-          '/plans',
+          '/plans?status=OVERDUE',
           'bad',
         );
         add(

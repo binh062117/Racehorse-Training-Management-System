@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, HealthStatus, Paginated } from '../lib/types';
@@ -145,7 +145,11 @@ export function HorsesPage({ personal = false }: { personal?: boolean }) {
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [filter, setFilter] = useState<Filter>('all');
+  const [searchParams] = useSearchParams();
+  const [filter, setFilter] = useState<Filter>(() => {
+    const f = searchParams.get('filter');
+    return f === 'locked' || f === 'injured' || f === 'mon' ? f : 'all';
+  });
   const [healthFilter, setHealthFilter] = useState<HealthStatus | ''>('');
   const [view, setView] = useState<'cards' | 'table'>('cards');
   const [page, setPage] = useState(1);

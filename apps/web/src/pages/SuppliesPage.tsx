@@ -113,6 +113,7 @@ export function SuppliesPage() {
                         <span className={`num font-semibold hop ${i.low ? 'text-bad' : ''}`}>{fmtQty(i.quantity)}</span>
                         <span className="text-muted text-[13px]"> {i.unit}</span>
                         <div className="text-[12px] text-muted">{t('supplies.min', { n: fmtQty(i.minQuantity), unit: i.unit })}</div>
+                        {i.unitPrice != null && <div className="text-[12px] text-muted num">{t('supplies.pricePer', { price: i.unitPrice.toLocaleString('vi-VN'), unit: i.unit })}</div>}
                       </td>
                       <td className="px-4 py-3"><Bar pct={pct} color={i.low ? '#c4242a' : '#1a4b8a'} /></td>
                       <td className="px-4 py-3">
@@ -225,6 +226,7 @@ function ItemModal({ item, onClose, onSaved }: { item: SupplyItem | null; onClos
   const [quantity, setQuantity] = useState(item ? String(item.quantity) : '0');
   const [minQuantity, setMinQuantity] = useState(item ? String(item.minQuantity) : '0');
   const [notes, setNotes] = useState(item?.notes ?? '');
+  const [unitPrice, setUnitPrice] = useState(item?.unitPrice != null ? String(item.unitPrice) : '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>(null);
 
@@ -232,7 +234,7 @@ function ItemModal({ item, onClose, onSaved }: { item: SupplyItem | null; onClos
     e.preventDefault();
     setBusy(true);
     setErr(null);
-    const body = { name: name.trim(), unit: unit.trim(), quantity: Number(quantity), minQuantity: Number(minQuantity), notes: notes.trim() };
+    const body = { name: name.trim(), unit: unit.trim(), quantity: Number(quantity), minQuantity: Number(minQuantity), notes: notes.trim(), ...(unitPrice.trim() ? { unitPrice: Math.round(Number(unitPrice)) } : {}) };
     try {
       if (item) await api.patch(`/supplies/${item.id}`, body);
       else await api.post('/supplies', { ...body, category });
@@ -273,6 +275,7 @@ function ItemModal({ item, onClose, onSaved }: { item: SupplyItem | null; onClos
             <Field label={t('supplies.unit')} req hint={t('supplies.unitHint')}><Input value={unit} onChange={(e) => setUnit(e.target.value)} maxLength={20} required /></Field>
             <Field label={item ? t('supplies.stockCounted') : t('supplies.stockStart')}><Input type="number" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} required /></Field>
             <Field label={t('supplies.minLabel')} hint={t('supplies.minHint')}><Input type="number" min="0" step="any" value={minQuantity} onChange={(e) => setMinQuantity(e.target.value)} required /></Field>
+            <Field label={t('supplies.unitPrice', { unit: unit || '…' })} hint={t('supplies.unitPriceHint')}><Input type="number" min="0" step="500" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="12000" /></Field>
           </div>
           <Field label={t('supplies.notes')}><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={500} /></Field>
           <ErrorText err={err} />

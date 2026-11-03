@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
-import type { Horse, HorseLockEvent } from '../../lib/types';
+import type { FitnessAssessmentItem, Horse, HorseLockEvent } from '../../lib/types';
+import { FitnessAssessmentModal } from './FitnessAssessmentModal';
 import { ErrorText } from '../ErrorText';
 import { HealthRecordPicker } from '../health/HealthRecordPicker';
-import { Alert, Btn, Field, Modal, ModalBody, ModalFoot, ModalHead, Textarea } from '../../ds/ui';
+import { Alert, Btn, Field, Icon, Modal, ModalBody, ModalFoot, ModalHead, Textarea } from '../../ds/ui';
 import { lockReasonText } from '../../ds/ui';
 
 /**
  * VET locks or unlocks training for a horse.
  * - Lock: a reason is required.
  * - Unlock: pick an exam written after the lock began that concludes the
- *   horse is healthy (the API enforces the same rule).
+ *   horse is healthy, plus a fitness assessment after the lock scoring at
+ *   least FITNESS_PASS (the API enforces the same rules).
  */
+export const FITNESS_PASS = 80;
+
 export function LockHorseModal({ horse, open, onClose, onDone }: { horse: Horse; open: boolean; onClose: () => void; onDone: () => void }) {
   const { t } = useTranslation();
   const unlocking = horse.locked;
@@ -21,13 +25,25 @@ export function LockHorseModal({ horse, open, onClose, onDone }: { horse: Horse;
   const [lockedSince, setLockedSince] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>(null);
+  const [assessments, setAssessments] = useState<FitnessAssessmentItem[]>([]);
+  const [assessOpen, setAssessOpen] = useState(false);
+  const [assessVersion, setAssessVersion] = useState(0);
 
   useEffect(() => {
     if (!open || !unlocking) return;
     api.get<HorseLockEvent[]>(`/horses/${horse.id}/lock-events`)
       .then((r) => setLockedSince(r.data.find((e) => e.locked)?.createdAt ?? null))
       .catch(() => setLockedSince(null));
-  }, [open, unlocking, horse.id]);
+    api.get<FitnessAssessmentItem[]>(`/horses/${horse.id}/fitness-assessments`)
+      .then((r) => setAssessments(r.data ?? []))
+      .catch(() => setAssessments([]));
+  }, [open, unlocking, horse.id, assessVersion]);
+
+  // The latest assessment written after the lock began decides.
+  const latest = assessments
+    .filter((a) => !lockedSince || new Date(a.createdAt) > new Date(lockedSince))
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
+  const scoreOk = !!latest && latest.totalScore >= FITNESS_PASS;
 
   const close = () => {
     if (busy) return;
@@ -55,7 +71,7 @@ export function LockHorseModal({ horse, open, onClose, onDone }: { horse: Horse;
     }
   };
 
-  const ready = unlocking ? !!recordId : reason.trim().length > 0;
+  const ready = unlocking ? !!recordId && scoreOk : reason.trim().length > 0;
 
   return (
     <Modal open={open} onClose={close} labelledBy="lock-horse-title" width={600}>
@@ -69,6 +85,19 @@ export function LockHorseModal({ horse, open, onClose, onDone }: { horse: Horse;
             <div>
               <div className="text-[13px] font-medium mb-1.5">{t('lock.evidence')} <span className="text-bad">*</span></div>
               <HealthRecordPicker horseId={horse.id} horseName={horse.name} value={recordId} onChange={setRecordId} requireFit after={lockedSince} canCreate />
+            </div>
+            <div className={`rounded-card border p-3.5 ${scoreOk ? 'border-ok-bd bg-ok-bg' : 'border-warn-bd bg-warn-bg'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-[13px] font-semibold">{t('lock.fitnessNeeded', { min: FITNESS_PASS })} <span className="text-bad">*</span></div>
+                  <div className="text-[12.5px] mt-0.5">
+                    {latest
+                      ? t('lock.latestScore', { score: latest.totalScore, date: new Date(latest.createdAt).toLocaleDateString('vi-VN') })
+                      : t('lock.noScoreSinceLock')}
+                  </div>
+                </div>
+                <Btn sm onClick={() => setAssessOpen(true)}><Icon name="heart" className="w-3.5 h-3.5" />{t('lock.assessNow')}</Btn>
+              </div>
             </div>
             <Field label={t('lock.unlockNote')}>
               <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} placeholder={t('lock.unlockNotePlaceholder')} />
@@ -87,6 +116,10 @@ export function LockHorseModal({ horse, open, onClose, onDone }: { horse: Horse;
           {busy ? t('lock.saving') : unlocking ? t('lock.unlockConfirm') : t('lock.lockConfirm')}
         </Btn>
       </ModalFoot>
+      {unlocking && (
+        <FitnessAssessmentModal isOpen={assessOpen} onClose={() => setAssessOpen(false)} horse={horse}
+          onUpdated={() => { setAssessOpen(false); setAssessVersion((v) => v + 1); }} />
+      )}
     </Modal>
   );
 }
