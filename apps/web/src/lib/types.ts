@@ -429,3 +429,43 @@ export interface HorseReport {
   readiness: RaceReadiness;
   media: TrainingMedia[];
 }
+
+export type StallStatus =
+  | 'AVAILABLE'
+  | 'OCCUPIED'
+  | 'CLEANING'
+  | 'MAINTENANCE'
+  | 'OUT_OF_SERVICE'
+  | 'DISINFECTING'
+  | 'QUARANTINED';
+
+export interface StallItem {
+  id: string;
+  code: string;
+  barn: string;
+  status: StallStatus;
+  pendingStatus?: StallStatus | null;
+  pendingNotes?: string | null;
+  pendingRequestedById?: string | null;
+  pendingRequestedAt?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  horse?: {
+    id: string;
+    name: string;
+    isOtherOwner?: boolean;
+    stallNumber?: string | null;
+    saddleNumber?: number | null;
+    photoUrl?: string | null;
+    status: HorseStatus;
+    healthStatus: HealthStatus;
+    locked: boolean;
+    lockReason?: string | null;
+    fitnessScore?: number | null;
+    breed?: string | null;
+    owner?: UserRef;
+    trainer?: UserRef | null;
+    groom?: UserRef | null;
+  } | null;
+}
