@@ -28,6 +28,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
   const [goal, setGoal] = useState('');
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState('');
+  const [targetDistance, setTargetDistance] = useState('');
 
   const [loadingHorses, setLoadingHorses] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -71,6 +72,10 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
       setErr(new Error('Vui lòng chọn ngựa để lập giáo án.'));
       return;
     }
+    if (selectedHorse?.locked) {
+      setErr(new Error('Không thể lập giáo án cho ngựa đang bị khóa tập luyện.'));
+      return;
+    }
     if (!goal.trim()) {
       setErr(new Error(i18n.t("ui.enterATrainingGoal")));
       return;
@@ -90,6 +95,7 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
         goal: goal.trim(),
         startDate: new Date(startDate).toISOString(),
         endDate: endDate ? new Date(endDate).toISOString() : undefined,
+        ...(targetDistance ? { targetDistanceM: Number(targetDistance) } : {}),
       });
       onCreated(res.data);
       onClose();
@@ -176,12 +182,15 @@ export function CreateTrainingPlanModal({ isOpen, onClose, onCreated, defaultHor
             <Field label={i18n.t("ui.endDateOptional")}>
               <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
             </Field>
+            <Field label={i18n.t("planProgress.targetDistance")} hint={i18n.t("planProgress.targetDistanceHint")}>
+              <Input type="number" min={100} max={10000} step={100} placeholder="1600" value={targetDistance} onChange={(e) => setTargetDistance(e.target.value)} />
+            </Field>
           </div>
         </ModalBody>
 
         <ModalFoot>
           <Btn onClick={onClose} disabled={busy}>{i18n.t("ui.cancel")}</Btn>
-          <Btn v="p" type="submit" disabled={busy || loadingHorses}>{busy ? i18n.t("ui.creating2") : i18n.t("ui.createPlan")}</Btn>
+          <Btn v="p" type="submit" disabled={busy || loadingHorses || Boolean(selectedHorse?.locked)}>{busy ? i18n.t("ui.creating2") : i18n.t("ui.createPlan")}</Btn>
         </ModalFoot>
       </form>
     </Modal>

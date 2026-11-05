@@ -21,16 +21,21 @@ const NAV: NavItem[] = [
   { to: '/training/progress', labelKey: 'hai.clubProgress', defaultLabel: 'Club training progress', icon: 'plans', roles: ['MANAGER', 'TRAINER'] },
   { to: '/dashboard', labelKey: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: 'dashboard' },
   { to: '/horses', labelKey: 'nav.horses', defaultLabel: 'Ngựa đua', icon: 'horse' },
+  { to: '/stalls', labelKey: 'nav.stalls', defaultLabel: 'Sơ đồ chuồng trại', icon: 'reports' },
   { to: '/plans', labelKey: 'nav.plansTrainer', defaultLabel: 'Giáo án huấn luyện', icon: 'plans' },
   { to: '/races', labelKey: 'nav.races', defaultLabel: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
+  { to: '/reports', labelKey: 'nav.reports', defaultLabel: 'Báo cáo tháng', icon: 'file', roles: ['OWNER', 'MANAGER'] },
+  { to: '/supplies', labelKey: 'nav.supplies', defaultLabel: 'Vật tư', icon: 'box', roles: ['MANAGER', 'GROOM', 'VET', 'TRAINER'] },
 ];
 const HEALTH_NAV: NavItem[] = [
   { to: '/health-records', labelKey: 'nav.healthRecords', defaultLabel: 'Hồ sơ khám bệnh', icon: 'steth', roles: ['VET'] },
   { to: '/vaccinations', labelKey: 'nav.vaccinations', defaultLabel: 'Tiêm phòng & tẩy giun', icon: 'syringe', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
+  { to: '/daily-care', labelKey: 'nav.dailyCare', defaultLabel: 'Chăm sóc hằng ngày', icon: 'check', roles: ['GROOM', 'MANAGER', 'TRAINER', 'VET', 'OWNER'] },
   { to: '/incidents', labelKey: 'nav.incidents', defaultLabel: 'Sự cố y tế', icon: 'alert', roles: ['MANAGER', 'TRAINER', 'VET', 'GROOM'] },
 ];
 const ADMIN_NAV: NavItem[] = [
   { to: '/admin/users', labelKey: 'nav.users', defaultLabel: 'Phân quyền tài khoản', icon: 'user', roles: ['MANAGER'] },
+  { to: '/admin/audit-logs', labelKey: 'nav.auditLogs', defaultLabel: 'Nhật ký hệ thống', icon: 'eye', roles: ['MANAGER'] },
 ];
 
 const POLL_MS = 20_000;

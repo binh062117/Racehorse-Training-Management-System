@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppException } from '../common/app-exception';
+import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { raceReadiness } from './race-readiness';
 import type { Paginated } from '../horses/horses.service';
 import {
   CreateRaceDto,
@@ -114,24 +116,13 @@ export class RacesService {
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
 
-    if (horse.locked) {
+    // Flow 1: only a horse whose latest plan is complete and whose fitness is
+    // at least FITNESS_PASS may race — checked here, not just greyed out in the UI.
+    const [readiness] = await raceReadiness(this.prisma, [horse.id]);
+    if (!readiness.ready) {
       throw new AppException(
         'VALIDATION_ERROR',
-        `Chiến mã ${horse.name} đang bị khóa huấn luyện/thi đấu (${horse.lockReason ?? 'theo chỉ định y tế'}), không thể đăng ký giải đua.`,
-      );
-    }
-
-    if (horse.status === 'RETIRED') {
-      throw new AppException(
-        'VALIDATION_ERROR',
-        `Chiến mã ${horse.name} đã giải nghệ (RETIRED), không thể đăng ký giải đua.`,
-      );
-    }
-
-    if (horse.healthStatus === 'QUARANTINED') {
-      throw new AppException(
-        'VALIDATION_ERROR',
-        `Chiến mã ${horse.name} đang cách ly y tế (QUARANTINED), không thể đăng ký giải đua.`,
+        `Ngựa ${horse.name} chưa đủ điều kiện thi đấu: ${readiness.reasons.join('; ')}.`,
       );
     }
 
@@ -211,5 +202,21 @@ export class RacesService {
       data,
       include: { horse: { select: ENTRY_HORSE_SELECT } },
     });
+  }
+
+  /** Readiness of every active horse the user may see — the race screens show why a horse can't run yet. */
+  async readiness(user: AuthUser) {
+    const horses = await this.prisma.horse.findMany({
+      where: {
+        deletedAt: null,
+        status: { not: 'RETIRED' },
+        ...(user.role === 'OWNER' ? { ownerId: user.id } : {}),
+      },
+      select: { id: true },
+    });
+    return raceReadiness(
+      this.prisma,
+      horses.map((h) => h.id),
+    );
   }
 }

@@ -14,11 +14,12 @@ import { CreateHealthRecordModal } from '../../components/health/CreateHealthRec
 import { TreatmentPlansSection } from '../../components/health/TreatmentPlansSection';
 import { InjuryLocationsSection } from '../../components/health/InjuryLocationsSection';
 import { AiInsightCard } from '../../components/horse/AiInsightCard';
+import { LockHistory } from '../../components/horse/LockHorseModal';
 import { formatDate } from '../../lib/format';
 import { Btn, Card, EmptyState, Field, FileInput, HealthBadge, LockBadge, Icon, Textarea } from '../../ds/ui';
 
 /* ========== Main component ========== */
-export function HealthTab({ horse, onHorseChanged }: { horse: Horse; onHorseChanged: () => Promise<void> }) {
+export function HealthTab({ horse, lockVersion, onHorseChanged }: { horse: Horse; lockVersion?: number; onHorseChanged: () => Promise<void> }) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isVet = user?.role === 'VET';
@@ -66,6 +67,8 @@ export function HealthTab({ horse, onHorseChanged }: { horse: Horse; onHorseChan
       )}
 
       <Pagination page={page} total={total} onPage={setPage} disabled={loading} />
+      <LockHistory horseId={horse.id} refreshKey={`${lockVersion ?? 0}-${horse.locked}`} />
+
       <CreateHealthRecordModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onCreated={() => { setPage(1); load(); void onHorseChanged(); }} horseId={horse.id} horseName={horse.name} />
     </div>
   );

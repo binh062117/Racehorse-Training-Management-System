@@ -90,6 +90,7 @@ describe('Health records (e2e)', () => {
 
   afterAll(async () => {
     await prisma.healthRecord.deleteMany({ where: { horseId } });
+    await prisma.horseLockEvent.deleteMany({ where: { horseId: horseId } });
     await prisma.horse.deleteMany({ where: { id: horseId } });
     // Remove attachment files created for the test record.
     const dir = join(process.cwd(), 'uploads', 'health-attachments');

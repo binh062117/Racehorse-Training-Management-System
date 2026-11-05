@@ -66,6 +66,7 @@ export class MissedSessionsJob
     this.running = true;
     try {
       await this.training.reconcileMissed();
+      await this.training.reconcileOverduePlans();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;

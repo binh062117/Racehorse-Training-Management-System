@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import { forwardRef, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, NavLink } from 'react-router-dom';
 
 /* ---------- icons (stroke, 24px grid) ---------- */
@@ -25,6 +26,7 @@ const P: Record<string, string[]> = {
   pin: ['M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11Z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z'],
   clock: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z', 'M12 7v5l3 2'], info: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z', 'M12 11v5M12 8h.01'],
   syringe: ['m18 2 4 4M7 13l4 4M3 21l4-4M14 4l6 6-9 9-6-6Z'], steth: ['M4 4v6a6 6 0 0 0 12 0V4', 'M8 4H4M16 4h-4', 'M20 12a2 2 0 1 0 0 .01', 'M10 16v1a5 5 0 0 0 10 0v-1'],
+  box: ['M21 8 12 3 3 8v8l9 5 9-5Z', 'M3 8l9 5 9-5', 'M12 13v8'],
   pill: ['M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7Z', 'M8.5 8.5l7 7'], file: ['M3 3h18v18H3z', 'M8 8h8M8 12h8M8 16h5'],
   sparkle: ['M12 3v4M12 17v4M3 12h4M17 12h4', 'M8 8 6 6M18 18l-2-2M16 8l2-2M6 18l2-2'],
   eye: ['M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
@@ -63,10 +65,10 @@ export function CareerBadge({ status }: { status: string }) {
   return <Badge tone={careerTone[status] ?? 'neu'}>{t(`horseStatusBadge.${status}`, careerLabel[status] ?? status)}</Badge>;
 }
 export const notificationTone: Record<string, Tone> = {
-  TRAINING_LOCKED: 'bad', TRAINING_UNLOCKED: 'ok', INCIDENT_REPORTED: 'bad', FITNESS_WARNING: 'warn', AI_RISK_ALERT: 'bad',
+  TRAINING_LOCKED: 'bad', TRAINING_UNLOCKED: 'ok', INCIDENT_REPORTED: 'bad', FITNESS_WARNING: 'warn', AI_RISK_ALERT: 'bad', SUPPLY_REQUESTED: 'warn', SUPPLY_REVIEWED: 'info',
 };
 export const notificationIcon: Record<string, string> = {
-  TRAINING_LOCKED: 'lock', TRAINING_UNLOCKED: 'unlock', INCIDENT_REPORTED: 'alert', FITNESS_WARNING: 'heart', AI_RISK_ALERT: 'sparkle',
+  TRAINING_LOCKED: 'lock', TRAINING_UNLOCKED: 'unlock', INCIDENT_REPORTED: 'alert', FITNESS_WARNING: 'heart', AI_RISK_ALERT: 'sparkle', SUPPLY_REQUESTED: 'box', SUPPLY_REVIEWED: 'box',
 };
 /** Fitness scale: ≥80 good, 60–79 watch, <60 low. Grey when not assessed. */
 export const fitColor = (v: number | null | undefined) => (v == null ? '#9ca3af' : v >= 80 ? '#247b50' : v >= 60 ? '#b45309' : '#c4242a');
@@ -230,6 +232,37 @@ export function WaveText({ text }: { text: string }) {
 /** Table header cell: sentence-case grey 12px, no band. Add pl-5/pr-5 on the edge columns. */
 export const thCls = 'h-10 px-4 text-left text-[12px] font-medium text-muted border-b border-line whitespace-nowrap';
 
+/**
+ * Page numbers for a server-paged list: previous / next plus the numbered
+ * pages around the current one (1 … 4 5 6 … 12). Renders nothing for one page.
+ */
+export function Pager({ page, total, limit, onPage, label }: { page: number; total: number; limit: number; onPage: (p: number) => void; label?: ReactNode }) {
+  const pages = Math.max(1, Math.ceil(total / limit));
+  if (pages <= 1) return label ? <p className="text-[13px] text-muted">{label}</p> : null;
+  const shown = [...new Set([1, page - 1, page, page + 1, pages])].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b);
+  const cell = 'h-8 min-w-8 px-2 rounded-btn text-[13px] num inline-flex items-center justify-center';
+  return (
+    <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Phân trang">
+      <span className="text-[13px] text-muted">{label}</span>
+      <div className="flex items-center gap-1">
+        <button type="button" className={`${cell} text-ink hover:bg-cream disabled:opacity-40 disabled:hover:bg-transparent`} disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Trang trước">
+          <Icon name="chevRight" className="w-4 h-4 rotate-180" />
+        </button>
+        {shown.map((p, i) => (
+          <span key={p} className="flex items-center gap-1">
+            {i > 0 && p - shown[i - 1] > 1 && <span className="px-1 text-muted">…</span>}
+            <button type="button" aria-current={p === page ? 'page' : undefined} onClick={() => onPage(p)}
+              className={`${cell} ${p === page ? 'bg-info text-white font-medium' : 'text-ink hover:bg-cream'}`}>{p}</button>
+          </span>
+        ))}
+        <button type="button" className={`${cell} text-ink hover:bg-cream disabled:opacity-40 disabled:hover:bg-transparent`} disabled={page >= pages} onClick={() => onPage(page + 1)} aria-label="Trang sau">
+          <Icon name="chevRight" className="w-4 h-4" />
+        </button>
+      </div>
+    </nav>
+  );
+}
+
 /** One sentence in the block's frame when it has nothing to show. */
 export function EmptyState({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
@@ -360,12 +393,15 @@ export function Modal({ open, onClose, width = 560, labelledBy, children }: { op
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
   if (!open) return null;
-  return (
+  // Portalled to <body>: a dialog opened from a table row or a hover-lifted card
+  // must not be clipped, hidden or offset by its ancestors.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[rgba(17,24,39,.42)]" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
       <div role="dialog" aria-modal="true" aria-labelledby={labelledBy} className="w-full max-h-full overflow-auto bg-white rounded-card shadow-pop flex flex-col animate-sheet" style={{ maxWidth: width }}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 /** Dialog title row. A destructive dialog (tone="bad") colours its title, never an icon tile. */
@@ -430,3 +466,127 @@ export const FileInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLIn
     </label>
   );
 });
+
+/* ---------- pagination ---------- */
+export interface PaginationProps {
+  page: number;
+  totalPages: number;
+  totalItems?: number;
+  pageSize?: number;
+  pageSizeOptions?: number[];
+  onPageChange: (newPage: number) => void;
+  onPageSizeChange?: (newPageSize: number) => void;
+  className?: string;
+}
+
+export function Pagination({
+  page,
+  totalPages,
+  totalItems,
+  pageSize,
+  pageSizeOptions = [12, 24, 48],
+  onPageChange,
+  onPageSizeChange,
+  className = '',
+}: PaginationProps) {
+  const { t } = useTranslation();
+  if (totalPages <= 1 && (!totalItems || totalItems <= (pageSize ?? 20))) {
+    return null;
+  }
+
+  const pages: (number | 'ellipsis')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push('ellipsis');
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('ellipsis');
+    pages.push(totalPages);
+  }
+
+  const startItem = pageSize ? (page - 1) * pageSize + 1 : undefined;
+  const endItem = pageSize && totalItems ? Math.min(page * pageSize, totalItems) : undefined;
+
+  return (
+    <div className={`flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-line text-[13px] ${className}`}>
+      <div className="text-muted">
+        {totalItems != null && startItem != null && endItem != null ? (
+          <span>
+            {t('pagination.showingRange', 'Hiển thị {{start}} - {{end}} trong tổng số {{total}}', {
+              start: startItem,
+              end: endItem,
+              total: totalItems,
+            })}
+          </span>
+        ) : (
+          <span>{t('pagination.pageOf', 'Trang {{page}} / {{totalPages}}', { page, totalPages })}</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5 ml-auto">
+        {onPageSizeChange && pageSize && (
+          <div className="flex items-center gap-1.5 mr-2">
+            <span className="text-muted text-[12px]">{t('pagination.perPage', 'Mỗi trang:')}</span>
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              className="h-8 px-2 rounded-btn border border-line bg-white text-[12px] text-ink focus:outline-none focus:border-info"
+            >
+              {pageSizeOptions.map((sz) => (
+                <option key={sz} value={sz}>
+                  {sz}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          className="h-8 px-2.5 rounded-btn border border-line bg-white text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-subtle transition-colors inline-flex items-center justify-center gap-1"
+          aria-label={t('pagination.prev', 'Trang trước')}
+        >
+          <Icon name="chevLeft" className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{t('pagination.prev', 'Trước')}</span>
+        </button>
+
+        <div className="flex items-center gap-1">
+          {pages.map((p, idx) =>
+            p === 'ellipsis' ? (
+              <span key={`el-${idx}`} className="px-1.5 text-muted">…</span>
+            ) : (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onPageChange(p)}
+                className={`min-w-8 h-8 px-2 rounded-btn text-[12.5px] font-medium transition-colors ${
+                  p === page
+                    ? 'bg-info text-white shadow-xs'
+                    : 'border border-line bg-white text-ink hover:bg-subtle'
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          className="h-8 px-2.5 rounded-btn border border-line bg-white text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-subtle transition-colors inline-flex items-center justify-center gap-1"
+          aria-label={t('pagination.next', 'Trang sau')}
+        >
+          <span className="hidden sm:inline">{t('pagination.next', 'Sau')}</span>
+          <Icon name="chevRight" className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { planProgress, type PlanProgress } from './plan-progress';
 import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import {
@@ -37,14 +38,27 @@ const VN_DATE_TIME = new Intl.DateTimeFormat('vi-VN', {
 });
 const formatVnDateTime = (d: Date) => VN_DATE_TIME.format(d);
 const FITNESS_HEART_RATE_MAX = 195;
+// Results can be recorded up to this long after the scheduled time; a planned
+// session left without results past it becomes MISSED.
+export const RESULT_WINDOW_HOURS = 24;
+const RESULT_WINDOW_MS = RESULT_WINDOW_HOURS * 60 * 60_000;
+const MUSCLE_RESPONSES = ['NORMAL', 'TIGHT', 'SORE'];
 const FITNESS_METRIC_KEY = 'heart_rate_max';
 
 const PLAN_INCLUDE = {
   trainer: { select: { id: true, name: true, email: true } },
   horse: { select: { id: true, name: true, breed: true, ownerId: true } },
+  sessions: { select: { status: true, distanceM: true } },
 } satisfies Prisma.TrainingPlanInclude;
 
-type PlanView = Prisma.TrainingPlanGetPayload<{ include: typeof PLAN_INCLUDE }>;
+type PlanRow = Prisma.TrainingPlanGetPayload<{ include: typeof PLAN_INCLUDE }>;
+type PlanView = Omit<PlanRow, 'sessions'> & { progress: PlanProgress };
+
+/** A plan as the API returns it: its progress instead of the raw session list. */
+function toPlanView(plan: PlanRow, now = new Date()): PlanView {
+  const { sessions, ...rest } = plan;
+  return { ...rest, progress: planProgress(plan, sessions, now) };
+}
 
 const SESSION_INCLUDE = {
   groom: { select: { id: true, name: true } },
@@ -61,7 +75,6 @@ export interface Paginated<T> {
   meta: { page: number; limit: number; total: number };
 }
 
-const GROOM_ALLOWED_FIELDS = new Set(['status', 'resultMetric', 'resultValue']);
 const TERMINAL: SessionStatus[] = [
   SessionStatus.DONE,
   SessionStatus.CANCELLED,
@@ -181,6 +194,8 @@ export class TrainingService {
         planId: dto.planId ?? null,
         scheduledAt: new Date(dto.scheduledAt),
         type: dto.type.trim(),
+        distanceM: dto.distanceM ?? null,
+        surface: dto.surface?.trim() ?? null,
         notes: dto.notes?.trim() ?? null,
       },
       include: SESSION_INCLUDE,
@@ -242,15 +257,9 @@ export class TrainingService {
     if (sentFields.length === 0) {
       throw new AppException('VALIDATION_ERROR', 'No fields to update');
     }
-    if (
-      user.role === Role.GROOM &&
-      !sentFields.every((k) => GROOM_ALLOWED_FIELDS.has(k))
-    ) {
-      throw new AppException(
-        'FORBIDDEN',
-        'A groom may only change status and result fields',
-      );
-    }
+    // Only the trainer records results (the route is TRAINER-only); grooms report
+    // what they see through incidents instead.
+    void user;
 
     await this.reconcileMissed(new Date(), undefined, id);
     const session = await this.prisma.trainingSession.findUnique({
@@ -269,7 +278,10 @@ export class TrainingService {
     const nonStatusFields =
       dto.scheduledAt !== undefined ||
       dto.type !== undefined ||
-      dto.notes !== undefined;
+      dto.groomId !== undefined ||
+      dto.planId !== undefined ||
+      dto.distanceM !== undefined ||
+      dto.surface !== undefined;
     if (nonStatusFields && session.status !== SessionStatus.PLANNED) {
       throw new AppException(
         'VALIDATION_ERROR',
@@ -302,10 +314,24 @@ export class TrainingService {
     if (dto.scheduledAt !== undefined)
       data.scheduledAt = new Date(dto.scheduledAt);
     if (dto.type !== undefined) data.type = dto.type.trim();
+    if (dto.distanceM !== undefined) data.distanceM = dto.distanceM;
+    if (dto.surface !== undefined) data.surface = dto.surface?.trim() ?? null;
     if (dto.notes !== undefined) data.notes = dto.notes?.trim() ?? null;
     if (dto.resultMetric !== undefined)
       data.resultMetric = dto.resultMetric.trim();
     if (dto.resultValue !== undefined) data.resultValue = dto.resultValue;
+    if (dto.finishTimeSec !== undefined) data.finishTimeSec = dto.finishTimeSec;
+    if (dto.recoveryHeartRate !== undefined)
+      data.recoveryHeartRate = dto.recoveryHeartRate;
+    if (dto.muscleResponse !== undefined) {
+      if (!MUSCLE_RESPONSES.includes(dto.muscleResponse)) {
+        throw new AppException(
+          'VALIDATION_ERROR',
+          'muscleResponse must be NORMAL, TIGHT or SORE',
+        );
+      }
+      data.muscleResponse = dto.muscleResponse;
+    }
     if (dto.status !== undefined) data.status = dto.status;
 
     // EX-01 — moving a planned session must not land it on top of another.
@@ -325,27 +351,39 @@ export class TrainingService {
       const metric = dto.resultMetric ?? session.resultMetric;
       const value =
         dto.resultValue !== undefined ? dto.resultValue : session.resultValue;
-      if (!metric || value === null || value === undefined) {
+      const hasLegacy = !!metric && value !== null && value !== undefined;
+      const hasResult =
+        (dto.finishTimeSec ?? session.finishTimeSec) != null ||
+        (dto.recoveryHeartRate ?? session.recoveryHeartRate) != null ||
+        (dto.muscleResponse ?? session.muscleResponse) != null;
+      if (!hasLegacy && !hasResult) {
         throw new AppException(
           'VALIDATION_ERROR',
-          'resultMetric and resultValue are required to mark a session DONE',
+          'Cần ghi ít nhất một kết quả (thời gian, nhịp tim hồi phục hoặc phản ứng cơ) để hoàn thành buổi tập.',
         );
       }
     }
 
     // Do not reopen a session closed by a concurrent request or the overdue job.
+    // Rescheduling / editing needs a session still ahead; results may be
+    // recorded up to RESULT_WINDOW_HOURS after the scheduled time.
+    const now = Date.now();
     const changed = await this.prisma.trainingSession.updateMany({
       where: {
         id,
         status: SessionStatus.PLANNED,
-        scheduledAt: { gte: new Date() },
+        scheduledAt: {
+          gte: new Date(nonStatusFields ? now : now - RESULT_WINDOW_MS),
+        },
       },
       data,
     });
     if (changed.count !== 1) {
       throw new AppException(
         'VALIDATION_ERROR',
-        'Only a planned session can be edited',
+        nonStatusFields
+          ? 'Chỉ sửa được buổi tập chưa diễn ra.'
+          : `Đã quá ${RESULT_WINDOW_HOURS} giờ sau buổi tập — không còn ghi kết quả được.`,
       );
     }
     const updated = await this.prisma.trainingSession.findUniqueOrThrow({
@@ -443,7 +481,7 @@ export class TrainingService {
     return this.prisma.trainingSession.updateMany({
       where: {
         status: SessionStatus.PLANNED,
-        scheduledAt: { lt: now },
+        scheduledAt: { lt: new Date(now.getTime() - RESULT_WINDOW_MS) },
         ...(horseId ? { horseId } : {}),
         ...(id ? { id } : {}),
       },
@@ -550,24 +588,31 @@ export class TrainingService {
       );
     }
 
-    // Note: locked horses (Training Lock) are allowed to have plans created —
-    // a plan is a strategic document, not an active session. The lock only
-    // prevents scheduling concrete training sessions (see createSession).
+    // BR-3: Cannot create training plan for a locked horse (Training Lock)
+    if (horse.locked) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `${horse.name} đang bị khóa tập luyện (Training Lock), không thể lập giáo án huấn luyện mới.`,
+      );
+    }
 
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : null;
     this.assertPlanDates(startDate, endDate);
 
-    return this.prisma.trainingPlan.create({
-      data: {
-        horseId,
-        trainerId: trainer.id,
-        goal: dto.goal.trim(),
-        startDate,
-        endDate,
-      },
-      include: PLAN_INCLUDE,
-    });
+    return this.prisma.trainingPlan
+      .create({
+        data: {
+          horseId,
+          trainerId: trainer.id,
+          goal: dto.goal.trim(),
+          startDate,
+          endDate,
+          targetDistanceM: dto.targetDistanceM ?? null,
+        },
+        include: PLAN_INCLUDE,
+      })
+      .then((p) => toPlanView(p));
   }
 
   async listPlansByHorse(
@@ -585,7 +630,11 @@ export class TrainingService {
       }),
       this.prisma.trainingPlan.count({ where }),
     ]);
-    return { data, meta: { page: q.page, limit: q.limit, total } };
+    const now = new Date();
+    return {
+      data: data.map((p) => toPlanView(p, now)),
+      meta: { page: q.page, limit: q.limit, total },
+    };
   }
 
   async listAllPlans(
@@ -608,7 +657,46 @@ export class TrainingService {
       }),
       this.prisma.trainingPlan.count({ where }),
     ]);
-    return { data, meta: { page: q.page, limit: q.limit, total } };
+    const now = new Date();
+    return {
+      data: data.map((p) => toPlanView(p, now)),
+      meta: { page: q.page, limit: q.limit, total },
+    };
+  }
+
+  /**
+   * Plans past their end date with sessions still not DONE: tell the managers
+   * (and the coach) once. Being late does not block anything — it is the
+   * manager's call how to deal with the coach.
+   */
+  async reconcileOverduePlans(now = new Date()): Promise<number> {
+    const candidates = await this.prisma.trainingPlan.findMany({
+      where: { endDate: { lt: now }, overdueNotifiedAt: null },
+      include: {
+        ...PLAN_INCLUDE,
+        horse: {
+          select: { id: true, name: true, ownerId: true, deletedAt: true },
+        },
+      },
+    });
+    let flagged = 0;
+    const managerIds = await this.notifications.managerIds();
+    for (const plan of candidates) {
+      const progress = planProgress(plan, plan.sessions, now);
+      // Mark it either way so a finished plan isn't re-checked every minute.
+      await this.prisma.trainingPlan.update({
+        where: { id: plan.id },
+        data: { overdueNotifiedAt: now },
+      });
+      if (!progress.overdue || plan.horse.deletedAt) continue;
+      flagged++;
+      await this.notifications.notifyUsers(
+        [...managerIds, plan.trainerId],
+        NotificationType.PLAN_OVERDUE,
+        `Giáo án "${plan.goal}" của ngựa ${plan.horse.name} (HLV ${plan.trainer.name}) đã quá hạn — mới hoàn thành ${progress.done}/${progress.total - progress.cancelled} buổi.`,
+      );
+    }
+    return flagged;
   }
 
   async getPlan(id: string, user: AuthUser) {
@@ -617,7 +705,13 @@ export class TrainingService {
       include: {
         ...PLAN_INCLUDE,
         sessions: {
-          select: { id: true, scheduledAt: true, type: true, status: true },
+          select: {
+            id: true,
+            scheduledAt: true,
+            type: true,
+            status: true,
+            distanceM: true,
+          },
           orderBy: { scheduledAt: 'asc' },
         },
       },
@@ -626,10 +720,16 @@ export class TrainingService {
     this.assertHorseVisible(plan.horse, user);
     await this.reconcileMissed(new Date(), plan.horseId);
     return {
-      ...plan,
+      ...toPlanView(plan),
       sessions: await this.prisma.trainingSession.findMany({
         where: { planId: id },
-        select: { id: true, scheduledAt: true, type: true, status: true },
+        select: {
+          id: true,
+          scheduledAt: true,
+          type: true,
+          status: true,
+          distanceM: true,
+        },
         orderBy: { scheduledAt: 'asc' },
       }),
     };
@@ -658,11 +758,13 @@ export class TrainingService {
     if (dto.goal !== undefined) data.goal = dto.goal.trim();
     if (dto.startDate !== undefined) data.startDate = startDate;
     if (dto.endDate !== undefined) data.endDate = endDate;
+    if (dto.targetDistanceM !== undefined)
+      data.targetDistanceM = dto.targetDistanceM;
+    // A new end date gets its own overdue check.
+    if (dto.endDate !== undefined) data.overdueNotifiedAt = null;
 
-    return this.prisma.trainingPlan.update({
-      where: { id },
-      data,
-      include: PLAN_INCLUDE,
-    });
+    return this.prisma.trainingPlan
+      .update({ where: { id }, data, include: PLAN_INCLUDE })
+      .then((p) => toPlanView(p));
   }
 }

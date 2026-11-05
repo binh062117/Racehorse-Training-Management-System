@@ -6,6 +6,7 @@ import { api, getFileUrl } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import type { Horse, Paginated, Notification, User, Role } from '../lib/types';
 import { formatDate } from '../lib/format';
+import { OverdueCoaches, TaskRows, useMyTasks } from '../components/dashboard/TaskList';
 import { usePageChrome } from '../ds/AppShell';
 import {
   Badge, Btn, Card, CardHeader, Cloth, EmptyState, HorseAvatar, Icon, KpiStrip, PageHeader,
@@ -126,6 +127,8 @@ export function DashboardPage() {
   ];
 
   const jobs = role ? getJobs(role, isVi) : [];
+  const { data: tasksData } = useMyTasks(user?.id);
+  const openTasks = (tasksData ?? []).filter((x) => x.count > 0);
 
   return (
     <>
@@ -144,7 +147,7 @@ export function DashboardPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] items-start">
         <Card>
-          <CardHeader title={t('dashboard.boardTitle', 'Bảng chuồng hôm nay')}>
+          <CardHeader title={role === 'OWNER' ? t('dashboard.boardTitleOwner', 'Ngựa của tôi') : t('dashboard.boardTitle', 'Bảng chuồng hôm nay')}>
             <Link to={role === 'OWNER' ? '/my-horses' : '/horses'} className="text-[13px] font-medium text-info no-underline flex items-center gap-1">
               {t('dashboard.viewAllHorses', 'Xem tất cả {{count}} ngựa', { count: horses.length })}
               <Icon name="chevRight" className="w-3.5 h-3.5 nudge" />
@@ -194,9 +197,16 @@ export function DashboardPage() {
 
         <div className="flex flex-col gap-5 min-w-0">
           <Card>
-            <CardHeader title={t('dashboard.quickActions', 'Việc cần làm')} />
+            <CardHeader title={t('dashboard.quickActions', 'Việc cần làm')}>
+              {openTasks.length > 0 && <span className="num text-[13px] text-muted">{openTasks.reduce((n, x) => n + x.count, 0)}</span>}
+            </CardHeader>
+            {role && tasksData && openTasks.length === 0 && (
+              <p className="px-5 pt-3 pb-1 text-[13px] text-ok font-medium">{t('myTasks.allClear')}</p>
+            )}
+            <TaskRows tasks={tasksData ?? []} />
             {role && jobs.length > 0 ? (
               <ul className="list-none p-0 m-0">
+                <li className="px-5 pt-3 pb-1 lbl">{t('myTasks.shortcuts')}</li>
                 {jobs.map((job) => (
                   <li key={job.title}>
                     <Link to={job.to} className="flex items-center gap-3 px-5 py-3 border-b border-line-soft last:border-0 no-underline text-ink hover:bg-subtle">
@@ -215,6 +225,8 @@ export function DashboardPage() {
               </p>
             )}
           </Card>
+
+          {role === 'MANAGER' && <OverdueCoaches />}
 
           <Card>
             <CardHeader title={t('dashboard.recentNotifs', 'Thông báo gần đây')}>

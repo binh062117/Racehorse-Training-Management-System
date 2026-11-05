@@ -5,7 +5,12 @@ import { AppException } from '../common/app-exception';
 import { PublicUser } from '../auth/auth.service';
 import { TokenService } from '../auth/token.service';
 import { MailService } from '../mail/mail.service';
-import { ListUsersQueryDto, UpdateUserDto } from './dto/users.dto';
+import { AuditService } from '../audit/audit.service';
+import {
+  ListUsersQueryDto,
+  UpdateUserDto,
+  ApproveUsersDto,
+} from './dto/users.dto';
 
 const PUBLIC_SELECT = {
   id: true,
@@ -28,25 +33,92 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
     private readonly mail: MailService,
+    private readonly audit: AuditService,
   ) {}
 
-  async list(q: ListUsersQueryDto): Promise<Paginated<PublicUser>> {
-    const where: Prisma.UserWhereInput = {
+  async list(
+    q: ListUsersQueryDto,
+  ): Promise<Paginated<PublicUser> & { counts: Record<string, number> }> {
+    const text = q.q?.trim();
+    const scope: Prisma.UserWhereInput = {
       deletedAt: null,
-      ...(q.status ? { status: q.status } : {}),
       ...(q.role ? { role: q.role } : {}),
+      ...(text
+        ? {
+            OR: [
+              { name: { contains: text, mode: 'insensitive' } },
+              { email: { contains: text, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
     };
-    const [data, total] = await this.prisma.$transaction([
+    const where: Prisma.UserWhereInput = {
+      ...scope,
+      ...(q.status ? { status: q.status } : {}),
+    };
+    const [data, total, byStatus] = await this.prisma.$transaction([
       this.prisma.user.findMany({
         where,
         select: PUBLIC_SELECT,
-        orderBy: { createdAt: 'desc' },
+        // Accounts waiting for a decision come first — that is why a manager opens this list.
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),
       this.prisma.user.count({ where }),
+      this.prisma.user.groupBy({
+        by: ['status'],
+        where: scope,
+        orderBy: { status: 'asc' },
+        _count: { _all: true },
+      }),
     ]);
-    return { data, meta: { page: q.page, limit: q.limit, total } };
+    const counts: Record<string, number> = {};
+    for (const r of byStatus)
+      counts[r.status] = (r._count as { _all: number })._all;
+    return { data, meta: { page: q.page, limit: q.limit, total }, counts };
+  }
+
+  /**
+   * Approve several PENDING registrations at once, each with its own role.
+   * Accounts that are no longer pending are skipped, not failed, so one
+   * stale row never blocks the rest.
+   */
+  async approveMany(
+    dto: ApproveUsersDto,
+    actorId?: string,
+  ): Promise<{ approved: PublicUser[]; skipped: string[] }> {
+    const ids = dto.users.map((u) => u.id);
+    const pending = await this.prisma.user.findMany({
+      where: { id: { in: ids }, deletedAt: null, status: UserStatus.PENDING },
+      select: { id: true },
+    });
+    const pendingIds = new Set(pending.map((u) => u.id));
+    const todo = dto.users.filter((u) => pendingIds.has(u.id));
+    const approved = await this.prisma.$transaction(
+      todo.map((u) =>
+        this.prisma.user.update({
+          where: { id: u.id },
+          data: { role: u.role, status: UserStatus.ACTIVE },
+          select: PUBLIC_SELECT,
+        }),
+      ),
+    );
+    for (const u of approved) {
+      await this.mail.sendAccountApproved(u.email, u.name);
+      await this.audit.record({
+        actorId,
+        action: 'USER_APPROVE',
+        entity: 'USER',
+        entityId: u.id,
+        description: `Phê duyệt tài khoản người dùng "${u.name}" (${u.email}) với vai trò ${u.role} (duyệt hàng loạt)`,
+        diff: {
+          before: { status: 'PENDING' },
+          after: { role: u.role, status: u.status },
+        },
+      });
+    }
+    return { approved, skipped: ids.filter((id) => !pendingIds.has(id)) };
   }
 
   async get(id: string): Promise<PublicUser> {
@@ -58,7 +130,11 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<PublicUser> {
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    actorId?: string,
+  ): Promise<PublicUser> {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });
@@ -94,11 +170,44 @@ export class UsersService {
       await this.mail.sendAccountApproved(updated.email, updated.name);
     }
 
+    // Determine audit action & description
+    let action = 'USER_UPDATE';
+    let description = `Cập nhật thông tin tài khoản "${updated.name}" (${updated.email})`;
+    if (
+      user.status === UserStatus.PENDING &&
+      updated.status === UserStatus.ACTIVE
+    ) {
+      action = 'USER_APPROVE';
+      description = `Phê duyệt tài khoản người dùng "${updated.name}" (${updated.email}) với vai trò ${updated.role}`;
+    } else if (dto.status === UserStatus.DISABLED) {
+      action = 'USER_DISABLE';
+      description = `Khóa tài khoản người dùng "${updated.name}" (${updated.email})`;
+    } else if (dto.role && dto.role !== user.role) {
+      action = 'USER_ROLE_ASSIGN';
+      description = `Thay đổi vai trò người dùng "${updated.name}" (${updated.email}) thành ${dto.role}`;
+    }
+
+    await this.audit.record({
+      actorId,
+      action,
+      entity: 'USER',
+      entityId: updated.id,
+      description,
+      diff: {
+        before: { name: user.name, role: user.role, status: user.status },
+        after: {
+          name: updated.name,
+          role: updated.role,
+          status: updated.status,
+        },
+      },
+    });
+
     return updated;
   }
 
   /** Hard-deletes a still-PENDING registration so the email can be reused. */
-  async reject(id: string): Promise<{ message: string }> {
+  async reject(id: string, actorId?: string): Promise<{ message: string }> {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });
@@ -110,6 +219,16 @@ export class UsersService {
       );
     }
     await this.prisma.user.delete({ where: { id } });
+
+    await this.audit.record({
+      actorId,
+      action: 'USER_REJECT',
+      entity: 'USER',
+      entityId: id,
+      description: `Từ chối đăng ký tài khoản "${user.name}" (${user.email})`,
+      diff: { rejectedEmail: user.email, name: user.name },
+    });
+
     return { message: 'Registration rejected' };
   }
 
@@ -130,6 +249,16 @@ export class UsersService {
       data: { deletedAt: new Date(), status: UserStatus.DISABLED },
     });
     await this.tokens.revokeAllRefreshTokens(id);
+
+    await this.audit.record({
+      actorId: currentUserId,
+      action: 'USER_DELETE',
+      entity: 'USER',
+      entityId: id,
+      description: `Xóa tài khoản người dùng "${user.name}" (${user.email})`,
+      diff: { email: user.email, name: user.name, role: user.role },
+    });
+
     return { message: 'User deleted' };
   }
 }

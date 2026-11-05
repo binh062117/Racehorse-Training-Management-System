@@ -2,6 +2,8 @@ import { isAxiosError } from 'axios';
 import i18n from '../i18n';
 import { apiErrorCode, apiErrorMessage } from './api';
 
+const VIETNAMESE = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i;
+
 const DETAIL_KEYS: Record<string, string> = {
   'Session time cannot be in the past': 'pastTime',
   'Session time must fall within the training plan dates': 'planDates',
@@ -48,7 +50,15 @@ export function localizedError(err: unknown): string {
     if (message.includes('trạng thái cách ly (QUARANTINED)')) return i18n.t('errorDetails.quarantinedHorse');
     // Locally authored form errors are already translated at their source.
     if (!isAxiosError(err)) return message;
+    // The server already explains the rule in Vietnamese — show it as is.
+    if (VIETNAMESE.test(message) && i18n.language.startsWith('vi')) return message;
   }
+  // No answer at all: offline, or the free-tier server is still waking up.
+  if (isAxiosError(err) && !err.response) return i18n.t('error.NETWORK');
+  const status = isAxiosError(err) ? err.response?.status : undefined;
+  if (status && status >= 500) return i18n.t('error.SERVER', { status });
   const key = `error.${apiErrorCode(err)}`;
-  return i18n.exists(key) ? i18n.t(key) : message ?? i18n.t('error.INTERNAL');
+  const label = i18n.exists(key) ? i18n.t(key) : i18n.t('error.INTERNAL');
+  // Keep the server's detail next to the label, so "invalid data" says which field.
+  return message && message !== label ? `${label}: ${message}` : label;
 }

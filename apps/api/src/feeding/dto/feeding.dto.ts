@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -29,6 +30,11 @@ export class CreateFeedingRecordDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  /** Feed taken from the supply store — its stock goes down by quantityKg. */
+  @IsOptional()
+  @IsUUID()
+  supplyItemId?: string;
 }
 
 export class ListFeedingRecordsQueryDto {

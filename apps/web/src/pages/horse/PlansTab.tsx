@@ -6,7 +6,8 @@ import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate } from '../../lib/format';
 import { CreateTrainingPlanModal } from '../../components/training/CreateTrainingPlanModal';
-import { Alert, Badge, Btn, Card, EmptyState, Icon } from '../../ds/ui';
+import { Alert, Btn, Card, EmptyState, Icon } from '../../ds/ui';
+import { PlanProgressCell, PlanStateBadge } from '../../components/training/PlanProgress';
 
 interface Props {
   horse: Horse;
@@ -40,7 +41,6 @@ export function PlansTab({ horse }: Props) {
 
   useEffect(() => { void loadPlans(); }, [loadPlans]);
 
-  const now = new Date();
 
   return (
     <div className="flex flex-col gap-4">
@@ -58,6 +58,15 @@ export function PlansTab({ horse }: Props) {
             : <>Horse is under <strong>medical quarantine</strong>. Wait for a veterinarian to lift quarantine before scheduling training.</>}
         </Alert>
       )}
+      {horse.locked && (
+        <Alert tone="bad" icon="alert">
+          {isVi ? (
+            <>Ngựa <strong>{horse.name}</strong> đang bị khóa tập luyện{horse.lockReason ? ` (Lý do: ${horse.lockReason})` : ''}. Hệ thống không cho phép tạo giáo án huấn luyện mới cho đến khi Bác sĩ thú y mở khóa.</>
+          ) : (
+            <>Horse <strong>{horse.name}</strong> training is currently locked{horse.lockReason ? ` (Reason: ${horse.lockReason})` : ''}. Creating new training plans is disabled until unlocked by a veterinarian.</>
+          )}
+        </Alert>
+      )}
 
       <div className="flex justify-between items-center flex-wrap gap-2.5">
         <div>
@@ -68,7 +77,7 @@ export function PlansTab({ horse }: Props) {
               : `${plans.length} ${t('plansPage.title', 'giáo án')} · ${t('horsesPage.thFitness', 'thể lực')} ${horse.fitnessScore != null ? `${horse.fitnessScore}/100` : '—'}`}
           </p>
         </div>
-        {canCreate && isEligible && (
+        {canCreate && isEligible && !horse.locked && (
           <Btn v="p" sm onClick={() => setCreateOpen(true)}>
             <Icon name="plus" />{t('plansPage.newPlan', 'Tạo giáo án mới')}
           </Btn>
@@ -80,14 +89,13 @@ export function PlansTab({ horse }: Props) {
       {loading && plans.length === 0 ? (
         <p className="text-muted">{t('plansPage.loading', 'Đang tải giáo án…')}</p>
       ) : plans.length === 0 ? (
-        <EmptyState action={canCreate && isEligible ? <Btn v="p" sm onClick={() => setCreateOpen(true)}>{t('plansPage.newPlan', 'Thiết lập giáo án đầu tiên')}</Btn> : undefined}>
+        <EmptyState action={canCreate && isEligible && !horse.locked ? <Btn v="p" sm onClick={() => setCreateOpen(true)}>{t('plansPage.newPlan', 'Thiết lập giáo án đầu tiên')}</Btn> : undefined}>
           {t('plansPage.empty', 'Ngựa này chưa có giáo án huấn luyện nào.')}
         </EmptyState>
       ) : (
         <Card>
           <ul className="list-none m-0 p-0">
             {plans.map((p) => {
-              const isOngoing = !p.endDate || new Date(p.endDate).getTime() >= now.getTime();
               return (
                 <li key={p.id} className="px-5 py-4 border-b border-line-soft last:border-0">
                   <div className="flex justify-between items-start flex-wrap gap-2">
@@ -98,12 +106,9 @@ export function PlansTab({ horse }: Props) {
                         {t('plansPage.colTrainer', 'Huấn luyện viên')} {p.trainer?.name ?? '—'}
                       </p>
                     </div>
-                    {isOngoing ? (
-                      <Badge tone="ok">{t('plansPage.active', 'Đang áp dụng')}</Badge>
-                    ) : (
-                      <Badge tone="neu">{t('plansPage.completed', 'Đã kết thúc')}</Badge>
-                    )}
+                    <PlanStateBadge plan={p} />
                   </div>
+                  <div className="mt-2.5 max-w-[420px]"><PlanProgressCell plan={p} /></div>
                   <p className="num text-[13px] mt-2">
                     {formatDate(p.startDate)} <span className="text-muted">{t('common.to', 'đến')}</span> {p.endDate ? formatDate(p.endDate) : <span className="text-muted">{t('plansPage.openEnded', 'không giới hạn')}</span>}
                   </p>

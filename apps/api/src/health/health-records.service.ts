@@ -107,6 +107,8 @@ export class HealthRecordsService {
         examDate: this.parseExamDate(dto.examDate),
         diagnosis: dto.diagnosis.trim(),
         treatment: dto.treatment?.trim() ?? null,
+        // The exam's conclusion — the evidence an unlock / incident close relies on.
+        healthStatus: dto.healthStatus ?? null,
       },
       include: RECORD_INCLUDE,
     });
@@ -167,6 +169,7 @@ export class HealthRecordsService {
         ...(q.healthStatus ? { healthStatus: q.healthStatus } : {}),
         ...(q.q ? { name: { contains: q.q.trim(), mode: 'insensitive' } } : {}),
       },
+      ...(q.horseId ? { horseId: q.horseId } : {}),
       ...(q.from || q.to
         ? {
             examDate: {

@@ -49,6 +49,51 @@ export class NotificationsService {
     return grooms.map((g) => g.id);
   }
 
+  /**
+   * Trainers working with a horse: those with an ongoing plan or a planned
+   * session for it. When nobody is assigned yet, every active trainer — a
+   * lock must never go unnoticed by the people who schedule training.
+   */
+  async trainerIdsForHorse(horseId: string): Promise<string[]> {
+    const now = new Date();
+    const [plans, sessions] = await Promise.all([
+      this.prisma.trainingPlan.findMany({
+        where: { horseId, OR: [{ endDate: null }, { endDate: { gte: now } }] },
+        select: { trainerId: true },
+      }),
+      this.prisma.trainingSession.findMany({
+        where: { horseId, status: 'PLANNED' },
+        select: { trainerId: true },
+      }),
+    ]);
+    // The horse's assigned trainer (Horse.trainerId) always hears about it too.
+    const horse = await this.prisma.horse.findUnique({
+      where: { id: horseId },
+      select: { trainerId: true },
+    });
+    const ids = [
+      ...new Set([
+        ...(horse?.trainerId ? [horse.trainerId] : []),
+        ...[...plans, ...sessions].map((x) => x.trainerId),
+      ]),
+    ];
+    if (ids.length > 0) return ids;
+    const all = await this.prisma.user.findMany({
+      where: { role: 'TRAINER', status: 'ACTIVE', deletedAt: null },
+      select: { id: true },
+    });
+    return all.map((u) => u.id);
+  }
+
+  /** All ACTIVE, non-deleted VET user ids — recipients for health & vaccination reminders. */
+  async vetIds(): Promise<string[]> {
+    const vets = await this.prisma.user.findMany({
+      where: { role: 'VET', status: 'ACTIVE', deletedAt: null },
+      select: { id: true },
+    });
+    return vets.map((v) => v.id);
+  }
+
   async list(
     q: ListNotificationsQueryDto,
     currentUser: AuthUser,
