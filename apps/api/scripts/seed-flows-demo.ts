@@ -55,6 +55,25 @@ async function main() {
   if (!trainer || !vet || !groom) throw new Error('trainer/vet/groom demo accounts not found');
 
   // 1. Supply prices + feeding cost backfill.
+  // An empty store gets the standard stock list first (same as prisma/seed.ts).
+  const live = await prisma.supplyItem.count({ where: { deletedAt: null } });
+  console.log(`supply items in store: ${live}${live === 0 ? ' → creating the standard list (11 items)' : ''}`);
+  if (EXECUTE && live === 0)
+    await prisma.supplyItem.createMany({
+      data: [
+        { name: 'Yến mạch cán', category: 'FEED', unit: 'kg', quantity: 180, minQuantity: 100, unitPrice: 18000 },
+        { name: 'Cỏ khô Timothy', category: 'FEED', unit: 'kg', quantity: 420, minQuantity: 200, unitPrice: 9000 },
+        { name: 'Cám hỗn hợp giàu đạm', category: 'FEED', unit: 'kg', quantity: 35, minQuantity: 60, unitPrice: 22000 },
+        { name: 'Cà rốt', category: 'FEED', unit: 'kg', quantity: 24, minQuantity: 20, unitPrice: 15000 },
+        { name: 'Muối khoáng liếm', category: 'FEED', unit: 'tảng', quantity: 6, minQuantity: 4, unitPrice: 120000 },
+        { name: 'Ivermectin 1.87% (gel uống)', category: 'MEDICINE', unit: 'ống', quantity: 3, minQuantity: 10, unitPrice: 95000 },
+        { name: 'Vắc xin cúm ngựa', category: 'MEDICINE', unit: 'liều', quantity: 12, minQuantity: 8, unitPrice: 450000 },
+        { name: 'Povidone-iodine 10%', category: 'MEDICINE', unit: 'chai', quantity: 5, minQuantity: 4, unitPrice: 60000 },
+        { name: 'Băng quấn chân', category: 'EQUIPMENT', unit: 'cuộn', quantity: 40, minQuantity: 20, unitPrice: 35000 },
+        { name: 'Móng sắt', category: 'EQUIPMENT', unit: 'bộ', quantity: 6, minQuantity: 8, unitPrice: 280000 },
+        { name: 'Bàn chải lông', category: 'EQUIPMENT', unit: 'cái', quantity: 9, minQuantity: 4, unitPrice: 45000 },
+      ],
+    });
   const items = await prisma.supplyItem.findMany({ where: { deletedAt: null } });
   const unpriced = items.filter((i) => i.unitPrice == null);
   console.log(`supplies without price: ${unpriced.length}/${items.length}`);
