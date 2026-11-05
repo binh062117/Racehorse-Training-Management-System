@@ -688,7 +688,7 @@ export class TrainingService {
         where: { id: plan.id },
         data: { overdueNotifiedAt: now },
       });
-      if (progress.complete || plan.horse.deletedAt) continue;
+      if (!progress.overdue || plan.horse.deletedAt) continue;
       flagged++;
       await this.notifications.notifyUsers(
         [...managerIds, plan.trainerId],

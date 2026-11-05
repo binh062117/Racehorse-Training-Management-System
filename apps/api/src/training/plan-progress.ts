@@ -5,7 +5,8 @@ import { SessionStatus } from '@prisma/client';
  *
  * - Complete = every session of the plan is DONE (cancelled ones don't count,
  *   and a plan with no sessions is never complete).
- * - Overdue  = the end date has passed and the plan is not complete. That does
+ * - Overdue  = the end date has passed, the plan has sessions and is not
+ *   complete (an empty plan was never started, so nobody is late on it). That does
  *   not block anything; it is reported to the manager (the coach is late).
  * - Distance short = the plan has a target distance and no DONE session has
  *   reached it yet.
@@ -49,6 +50,7 @@ export function planProgress(
     pct: counted > 0 ? Math.round((done / counted) * 100) : 0,
     complete,
     overdue:
+      counted > 0 &&
       !complete &&
       plan.endDate != null &&
       plan.endDate.getTime() < now.getTime(),
