@@ -29,6 +29,33 @@ import {
   PageHeader,
 } from '../ds/ui';
 
+function DisinfectingIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={"flex-none inline-block " + className} fill="currentColor" aria-hidden="true">
+      <g id="Layer_21">
+        <path d="M27.25,22.68,18.51,7.37a2.9,2.9,0,0,0-5,0L4.75,22.68A2.88,2.88,0,0,0,7.25,27h17.5a2.88,2.88,0,0,0,2.5-4.32Zm-1.74,1.88a.85.85,0,0,1-.76.44H7.25a.85.85,0,0,1-.76-.44.87.87,0,0,1,0-.89L15.23,8.36a.89.89,0,0,1,1.54,0l8.75,15.31A.87.87,0,0,1,25.51,24.56Z" />
+        <path d="M16,13a1,1,0,0,0-1,1v5a1,1,0,0,0,2,0V14A1,1,0,0,0,16,13Z" />
+        <circle cx="16" cy="22" r="1" />
+      </g>
+    </svg>
+  );
+}
+
+function QuarantinedIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={"flex-none inline-block " + className} fill="currentColor" aria-hidden="true">
+      <g id="Health_Icons">
+        <path d="M44,19a2,2,0,0,0-2,2v1H39.9a16.5,16.5,0,0,0-3.3-7.8l1.5-1.5.7.7a2.2,2.2,0,0,0,1.5.6,2,2,0,0,0,1.4-.6,1.9,1.9,0,0,0,0-2.8L37.4,6.3a1.9,1.9,0,0,0-2.8,0,2.1,2.1,0,0,0,0,2.9l.7.7-1.5,1.5A16.5,16.5,0,0,0,26,8.1V6h1a2,2,0,0,0,0-4H21a2,2,0,0,0,0,4h1V8.1a16.5,16.5,0,0,0-7.8,3.3L12.7,9.9l.7-.7a2.1,2.1,0,0,0,0-2.9,1.9,1.9,0,0,0-2.8,0L6.3,10.6a1.9,1.9,0,0,0,0,2.8,2,2,0,0,0,1.4.6,2.2,2.2,0,0,0,1.5-.6l.7-.7,1.5,1.5A16.5,16.5,0,0,0,8.1,22H6V21a2,2,0,0,0-4,0v6a2,2,0,0,0,4,0V26H8.1a16.5,16.5,0,0,0,3.3,7.8L9.9,35.3l-.7-.7a2.1,2.1,0,0,0-2.9,0,1.9,1.9,0,0,0,0,2.8l4.3,4.3a1.9,1.9,0,0,0,2.8,0,2.1,2.1,0,0,0,0-2.9l-.7-.7,1.5-1.5A16.5,16.5,0,0,0,22,39.9V42H21a2,2,0,0,0,0,4h6a2,2,0,0,0,0-4H26V39.9a16.5,16.5,0,0,0,7.8-3.3l1.5,1.5-.7.7a2.1,2.1,0,0,0,0,2.9,1.9,1.9,0,0,0,2.8,0l4.3-4.3a1.9,1.9,0,0,0,0-2.8,2.1,2.1,0,0,0-2.9,0l-.7.7-1.5-1.5A16.5,16.5,0,0,0,39.9,26H42v1a2,2,0,0,0,4,0V21A2,2,0,0,0,44,19ZM24,36A12,12,0,1,1,36,24,12,12,0,0,1,24,36Z" />
+        <circle cx="24" cy="16" r="3" />
+        <circle cx="24" cy="24" r="3" />
+        <circle cx="24" cy="32" r="3" />
+        <circle cx="32" cy="24" r="3" />
+        <circle cx="16" cy="24" r="3" />
+      </g>
+    </svg>
+  );
+}
+
 const STATUS_CONFIG: Record<
   StallStatus,
   { labelVi: string; labelEn: string; color: string; badgeCls: string }
@@ -874,18 +901,56 @@ export function StableMapPage() {
             <ErrorText err={statusErr} />
 
             <Field label={isVi ? 'Chọn trạng thái mới' : 'Select Target Status'} req>
-              <select
-                className="h-10 w-full rounded-btn border border-line-strong bg-white px-3 text-[14px] outline-none transition-colors focus:border-info focus:ring-2 focus:ring-info/15"
-                value={targetStatus}
-                onChange={(e) => setTargetStatus(e.target.value as StallStatus)}
-              >
-                <option value="AVAILABLE">Sẵn sàng / Trống</option>
-                <option value="CLEANING">Đang vệ sinh định kỳ</option>
-                <option value="MAINTENANCE">Đang bảo trì / Sửa chữa</option>
-                <option value="OUT_OF_SERVICE">Ngừng hoạt động</option>
-                <option value="DISINFECTING">⚠️ Đang khử trùng (Cần Vet/Groom duyệt)</option>
-                <option value="QUARANTINED">🚨 Cách ly dịch bệnh (Cần Vet/Groom duyệt)</option>
-              </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  { value: 'AVAILABLE' as StallStatus, label: 'Sẵn sàng / Trống', desc: 'Chuồng sạch, sẵn sàng nuôi nhốt' },
+                  { value: 'CLEANING' as StallStatus, label: 'Đang vệ sinh định kỳ', desc: 'Dọn dẹp rơm, rửa sàn' },
+                  { value: 'MAINTENANCE' as StallStatus, label: 'Đang bảo trì / Sửa chữa', desc: 'Sửa cửa, máng nước, đèn' },
+                  { value: 'OUT_OF_SERVICE' as StallStatus, label: 'Ngừng hoạt động', desc: 'Tạm dừng sử dụng ô chuồng' },
+                  { value: 'DISINFECTING' as StallStatus, label: 'Đang khử trùng', icon: DisinfectingIcon, needApproval: true, desc: 'Phun hóa chất khử trùng (Cần Vet/Groom duyệt)' },
+                  { value: 'QUARANTINED' as StallStatus, label: 'Cách ly dịch bệnh', icon: QuarantinedIcon, needApproval: true, desc: 'Phong tỏa kiểm dịch y tế (Cần Vet/Groom duyệt)' },
+                ].map((item) => {
+                  const isSelected = targetStatus === item.value;
+                  const IconComp = item.icon;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setTargetStatus(item.value)}
+                      className={`p-2.5 rounded-btn border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-info bg-info/5 ring-2 ring-info/20 text-ink shadow-sm'
+                          : 'border-line bg-white hover:bg-subtle text-muted hover:text-ink'
+                      }`}
+                    >
+                      <div className="mt-0.5 flex-none">
+                        {IconComp ? (
+                          <span className={item.value === 'QUARANTINED' ? 'text-rose-600' : 'text-purple-600'}>
+                            <IconComp className="w-5 h-5" />
+                          </span>
+                        ) : (
+                          <span className={`w-3.5 h-3.5 rounded-full inline-block mt-0.5 ${
+                            item.value === 'AVAILABLE' ? 'bg-emerald-500' :
+                            item.value === 'CLEANING' ? 'bg-cyan-500' :
+                            item.value === 'MAINTENANCE' ? 'bg-amber-500' : 'bg-gray-400'
+                          }`} />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-[13px] flex items-center justify-between">
+                          <span className={isSelected ? 'text-info-ink' : 'text-ink'}>{item.label}</span>
+                          {item.needApproval && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                              Cần duyệt
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11.5px] text-muted mt-0.5 line-clamp-1">{item.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </Field>
 
             {(targetStatus === 'DISINFECTING' || targetStatus === 'QUARANTINED') && (
