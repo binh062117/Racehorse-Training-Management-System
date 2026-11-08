@@ -1,7 +1,5 @@
-# QUY TẮC NHÓM — SWP391
+# NHÓM 2 — SWP391
 ### Topic: Racehorse Training & Management System
-
-> Cập nhật lần cuối: **2026-11-08** — đồng bộ với `main` (tới 05/11/2026).
 
 ---
 
