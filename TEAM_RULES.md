@@ -9,11 +9,11 @@
 
 | Thành viên | Vai trò chính | Trách nhiệm |
 |---|---|---|
-| Nguyễn Đình Nhất Định | Team Leader | Quản lý tiến độ, phân công task, requirement, điều phối, review code trước khi merge. |
+| Nguyễn Đình Nhất Định | Team Leader | Quản lý tiến độ, phân công task, requirement, điều phối, review code và merge code vào `main`. |
 | Phạm Thế Cường | Horse Management | Flow 1 — Quản lý Hồ sơ & Lý lịch Ngựa. |
 | Đào Trọng Tấn | Training Management | Flow 2 — Lập & Thực hiện Giáo án Huấn luyện. |
 | Lê Quang Hải | Medical Management | Flow 3 — Quản lý Y tế & Xử lý Chấn thương. |
-| Huỳnh Quốc Bình | Frontend / BA / Integration | UI, validation, testing, hỗ trợ các module; người duy nhất merge code vào `main`. |
+| Huỳnh Quốc Bình | Frontend / BA / Integration | UI, validation, testing, hỗ trợ các module; merge code vào `main`. |
 
 - Các thành viên có thể hỗ trợ lẫn nhau khi cần.
 
@@ -65,7 +65,7 @@
 ## 6. Git & Version Control
 
 - Sử dụng một repository GitHub chung.
-- **Chỉ người phụ trách merge (Bình) được đưa code vào `main`.** Các thành viên khác không push hoặc merge vào `main`.
+- **Chỉ Leader (Định) hoặc Bình được đưa code vào `main`.** Các thành viên khác không push hoặc merge vào `main`.
 - Nếu lỡ đưa code sai lên `main`: dùng `git revert`, không dùng `push --force`.
 - Mỗi feature/module sử dụng một branch riêng, tạo từ `main` mới nhất.
 - Đặt tên branch theo loại việc:
@@ -75,11 +75,11 @@
   - `docs/<ten-ngan>` — tài liệu
   - Hạn chế branch đặt theo tên người (`Hai-work`, `cuong-work`).
 - Commit message theo dạng `loại(phạm vi): mô tả` — vd `feat(api): …`, `fix(web): …`, `chore(scripts): …`. Mô tả ngắn gọn, nói rõ thay đổi gì.
-- Quy trình: Pull → Branch → Code → Test → Commit → Push branch → Leader review → Bình merge vào `main`.
+- Quy trình: Pull → Branch → Code → Test → Commit → Push branch → Leader review → Leader hoặc Bình merge vào `main`.
   1. Người phụ trách làm xong phần việc trên branch của mình, cập nhật branch với `main` mới nhất và tự xử lý conflict.
   2. Push branch lên GitHub, báo Leader (Định) kèm tên branch, nội dung thay đổi và cách đã test.
   3. Leader review; nếu cần sửa, người phụ trách sửa trên cùng branch rồi báo lại.
-  4. Leader đồng ý thì báo Bình merge vào `main`.
+  4. Leader đồng ý thì Leader hoặc Bình merge vào `main`.
 - Thay đổi đụng tới thành phần dùng chung (mục 8) phải được nhóm thống nhất trước khi merge.
 - Mỗi lần gửi review nên gọn, một mục đích.
 - Không dồn integration đến cuối project; phải merge và kiểm tra thường xuyên.
