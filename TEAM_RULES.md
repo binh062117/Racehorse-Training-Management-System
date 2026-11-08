@@ -1,7 +1,7 @@
 # QUY TẮC NHÓM — SWP391
 ### Topic: Racehorse Training & Management System
 
-> Cập nhật lần cuối: **2026-11-08** — đồng bộ với `main` (tới PR #63).
+> Cập nhật lần cuối: **2026-11-08** — đồng bộ với `main` (tới 05/11/2026).
 
 ---
 
@@ -9,11 +9,11 @@
 
 | Thành viên | Vai trò chính | Trách nhiệm |
 |---|---|---|
-| Nguyễn Đình Nhất Định | Team Leader | Quản lý tiến độ, phân công task, requirement, điều phối, integration. |
+| Nguyễn Đình Nhất Định | Team Leader | Quản lý tiến độ, phân công task, requirement, điều phối, review code trước khi merge. |
 | Phạm Thế Cường | Horse Management | Flow 1 — Quản lý Hồ sơ & Lý lịch Ngựa. |
 | Đào Trọng Tấn | Training Management | Flow 2 — Lập & Thực hiện Giáo án Huấn luyện. |
 | Lê Quang Hải | Medical Management | Flow 3 — Quản lý Y tế & Xử lý Chấn thương. |
-| Huỳnh Quốc Bình | Frontend / BA | UI, validation, testing, integration và hỗ trợ các module. |
+| Huỳnh Quốc Bình | Frontend / BA / Integration | UI, validation, testing, hỗ trợ các module; người duy nhất merge code vào `main`. |
 
 - Các thành viên có thể hỗ trợ lẫn nhau khi cần.
 
@@ -53,7 +53,7 @@
 
 - Nhóm phải hoàn thành 3 Flow REQUIRED trước khi bắt đầu các Flow OPTIONAL.
 - Flow REQUIRED chỉ được xem là hoàn thành khi đã phát triển, kiểm thử và integration thành công.
-- **Trạng thái hiện tại (PR #62, #63):** 3 Flow REQUIRED đã hoàn thiện trên `main`
+- **Trạng thái hiện tại (tháng 11/2026):** 3 Flow REQUIRED đã hoàn thiện trên `main`
   (Huấn luyện → sẵn sàng thi đấu, Chấn thương, Minh bạch cho chủ ngựa), e2e + unit test pass.
   Giai đoạn hiện tại: **ổn định, sửa lỗi, chuẩn bị demo**.
 - Flow 4 và Flow 5 chỉ được thực hiện khi 3 Flow REQUIRED đã ổn định và còn đủ thời gian.
@@ -65,7 +65,7 @@
 ## 6. Git & Version Control
 
 - Sử dụng một repository GitHub chung.
-- **Không push trực tiếp lên `main`**, kể cả merge local rồi push. Mọi thay đổi vào `main` phải qua Pull Request.
+- **Chỉ người phụ trách merge (Bình) được đưa code vào `main`.** Các thành viên khác không push hoặc merge vào `main`.
 - Nếu lỡ đưa code sai lên `main`: dùng `git revert`, không dùng `push --force`.
 - Mỗi feature/module sử dụng một branch riêng, tạo từ `main` mới nhất.
 - Đặt tên branch theo loại việc:
@@ -73,12 +73,15 @@
   - `fix/<ten-ngan>` — sửa lỗi
   - `chore/<ten-ngan>` — dọn dẹp, cấu hình, script
   - `docs/<ten-ngan>` — tài liệu
-  - Hạn chế branch đặt theo tên người (`Hai-work`, `cuong-work`); nếu đã có, đưa vào `main` qua branch `merge/<ten>` + PR.
+  - Hạn chế branch đặt theo tên người (`Hai-work`, `cuong-work`).
 - Commit message theo dạng `loại(phạm vi): mô tả` — vd `feat(api): …`, `fix(web): …`, `chore(scripts): …`. Mô tả ngắn gọn, nói rõ thay đổi gì.
-- Quy trình: Pull → Branch → Code → Test → Commit → Push → Pull Request → Review → Merge.
-- Trước khi tạo PR: cập nhật branch với `main` mới nhất và tự xử lý conflict trên branch của mình.
-- Mỗi PR phải có ít nhất 1 thành viên khác review. PR đụng tới thành phần dùng chung (mục 8) phải được nhóm thống nhất trước khi merge.
-- Mỗi PR nên gọn, một mục đích; mô tả rõ thay đổi gì và đã test thế nào.
+- Quy trình: Pull → Branch → Code → Test → Commit → Push branch → Leader review → Bình merge vào `main`.
+  1. Người phụ trách làm xong phần việc trên branch của mình, cập nhật branch với `main` mới nhất và tự xử lý conflict.
+  2. Push branch lên GitHub, báo Leader (Định) kèm tên branch, nội dung thay đổi và cách đã test.
+  3. Leader review; nếu cần sửa, người phụ trách sửa trên cùng branch rồi báo lại.
+  4. Leader đồng ý thì báo Bình merge vào `main`.
+- Thay đổi đụng tới thành phần dùng chung (mục 8) phải được nhóm thống nhất trước khi merge.
+- Mỗi lần gửi review nên gọn, một mục đích.
 - Không dồn integration đến cuối project; phải merge và kiểm tra thường xuyên.
 - Không tự ý thay đổi dữ liệu dùng chung.
 
@@ -86,7 +89,7 @@
 
 ## 7. Code Quality & Testing
 
-- Code phải build và lint thành công trước khi tạo Pull Request:
+- Code phải build và lint thành công trước khi gửi Leader review:
   - `apps/api`: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`
   - `apps/web`: `npm run build`, `npm run lint`
 - Feature phải được test trước khi merge; logic nghiệp vụ mới ở API cần có test e2e đi kèm.
@@ -111,7 +114,7 @@
 
 ## 9. Tài liệu & Deploy
 
-- Thư mục `docs/` là nguồn thông tin chính của dự án. Khi thiết kế thay đổi trong lúc code, cập nhật `docs/STATE.md` và `docs/DECISIONS.md` trong cùng PR.
+- Thư mục `docs/` là nguồn thông tin chính của dự án. Khi thiết kế thay đổi trong lúc code, cập nhật `docs/STATE.md` và `docs/DECISIONS.md` trong cùng lần gửi review.
 - Thành viên mới làm theo `Racehorse_Team_Setup_Guide.md` và `docs/SETUP.md`.
 - Bản demo: frontend trên Vercel, API trên Render, database trên Neon, ảnh/file trên Cloudinary (xem `docs/DEPLOY.md`). Code merge vào `main` sẽ được deploy, nên `main` luôn phải chạy được.
 - Trước buổi demo: mở link API trước vài phút để server khởi động, kiểm tra dữ liệu demo.
