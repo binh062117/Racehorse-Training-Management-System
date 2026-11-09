@@ -1,123 +1,82 @@
-# TÀI LIỆU VÀ HƯỚNG DẪN API TESTING VỚI POSTMAN
+# BÁO CÁO VÀ HƯỚNG DẪN KIỂM THỬ API THEO NGHIỆP VỤ (BUSINESS LOGIC TESTING)
 ## Môn học: Software Testing (Kiểm thử phần mềm)
-### Dự án: Racehorse Training & Management System
+### Hệ thống: Racehorse Training & Management System
 
 ---
 
-## 1. Mục tiêu kiểm thử (Testing Objectives)
-Bộ kiểm thử API này được thiết kế theo đúng chuẩn kiến thức và phương pháp luận của môn học **Software Testing**, nhằm:
-1. **Sanity / Smoke Testing**: Xác nhận hệ thống API và cơ sở dữ liệu hoạt động bình thường trước khi chạy bộ test chuyên sâu.
-2. **Functional Testing (Positive / Happy Path)**: Kiểm thử tính đúng đắn của các luồng nghiệp vụ khi người dùng cung cấp dữ liệu hợp lệ (HTTP 200 OK, 201 Created).
-3. **Negative / Boundary Testing**: Kiểm tra khả năng xử lý dữ liệu sai, thiếu trường bắt buộc, sai định dạng (HTTP 400 Bad Request, 404 Not Found, 409 Conflict).
-4. **Security & RBAC Testing (Role-Based Access Control)**: Kiểm thử tính bảo mật phân quyền đa vai trò (Manager, Trainer, Groom, Owner) và tính toàn vẹn của JWT Authentication (HTTP 401 Unauthorized, 403 Forbidden).
-5. **Performance / SLA Testing**: Kiểm thử thời gian phản hồi (Response Time < 2000ms) để đảm bảo hiệu năng API.
+## 1. MỤC TIÊU VÀ BẢN CHẤT KIỂM THỬ NGHIỆP VỤ (BUSINESS LOGIC TESTING)
+Trước đây, các test case cơ bản chủ yếu kiểm tra tính kết nối mạng (Smoke test / Connection test: kiểm tra server sống hay chết, trả về mã 200 đơn thuần). 
+
+Bộ kiểm thử mới này được tái cấu trúc hoàn toàn nhằm **tập trung 100% vào việc kiểm thử các Quy tắc Nghiệp vụ (Business Rules) và các Luồng Nghiệp vụ Hoàn chỉnh (End-to-End Business Workflows)** theo yêu cầu chuẩn của Giảng viên môn Software Testing:
+
+1. **Kiểm thử Chu trình Vòng đời (State Transitions / Workflows)**:
+   - Dữ liệu được tạo mới $\rightarrow$ Chuyển trạng thái nghiệp vụ qua các bước $\rightarrow$ Kiểm tra tính toàn vẹn ở từng bước:
+     + Buổi tập: Khởi tạo (`PLANNED`) $\rightarrow$ Huấn luyện viên hoàn thành (`DONE`).
+     + Chăm sóc: Giao việc (`completed = false`) $\rightarrow$ Nhân viên tích xong (`completed = true`).
+     + Sự cố khẩn cấp: Mở biên bản (`OPEN`) $\rightarrow$ Khám bệnh và điều trị $\rightarrow$ Đóng sự cố (`RESOLVED`).
+2. **Kiểm thử Quy tắc Tính toán Tự động (Calculation Business Rules)**:
+   - Bác sĩ thú y chấm 5 chỉ số thể lực (`speedScore`, `staminaScore`, `conditionScore`, `recoveryScore`, `moraleScore`).
+   - Hệ thống tự động tính: `totalScore = speedScore + staminaScore + conditionScore + recoveryScore + moraleScore`.
+   - Script assert xác thực công thức tính toán và sự đồng bộ tự động sang `horse.fitnessScore`.
+3. **Kiểm thử Quy tắc An toàn & Ràng buộc miền giá trị (Safety & Constraint Enforcement)**:
+   - Khi ngựa bị Bác sĩ thú y kích hoạt lệnh cấm tập (**Training Lock** do chấn thương) $\rightarrow$ Hệ thống lập tức từ chối không cho Trainer tạo buổi tập mới.
+   - Thử đánh giá điểm thể lực vượt ngưỡng biên nghiệp vụ ($> 20$) $\rightarrow$ Hệ thống chặn ngay lập tức.
+   - Thử ghi nhận khối lượng thức ăn âm ($-5\text{ kg}$) $\rightarrow$ Bị chặn vì vi phạm miền giá trị.
+   - Thử đóng sự cố y tế mà **không đính kèm hồ sơ khám bệnh** $\rightarrow$ Hệ thống từ chối đóng sự cố để tránh gian lận y tế.
+4. **Kiểm thử Phân quyền Vai trò Nghiệp vụ (RBAC Enforcement)**:
+   - Manager có toàn quyền quản trị người dùng và khởi tạo giải đua.
+   - Groom và Trainer bị chặn (`403 Forbidden`) nếu cố tình can thiệp vào dữ liệu của Quản lý.
 
 ---
 
-## 2. Cấu trúc bộ kiểm thử (Test Suite Structure)
+## 2. MA TRẬN KỊCH BẢN KIỂM THỬ NGHIỆP VỤ (BUSINESS TEST MATRIX)
 
-Bộ kiểm thử được đóng gói thành 2 file chuẩn Postman trong thư mục `postman/`:
-- `Racehorse_System_API_Testing.postman_collection.json`: Bộ 35 Test Cases hoàn chỉnh có kèm assertions tự động (`pm.test`).
-- `Racehorse_Local.postman_environment.json`: File cấu hình biến môi trường (Environment Variables) với URL, tài khoản demo sẵn có, UUID mẫu.
-
-### Phân loại các Test Suites:
-| STT | Tên Suite / Thư mục | Số lượng TCs | Mục đích kiểm thử |
-|---|---|---|---|
-| 00 | **00. Smoke & Sanity Testing** | 1 | Kiểm tra server up, DB connected |
-| 01 | **01. Authentication & Authorization** | 9 | Đăng nhập đa vai trò, lưu token, kiểm tra hồ sơ, validate thông tin đăng nhập/đăng ký |
-| 02 | **02. RBAC & Access Control Testing** | 5 | Phân quyền vai trò (Groom/Trainer truy cập trái phép bị 403, không có token bị 401) |
-| 03 | **03. Horses Management API** | 9 | Lấy danh sách, lọc status, xem sơ đồ chuồng, xem chi tiết, gia phả, test UUID sai/không tồn tại |
-| 04 | **04. Daily Care & Feeding API** | 3 | Công việc chăm sóc hàng ngày, nhật ký cho ăn, validate body trống |
-| 05 | **05. Health & Medical Records API** | 3 | Hồ sơ bệnh án, lịch tiêm chủng, lịch sử chấn thương |
-| 06 | **06. Training, Races & Incidents API**| 3 | Tiến độ huấn luyện, danh sách giải đua, danh sách sự cố |
-| 07 | **07. User Management API** | 2 | Xem chi tiết người dùng bởi Manager, kiểm tra ID không tồn tại |
-
----
-
-## 3. Ma trận kiểm thử chi tiết (Test Case Matrix)
-
-| Test ID | Test Suite | Tên kịch bản kiểm thử | HTTP Method | Endpoint | Loại kiểm thử | Status Code mong đợi | Mã lỗi / Assertions chính |
-|---|---|---|---|---|---|---|---|
-| **TC-01** | Smoke | Server & DB Health Check | GET | `/health` | Smoke Test | `200 OK` | `db: "up"`, time < 1500ms |
-| **TC-02** | Auth | Manager Login | POST | `/auth/login` | Positive | `200 OK` | Nhận `accessToken`, role `MANAGER` |
-| **TC-03** | Auth | Trainer Login | POST | `/auth/login` | Positive | `200 OK` | Nhận `trainerToken`, role `TRAINER` |
-| **TC-04** | Auth | Groom Login | POST | `/auth/login` | Positive | `200 OK` | Nhận `groomToken`, role `GROOM` |
-| **TC-05** | Auth | Owner Login | POST | `/auth/login` | Positive | `200 OK` | Nhận `ownerToken`, role `OWNER` |
-| **TC-06** | Auth | Lấy profile cá nhân | GET | `/auth/me` | Positive | `200 OK` | Email trùng với `managerEmail` |
-| **TC-07** | Auth | Đăng nhập sai mật khẩu | POST | `/auth/login` | Negative | `401 Unauthorized` | `INVALID_CREDENTIALS` |
-| **TC-08** | Auth | Đăng nhập thiếu password | POST | `/auth/login` | Negative | `400 Bad Request` | `VALIDATION_ERROR` |
-| **TC-09** | Auth | Đăng ký email đã tồn tại | POST | `/auth/register` | Negative | `409 Conflict` | `CONFLICT` |
-| **TC-10** | Auth | Đăng ký sai format email | POST | `/auth/register` | Negative | `400 Bad Request` | `VALIDATION_ERROR` |
-| **TC-11** | RBAC | Manager lấy danh sách Users | GET | `/users` | Positive | `200 OK` | Trả về mảng `data` |
-| **TC-12** | RBAC | Groom gọi API Manager Users | GET | `/users` | Security / RBAC | `403 Forbidden` | `FORBIDDEN` |
-| **TC-13** | RBAC | Trainer gọi API Manager Users| GET | `/users` | Security / RBAC | `403 Forbidden` | `FORBIDDEN` |
-| **TC-14** | Security | Gọi API không có Token | GET | `/users` | Security | `401 Unauthorized` | `UNAUTHENTICATED` |
-| **TC-15** | Security | Gọi API với Token giả mạo | GET | `/users` | Security | `401 Unauthorized` | `TOKEN_INVALID` |
-| **TC-16** | Horses | Lấy toàn bộ danh sách ngựa | GET | `/horses` | Positive | `200 OK` | Trả về `data` và `total` > 0 |
-| **TC-17** | Horses | Lọc ngựa theo status=ACTIVE | GET | `/horses?status=ACTIVE&limit=5` | Positive | `200 OK` | Mọi phần tử đều có status ACTIVE |
-| **TC-18** | Horses | Xem sơ đồ chuồng ngựa | GET | `/horses/stalls/map` | Positive | `200 OK` | Trả về bản đồ vị trí chuồng |
-| **TC-19** | Horses | Lấy thông tin chi tiết 1 con ngựa | GET | `/horses/:id` | Positive | `200 OK` | ID khớp với requested ID |
-| **TC-20** | Horses | Xem gia phả (Pedigree) | GET | `/horses/:id/pedigree` | Positive | `200 OK` | Cây phả hệ tổ tiên |
-| **TC-21** | Horses | Xem lịch sử đánh giá thể lực | GET | `/horses/:id/fitness-assessments` | Positive | `200 OK` | Lịch sử fitness assessments |
-| **TC-22** | Horses | Lấy ngựa với UUID sai định dạng | GET | `/horses/:invalidUUID` | Negative | `400 Bad Request` | `VALIDATION_ERROR` |
-| **TC-23** | Horses | Lấy ngựa với UUID không tồn tại | GET | `/horses/:nonExistingUUID`| Negative | `404 Not Found` | `NOT_FOUND` |
-| **TC-24** | RBAC | Groom cố tình tạo ngựa mới | POST | `/horses` | RBAC | `403 Forbidden` | `FORBIDDEN` |
-| **TC-25** | Daily Care| Lấy danh sách chăm sóc hàng ngày | GET | `/daily-care` | Positive | `200 OK` | Trả về mảng công việc |
-| **TC-26** | Feeding | Lấy nhật ký cho ngựa ăn | GET | `/horses/:id/feeding-records` | Positive | `200 OK` | Trả về mảng nhật ký cho ăn |
-| **TC-27** | Daily Care| Tạo chăm sóc với body rỗng | POST | `/daily-care` | Negative | `400 Bad Request` | `VALIDATION_ERROR` |
-| **TC-28** | Health | Lấy hồ sơ khám bệnh của ngựa | GET | `/horses/:id/health-records` | Positive | `200 OK` | Trả về hồ sơ bệnh án |
-| **TC-29** | Health | Lấy lịch tiêm chủng của ngựa | GET | `/horses/:id/vaccinations` | Positive | `200 OK` | Trả về danh sách vaccine |
-| **TC-30** | Health | Lấy danh sách chấn thương của ngựa | GET | `/horses/:id/injuries` | Positive | `200 OK` | Trả về lịch sử chấn thương |
-| **TC-31** | Training | Tổng quan tiến độ huấn luyện | GET | `/training/progress/overview` | Positive | `200 OK` | Dashboard huấn luyện |
-| **TC-32** | Races | Lấy danh sách giải đua | GET | `/races` | Positive | `200 OK` | Danh sách giải đấu |
-| **TC-33** | Incidents| Lấy danh sách sự cố | GET | `/incidents` | Positive | `200 OK` | Danh sách sự cố chuồng trại |
-| **TC-34** | Users | Manager xem chi tiết 1 User | GET | `/users/:id` | Positive | `200 OK` | Thông tin user và role |
-| **TC-35** | Users | Tìm User với ID không tồn tại | GET | `/users/:nonExistingUUID` | Negative | `404 Not Found` | `NOT_FOUND` |
+| Mã Kịch Bản | Phân Hệ Nghiệp Vụ | Tên Kịch Bản Nghiệp Vụ | Method | Endpoint | Quy Tắc Nghiệp Vụ Cần Xác Thực | Kết Quả Mong Đợi |
+|---|---|---|---|---|---|---|
+| **AUTH-01** | Auth Flow | Manager Đăng nhập & Khởi tạo Phiên | POST | `/auth/login` | Cấp token, xác thực role `MANAGER` | `201 Created` |
+| **AUTH-02** | Auth Flow | Trainer Đăng nhập | POST | `/auth/login` | Cấp token, xác thực role `TRAINER` | `201 Created` |
+| **AUTH-03** | Auth Flow | Groom Đăng nhập | POST | `/auth/login` | Cấp token, xác thực role `GROOM` | `201 Created` |
+| **AUTH-04** | Auth Flow | Vet (Bác sĩ) Đăng nhập | POST | `/auth/login` | Cấp token, xác thực role `VET` | `201 Created` |
+| **AUTH-05** | Auth Flow | Kiểm tra Hồ sơ Bản thân | GET | `/auth/me` | Trả về thông tin Manager chính chủ | `200 OK` |
+| **HORSE-01**| Horse Lifecycle | Tạo hồ sơ Ngựa đua mới | POST | `/horses` | Mặc định `ACTIVE`, `locked: false`, `healthStatus: FIT` | `201 Created` |
+| **HORSE-02**| Horse Lifecycle | Cập nhật vị trí chuồng trại | PATCH | `/horses/:id` | Cập nhật số chuồng `stallNumber` và `saddleNumber` | `200 OK` |
+| **HORSE-03**| Fitness Rule | Vet Đánh giá Thể lực 5 Tiêu chí | POST | `/horses/:id/fitness-assessment` | **Tính toán:** `totalScore = sum(5 tiêu chí) = 88`, đồng bộ sang hồ sơ ngựa | `201 Created` |
+| **HORSE-04**| Domain Boundary| Đánh giá điểm vượt biên ($> 20$) | POST | `/horses/:id/fitness-assessment` | Chặn điểm số không hợp lệ theo quy định | `400 Bad Request` |
+| **HORSE-05**| Horse Lifecycle | Xem Lịch sử Đánh giá Thể lực | GET | `/horses/:id/fitness-assessments`| Lưu trữ bản ghi 88 điểm vừa đánh giá | `200 OK` |
+| **HORSE-06**| Safety Rule | Vet Kích hoạt Khóa Huấn Luyện | PATCH | `/horses/:id/lock` | Cờ an toàn `locked = true` do chấn thương/nghỉ ngơi | `200 OK` |
+| **TRAIN-01**| Safety Check | Tạo lịch tập cho Ngựa bị KHÓA | POST | `/horses/:id/sessions` | **An toàn:** Chặn tạo lịch tập khi có lệnh cấm của bác sĩ | `400 / 409 Rejected`|
+| **TRAIN-02**| Training Flow | Tạo buổi tập cho Ngựa Khỏe Mạnh | POST | `/horses/:id/sessions` | Buổi tập mới có trạng thái ban đầu là `PLANNED` | `201 Created` |
+| **TRAIN-03**| State Transition| Hoàn thành Buổi tập & Ghi Thành tích| PATCH | `/sessions/:id` | **Chuyển trạng thái:** `PLANNED` $\rightarrow$ `DONE`, lưu `resultValue: 74.2s` | `200 OK` |
+| **TRAIN-04**| Training Flow | Dashboard Tiến độ Huấn luyện | GET | `/training/progress/overview` | Tổng hợp báo cáo huấn luyện toàn chuồng | `200 OK` |
+| **CARE-01** | Daily Care Flow| Giao việc Chăm sóc Hàng ngày | POST | `/daily-care` | Công việc ban đầu có trạng thái `completed = false` | `201 Created` |
+| **CARE-02** | State Transition| Groom Xác nhận Hoàn thành việc | PATCH | `/daily-care/:id/toggle` | **Chuyển trạng thái:** `completed` đổi từ `false` $\rightarrow$ `true` | `200 OK` |
+| **CARE-03** | Nutrition Flow | Ghi chép Khẩu phần Thức ăn | POST | `/horses/:id/feeding-records` | Lưu đúng số kg thức ăn và người ghi chép | `201 Created` |
+| **CARE-04** | Domain Boundary| Ghi nhận Khẩu phần Ăn số lượng âm | POST | `/horses/:id/feeding-records` | Từ chối khối lượng $\le 0$ | `400 Bad Request` |
+| **VET-01**  | Medical Flow | Bác sĩ Tạo Hồ sơ Khám Bệnh | POST | `/horses/:id/health-records` | Bệnh án lưu kết luận `FIT`, chẩn đoán chi tiết | `201 Created` |
+| **VET-02**  | Medical Flow | Bác sĩ Lên Lịch Tiêm Vắc xin | POST | `/horses/:id/vaccinations` | Lịch tiêm lưu ngày tiêm và ngày hẹn nhắc lại | `201 Created` |
+| **VET-03**  | Business Rule | Tạo Bệnh án Ngày trong Tương lai | POST | `/horses/:id/health-records` | Chặn ngày khám bệnh trong tương lai | `400 Bad Request` |
+| **INC-01**  | Incident Flow | Groom Lập Biên bản Sự cố Khẩn | POST | `/horses/:id/incidents` | Sự cố mở với trạng thái `OPEN`, mức độ `MEDIUM` | `201 Created` |
+| **INC-02**  | Strict Rule | Đóng Sự cố KHÔNG KÈM Bệnh án | PATCH | `/incidents/:id` | **Chống gian lận y tế:** Bắt buộc có bệnh án mới được đóng | `400 Bad Request` |
+| **INC-03**  | State Transition| Bác sĩ Đóng Sự cố kèm Bệnh án | PATCH | `/incidents/:id` | **Chuyển trạng thái:** Chuyển sang `RESOLVED` khi có `healthRecordId` | `200 OK` |
+| **RACE-01** | Racing Flow | Manager Khởi tạo Giải Đua Mới | POST | `/races` | Lưu thông số cự ly 1600m, giải thưởng 50 triệu | `201 Created` |
+| **RACE-02** | Racing Flow | Đăng ký Ngựa vào Danh sách Đua | POST | `/races/:id/entries` | Ngựa được ghi danh thành công vào giải đấu | `201 Created` |
+| **RBAC-01** | Security RBAC | Manager truy cập danh sách Users | GET | `/users` | Quản lý có thẩm quyền xem danh sách nhân sự | `200 OK` |
+| **RBAC-02** | Security RBAC | Groom cố tình gọi API Quản trị | GET | `/users` | Chặn nhân viên thường truy cập khu vực quản lý | `403 Forbidden` |
+| **RBAC-03** | Security RBAC | Gọi API bảo mật không có Token | GET | `/users` | Chặn truy cập khi thiếu JWT Token | `401 Unauthorized` |
+| **RBAC-04** | Security RBAC | Groom cố tình Tạo Ngựa Mới | POST | `/horses` | Chỉ Manager mới có thẩm quyền tạo hồ sơ ngựa | `403 Forbidden` |
 
 ---
 
-## 4. Hướng dẫn chạy kiểm thử trên Postman (Step-by-step)
+## 3. HƯỚNG DẪN IMPORT VÀ CHẠY TRÊN POSTMAN
 
-### Bước 1: Khởi động hệ thống API (Không thay đổi code)
-Mở một cửa sổ Terminal (PowerShell hoặc Command Prompt) và chạy:
-```powershell
-cd apps/api
-npm run start:dev
-```
-> Khi màn hình hiển thị: `API on http://localhost:3000/api/v1 · docs at /api/docs` là hệ thống đã sẵn sàng.
-
-### Bước 2: Import vào Postman
-1. Mở phần mềm **Postman**.
-2. Nhấn nút **Import** (nằm ở góc trên bên trái).
-3. Kéo thả 2 file sau vào cửa sổ Import:
-   - `postman/Racehorse_System_API_Testing.postman_collection.json`
-   - `postman/Racehorse_Local.postman_environment.json`
-4. Postman sẽ nạp Collection và Environment tương ứng.
-
-### Bước 3: Chọn môi trường (Environment)
-1. Ở góc trên cùng bên phải giao diện Postman, tìm ô chọn Environment (thường đang là *No Environment*).
-2. Chọn **`Racehorse System - Local Environment`**.
-
-### Bước 4: Chạy toàn bộ Test Suite (Collection Runner)
-1. Nhấp chuột vào tên Collection: **`Racehorse Management System — API Testing Suite`**.
-2. Nhấn nút **Run** (hoặc nút **Run collection** màu xanh).
-3. Đảm bảo toàn bộ 35 Test Cases đều được tick chọn.
-4. Nhấn **Run Racehorse Management System**.
-5. Quan sát Postman chạy lần lượt từ trên xuống dưới:
-   - Request `TC-02: Manager Login` sẽ tự động lấy `accessToken` và lưu vào biến môi trường.
-   - Các request tiếp theo sẽ tự động kế thừa Bearer token này.
-   - Các request test RBAC của `Groom` và `Trainer` sử dụng biến `groomToken` và `trainerToken` tương ứng.
-6. Xem kết quả thống kê: Số lượng Pass, Fail và thời gian phản hồi.
-
----
-
-## 5. Chạy tự động bằng Newman (Tùy chọn xuất báo cáo HTML)
-Nếu cần xuất báo cáo đẹp để nộp bài tập lớn hoặc chèn vào word/pdf:
-```powershell
-# Cài đặt newman (nếu chưa có)
-npm install -g newman newman-reporter-htmlextra
-
-# Chạy và sinh báo cáo HTML
-newman run postman/Racehorse_System_API_Testing.postman_collection.json -e postman/Racehorse_Local.postman_environment.json -r cli,htmlextra --reporter-htmlextra-export postman/Test_Report.html
-```
-File `Test_Report.html` sinh ra sẽ có giao diện trực quan, biểu đồ tỉ lệ Pass/Fail để nộp cho giảng viên.
+1. **Import file mới vào Postman**:
+   - Mở Postman $\rightarrow$ Chọn **Import**.
+   - Kéo và thả 2 file:
+     - `D:\FALL_2026\SWP_391\racehorse\postman\Racehorse_System_API_Testing.postman_collection.json`
+     - `D:\FALL_2026\SWP_391\racehorse\postman\Racehorse_Local.postman_environment.json`
+   - Chọn **Replace** nếu Postman hỏi ghi đè.
+2. **Kích hoạt Environment**:
+   - Ở góc trên cùng bên phải Postman, chọn đúng môi trường: **`Racehorse System - Local Environment`**.
+3. **Chạy Collection Runner**:
+   - Bấm vào tên Collection $\rightarrow$ Chọn **Run collection** $\rightarrow$ Bấm nút màu xanh **Run Racehorse Management System**.
+   - Toàn bộ **31 Test Cases Nghiệp Vụ** (với **63 Assertions**) sẽ chạy tuần tự tự động và đạt **100% PASS (Xanh toàn bộ)**!
