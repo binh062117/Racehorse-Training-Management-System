@@ -219,6 +219,13 @@ describe('Training safety rules (e2e)', () => {
   });
 
   it('marking a session DONE with heart_rate_max > 195 notifies trainer + groom + owner', async () => {
+    // Results are recorded after the sessions took place.
+    for (const [i, id] of sessionIds.slice(0, 3).entries()) {
+      await prisma.trainingSession.update({
+        where: { id },
+        data: { scheduledAt: new Date(Date.now() - (i + 1) * 3600_000) },
+      });
+    }
     const res = await api()
       .patch(`/api/v1/sessions/${sessionIds[0]}`)
       .set(auth('trainer'))

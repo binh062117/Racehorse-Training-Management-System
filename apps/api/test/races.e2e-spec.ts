@@ -96,6 +96,10 @@ describe('Races (e2e)', () => {
         planId: plan.body.id,
       });
     expect(session.status).toBe(201);
+    await prisma.trainingSession.update({
+      where: { id: session.body.id },
+      data: { scheduledAt: new Date(Date.now() - 1 * 3600_000) },
+    });
     const done = await api()
       .patch(`/api/v1/sessions/${session.body.id}`)
       .set(auth('trainer'))
