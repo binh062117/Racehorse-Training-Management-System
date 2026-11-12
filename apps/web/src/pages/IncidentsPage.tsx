@@ -278,7 +278,7 @@ function CreateIncidentForm({ horses, onCreated }: { horses: Horse[]; onCreated:
         <Field label={t('incidents.descriptionLabel')}>
           <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={2000} required placeholder={t('incidents.descriptionPlaceholder')} />
         </Field>
-        <Field label={t('incidents.photo')} hint={`JPEG, PNG hoặc WebP, tối đa ${PHOTO_MAX_MB} MB.`}>
+        <Field label={t('incidents.photo')} hint={t('incidents.photoHint')}>
           <PhotoPicker file={photo} onChange={setPhoto} disabled={saving} />
         </Field>
         <ErrorText err={error} />

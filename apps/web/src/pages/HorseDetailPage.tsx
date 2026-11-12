@@ -7,6 +7,7 @@ import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
 import { formatDate } from '../lib/format';
 import { SessionsTab } from './horse/SessionsTab';
+import { TrialVideosTab } from './horse/TrialVideosTab';
 import { TrainingProgressTab } from './horse/TrainingProgressTab';
 import { HealthTab } from './horse/HealthTab';
 import { FeedingTab } from './horse/FeedingTab';
@@ -24,7 +25,7 @@ import {
   fitColor, lockReasonText,
 } from '../ds/ui';
 
-type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'progress' | 'health' | 'feeding';
+type Tab = 'profile' | 'pedigree' | 'plans' | 'sessions' | 'progress' | 'health' | 'feeding' | 'videos';
 
 function calculateAge(birthDate: string | null): number | null {
   if (!birthDate) return null;
@@ -68,7 +69,7 @@ export function HorseDetailPage() {
     rawTab === 'sessions' ||
     rawTab === 'progress' ||
     rawTab === 'health' ||
-    rawTab === 'feeding'
+    rawTab === 'feeding' || rawTab === 'videos'
       ? rawTab
       : 'profile';
 
@@ -86,6 +87,7 @@ export function HorseDetailPage() {
     ['sessions', t('horseDetail.tabs.sessions', 'Buổi tập luyện')],
     ['progress', t('horseDetail.tabs.progress', 'Tiến độ huấn luyện')],
     ['health', t('horseDetail.tabs.health', 'Hồ sơ y tế')],
+    ['videos', t('raceFeatures.videos')],
     ['feeding', t('horseDetail.tabs.feeding', 'Khẩu phần ăn')],
   ];
 
@@ -314,6 +316,7 @@ export function HorseDetailPage() {
       )}
 
       {isVet && <LockHorseModal horse={horse} open={lockOpen} onClose={() => setLockOpen(false)} onDone={() => { setLockVersion((v) => v + 1); void loadHorse(); }} />}
+      {visitedTabs.has('videos') && <div hidden={tab !== 'videos'}><TrialVideosTab key={horse.id} horseId={horse.id} /></div>}
       <EditHorseModal
         horse={horse}
         isOpen={editOpen}

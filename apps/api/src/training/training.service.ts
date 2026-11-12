@@ -64,6 +64,7 @@ const SESSION_INCLUDE = {
   groom: { select: { id: true, name: true } },
   trainer: { select: { id: true, name: true, email: true } },
   horse: { select: { id: true, name: true, ownerId: true } },
+  resultRecordedBy: { select: { id: true, name: true, role: true } },
 } satisfies Prisma.TrainingSessionInclude;
 
 type SessionView = Prisma.TrainingSessionGetPayload<{
@@ -269,6 +270,19 @@ export class TrainingService {
     if (!session) throw new AppException('NOT_FOUND', 'Session not found');
 
     if (TERMINAL.includes(session.status)) {
+      if (
+        session.status === SessionStatus.DONE &&
+        user.role === Role.TRAINER &&
+        dto.resultConfirmed === true &&
+        !session.resultConfirmed &&
+        sentFields.length === 1
+      ) {
+        return this.prisma.trainingSession.update({
+          where: { id },
+          data: { resultConfirmed: true },
+          include: SESSION_INCLUDE,
+        });
+      }
       throw new AppException(
         'VALIDATION_ERROR',
         `Session is already ${session.status}`,
@@ -361,6 +375,13 @@ export class TrainingService {
       );
     }
 
+    if (dto.resultConfirmed !== undefined && user.role !== Role.TRAINER) {
+      throw new AppException('FORBIDDEN', 'Only a trainer can confirm results');
+    }
+    if (dto.resultMetric !== undefined || dto.resultValue !== undefined) {
+      data.resultRecordedById = user.id;
+      data.resultConfirmed = false;
+    }
     if (dto.status === SessionStatus.DONE) {
       const metric = dto.resultMetric ?? session.resultMetric;
       const value =
@@ -375,6 +396,12 @@ export class TrainingService {
           'VALIDATION_ERROR',
           'Cần ghi ít nhất một kết quả (thời gian, nhịp tim hồi phục hoặc phản ứng cơ) để hoàn thành buổi tập.',
         );
+      }
+      data.resultRecordedById = user.id;
+      if (user.role === Role.TRAINER) {
+        data.resultConfirmed = dto.resultConfirmed ?? true;
+      } else {
+        data.resultConfirmed = false;
       }
     }
 

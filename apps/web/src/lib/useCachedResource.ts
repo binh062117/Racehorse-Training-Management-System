@@ -9,6 +9,9 @@ import { getCached, setCached } from './dataCache';
  * shows the normal loading state.
  */
 export function useCachedResource<T>(key: string, fetcher: () => Promise<T>) {
+  const activeKey = useRef(key);
+  activeKey.current = key;
+  const requestId = useRef(0);
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
 
@@ -17,15 +20,17 @@ export function useCachedResource<T>(key: string, fetcher: () => Promise<T>) {
   const [error, setError] = useState<unknown>(null);
 
   const load = useCallback(async () => {
+    const id = ++requestId.current;
     try {
       const result = await fetcherRef.current();
+      if (activeKey.current !== key || requestId.current !== id) return;
       setData(result);
       setCached(key, result);
       setError(null);
     } catch (e) {
-      setError(e);
+      if (activeKey.current === key && requestId.current === id) setError(e);
     } finally {
-      setLoading(false);
+      if (activeKey.current === key && requestId.current === id) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);

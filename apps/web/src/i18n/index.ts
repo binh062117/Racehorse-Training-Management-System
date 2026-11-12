@@ -57,4 +57,8 @@ export function setLanguage(lang: 'vi' | 'en'): void {
   void i18n.changeLanguage(lang);
 }
 
+export function getLocale(): 'vi-VN' | 'en-GB' {
+  return getLanguage() === 'en' ? 'en-GB' : 'vi-VN';
+}
+
 export default i18n;

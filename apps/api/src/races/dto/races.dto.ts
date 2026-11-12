@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
+import { RaceEntryStatus } from '@prisma/client';
 import {
+  IsEnum,
   IsInt,
   IsISO8601,
   IsNotEmpty,
@@ -76,6 +78,11 @@ export class UpdateRaceDto {
 
 export class ListRacesQueryDto {
   @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  search?: string;
+
+  @IsOptional()
   @IsISO8601()
   from?: string;
 
@@ -102,6 +109,10 @@ export class CreateRaceEntryDto {
   horseId!: string;
 
   @IsOptional()
+  @IsEnum(RaceEntryStatus)
+  status?: RaceEntryStatus;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   position?: number;
@@ -110,9 +121,18 @@ export class CreateRaceEntryDto {
   @IsString()
   @MaxLength(40)
   time?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  prizeWon?: number;
 }
 
 export class UpdateRaceEntryDto {
+  @IsOptional()
+  @IsEnum(RaceEntryStatus)
+  status?: RaceEntryStatus;
+
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -122,6 +142,11 @@ export class UpdateRaceEntryDto {
   @IsString()
   @MaxLength(40)
   time?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  prizeWon?: number | null;
 }
 
 export class ListRaceEntriesQueryDto {

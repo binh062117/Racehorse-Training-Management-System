@@ -26,25 +26,60 @@ const dateTimeFmt = new Intl.DateTimeFormat('vi-VN', {
   minute: '2-digit',
 });
 
+const dateFormatters = {
+  vi: dateFmt,
+  en: new Intl.DateTimeFormat('en-GB', {
+    timeZone: TZ,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }),
+};
+const dateTimeFormatters = {
+  vi: dateTimeFmt,
+  en: new Intl.DateTimeFormat('en-GB', {
+    timeZone: TZ,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }),
+};
+
+const timeFormatters = {
+  vi: new Intl.DateTimeFormat('vi-VN', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+  }),
+  en: new Intl.DateTimeFormat('en-GB', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+  }),
+};
+
+function currentLocale(): 'vi' | 'en' {
+  return i18n.resolvedLanguage?.startsWith('en') ? 'en' : 'vi';
+}
+
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : dateFmt.format(d);
+  return Number.isNaN(d.getTime()) ? '—' : dateFormatters[currentLocale()].format(d);
 }
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : dateTimeFmt.format(d);
+  return Number.isNaN(d.getTime()) ? '—' : dateTimeFormatters[currentLocale()].format(d);
 }
 
-const timeFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
-
-/** Time of day only ("15:49"), in Vietnam's display timezone. */
 export function formatTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : timeFmt.format(d);
+  return Number.isNaN(d.getTime()) ? '—' : timeFormatters[currentLocale()].format(d);
 }
 
 /** Format an ISO date for <input type="date"> in Vietnam's display timezone. */

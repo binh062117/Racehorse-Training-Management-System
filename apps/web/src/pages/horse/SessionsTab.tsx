@@ -429,6 +429,16 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
             )}
           </dl>
 
+          {(session.resultRecordedBy || session.status === 'DONE') && <p className="cap mt-2">{t('raceFeatures.recordedBy')}: {session.resultRecordedBy?.name ?? t('raceFeatures.unknownRecorder')} · {t(session.resultConfirmed ? 'raceFeatures.confirmed' : 'raceFeatures.unconfirmed')}</p>}
+          {isTrainer && session.status === 'DONE' && !session.resultConfirmed && <>
+            <Btn sm className="mt-2" disabled={busy} onClick={async () => {
+              setBusy(true); setErr(null);
+              try { await api.patch(`/sessions/${session.id}`, { resultConfirmed: true }); onChanged(); }
+              catch (error) { setErr(error); } finally { setBusy(false); }
+            }}>{t('raceFeatures.confirmResult')}</Btn>
+            <ErrorText err={err} />
+          </>}
+          {editable && !editing && <Btn sm className="mt-3" onClick={() => setEditing(true)}>{ahead ? t('common.update') : t('sessionResult.record')}</Btn>}
           {isLocked && session.status === 'PLANNED' && ahead && (
             <p className="mt-2 text-[12.5px] text-warn font-medium">{t('sessionResult.lockedHold')}</p>
           )}

@@ -49,7 +49,11 @@ export class VaccinationsService {
       const in7Days = new Date(now.getTime() + 7 * 86_400_000);
       if (created.nextDueDate >= now && created.nextDueDate <= in7Days) {
         const typeLabel =
-          created.careType === 'DEWORMING' ? 'Tẩy giun' : 'Tiêm vắc-xin';
+          created.careType === 'FARRIER'
+            ? 'Kiểm tra móng'
+            : created.careType === 'DEWORMING'
+              ? 'Tẩy giun'
+              : 'Tiêm vắc-xin';
         const formattedDate = created.nextDueDate.toLocaleDateString('vi-VN');
         const [vetIds, managerIds] = await Promise.all([
           this.notifications.vetIds(),
@@ -87,7 +91,11 @@ export class VaccinationsService {
     let notifiedCount = 0;
     for (const item of upcoming) {
       const typeLabel =
-        item.careType === 'DEWORMING' ? 'Tẩy giun' : 'Tiêm vắc-xin';
+        item.careType === 'FARRIER'
+          ? 'Kiểm tra móng'
+          : item.careType === 'DEWORMING'
+            ? 'Tẩy giun'
+            : 'Tiêm vắc-xin';
       const formattedDate = item.nextDueDate?.toLocaleDateString('vi-VN');
       const message = `Lịch phòng ngừa sắp tới: ${item.horse.name} cần ${typeLabel} (${item.vaccineName}) trước ngày ${formattedDate}`;
 
@@ -145,7 +153,7 @@ export class VaccinationsService {
       this.prisma.vaccination.findMany({
         where,
         include: { horse: { select: UPCOMING_HORSE_SELECT } },
-        orderBy: { nextDueDate: 'asc' },
+        orderBy: [{ nextDueDate: 'asc' }, { id: 'asc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),

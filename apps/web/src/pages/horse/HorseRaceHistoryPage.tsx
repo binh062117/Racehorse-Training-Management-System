@@ -1,12 +1,12 @@
-import i18n from '../../i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
+import { fetchAll } from '../../lib/pagination';
 import { api } from '../../lib/api';
 import { formatDate } from '../../lib/format';
-import type { Horse, HorseRaceEntry, Paginated, Race, RaceEntry } from '../../lib/types';
+import type { Horse, HorseRaceEntry, Race, RaceEntry } from '../../lib/types';
 import { usePageChrome } from '../../ds/AppShell';
 import { Badge, Btn, Card, CardHeader, EmptyState, Field, KpiStrip, NativeSelect, PageHeader, thCls } from '../../ds/ui';
 import { HorseRecordNav } from './HorseRecordNav';
@@ -33,27 +33,25 @@ export function HorseRaceHistoryPage() {
     let active = true;
     Promise.all([
       api.get<Horse>(`/horses/${id}`),
-      api.get<Paginated<HorseRaceEntry>>(`/horses/${id}/race-entries`, { params: { limit: 100 } }),
-      api.get<Paginated<Race>>('/races', { params: { limit: 100 } }),
+      fetchAll<HorseRaceEntry>(`/horses/${id}/race-entries`),
+      fetchAll<Race>('/races'),
     ]).then(([horseResponse, raceResponse, raceListResponse]) => {
       if (active) {
         setHorse(horseResponse.data);
-        setEntries(raceResponse.data.data);
-        setRaces(raceListResponse.data.data);
+        setEntries(raceResponse);
+        setRaces(raceListResponse);
       }
     }).catch((reason: unknown) => { if (active) setError(reason); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id]);
 
-  usePageChrome({ crumbs: [[i18n.t("nav.horses"), '/horses'], horse?.name ?? '…', t('horseFlow.performanceTitle')] });
+  usePageChrome({ crumbs: [[t('nav.horses'), '/horses'], horse?.name ?? '…', t('horseFlow.performanceTitle')] });
 
   // Chỉ hiện các race còn diễn ra trong tương lai và chưa được ngựa này đăng ký.
   const enteredRaceIds = new Set(entries.map((entry) => entry.race.id));
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const availableRaces = races.filter((race) => (
-    new Date(race.date) >= today && !enteredRaceIds.has(race.id)
+    new Date(race.date).getTime() - new Date().getTime() >= 3 * 86400000 && !enteredRaceIds.has(race.id)
   ));
 
   // Tính nhanh các KPI hiển thị ở đầu tab: số lần thi, số lần lên podium, vị trí tốt nhất.
@@ -98,7 +96,7 @@ export function HorseRaceHistoryPage() {
       />
       <HorseRecordNav horseId={id} />
 
-      {user?.role === 'MANAGER' && (
+      {user?.role === 'MANAGER' && !horse.locked && horse.status !== 'RETIRED' && horse.healthStatus !== 'INJURED' && horse.healthStatus !== 'QUARANTINED' && (
         <Card className="p-5">
           <h2 className="font-semibold text-[15px]">{t('horseFlow.registerForRace')}</h2>
           <p className="text-[13px] text-muted mt-0.5">{t('horseFlow.entryDescription', { horse: horse.name })}</p>
@@ -126,17 +124,17 @@ export function HorseRaceHistoryPage() {
       )}
 
       {entries.length > 0 && <KpiStrip items={[
-        { label: t('horseFlow.racesStarted'), value: entries.length },
+        { label: t('horseFlow.racesStarted'), value: entries.filter((entry) => entry.status === 'COMPLETED').length },
         { label: t('horseFlow.wins'), value: wins, lead: wins > 0 },
         { label: t('horseFlow.podiums'), value: podiums },
-        { label: t('horseFlow.bestFinish'), value: bestPlace == null ? <span className="text-muted text-[16px] font-normal">Chưa có</span> : `Hạng ${bestPlace}` },
+        { label: t('horseFlow.bestFinish'), value: bestPlace == null ? <span className="text-muted text-[16px] font-normal">{t('common.noData')}</span> : t('horseFlow.place', { place: bestPlace }) },
       ]} />}
 
       {entries.length === 0 ? (
         <EmptyState>{t('horseFlow.noRaceResults')}. {t('horseFlow.noRaceResultsDescription')}</EmptyState>
       ) : (
         <Card>
-          <CardHeader title="Các giải đã tham gia" />
+          <CardHeader title={t('horseFlow.enteredRaces')} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead>
@@ -144,6 +142,7 @@ export function HorseRaceHistoryPage() {
                   <th className={`${thCls} pl-5`}>{t('horseFlow.race')}</th>
                   <th className={`${thCls} text-right`}>{t('horseFlow.date')}</th>
                   <th className={thCls}>{t('horseFlow.venue')}</th>
+                  <th className={thCls}>{t('races.statusLabel')}</th>
                   <th className={`${thCls} text-right`}>{t('horseFlow.finish')}</th>
                   <th className={`${thCls} text-right pr-5`}>{t('horseFlow.time')}</th>
                 </tr>
@@ -153,7 +152,8 @@ export function HorseRaceHistoryPage() {
                   <tr key={entry.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
                     <td className="pl-5 pr-4 py-3 font-medium">{entry.race.name}</td>
                     <td className="px-4 py-3 num text-right whitespace-nowrap">{formatDate(entry.race.date)}</td>
-                    <td className="px-4 py-3 text-muted">{entry.race.venue ?? 'Chưa rõ'}</td>
+                    <td className="px-4 py-3 text-muted">{entry.race.venue ?? t('common.unknown')}</td>
+                    <td className="px-4 py-3">{t(`raceFeatures.status.${entry.status}`)}</td>
                     <td className="px-4 py-3 text-right">
                       {entry.position == null
                         ? <Badge tone="neu">{t('horseFlow.pendingResult')}</Badge>

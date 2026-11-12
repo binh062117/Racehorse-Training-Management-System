@@ -16,8 +16,8 @@ import { IncidentsModule } from './incidents/incidents.module';
 import { InjuriesModule } from './injuries/injuries.module';
 import { VaccinationsModule } from './vaccinations/vaccinations.module';
 import { FeedingModule } from './feeding/feeding.module';
-import { SuppliesModule } from './supplies/supplies.module';
 import { ReportsModule } from './reports/reports.module';
+import { SuppliesModule } from './supplies/supplies.module';
 import { DailyCareModule } from './daily-care/daily-care.module';
 import { StallsModule } from './stalls/stalls.module';
 import { AuditModule } from './audit/audit.module';
@@ -46,8 +46,8 @@ import { RolesGuard } from './common/guards/roles.guard';
     InjuriesModule,
     VaccinationsModule,
     FeedingModule,
-    SuppliesModule,
     ReportsModule,
+    SuppliesModule,
     DailyCareModule,
     StallsModule,
   ],

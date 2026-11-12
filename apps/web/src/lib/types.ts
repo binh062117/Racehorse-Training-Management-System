@@ -2,6 +2,7 @@ export type Role = 'MANAGER' | 'TRAINER' | 'VET' | 'GROOM' | 'OWNER';
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'DISABLED';
 export type HorseStatus = 'ACTIVE' | 'RESTING' | 'RETIRED';
 export type SessionStatus = 'PLANNED' | 'DONE' | 'CANCELLED' | 'MISSED';
+export type RaceEntryStatus = 'PENDING' | 'COMPLETED' | 'WITHDRAWN' | 'DID_NOT_START';
 
 export interface User {
   id: string;
@@ -65,11 +66,14 @@ export interface HorseRaceEntry {
   horseId: string;
   position: number | null;
   time: string | null;
+  status: RaceEntryStatus;
+  prizeWon?: number | null;
   race: {
     id: string;
     name: string;
     date: string;
     venue: string | null;
+    prizePool?: number | null;
   };
 }
 
@@ -89,6 +93,8 @@ export interface RaceEntry {
   horseId: string;
   position: number | null;
   time: string | null;
+  status: RaceEntryStatus;
+  prizeWon?: number | null;
 }
 
 export interface RaceDetail extends Race {
@@ -99,7 +105,7 @@ export interface Vaccination {
   id: string;
   horseId: string;
   horse?: { id: string; name: string };
-  careType?: 'VACCINATION' | 'DEWORMING';
+  careType?: 'VACCINATION' | 'DEWORMING' | 'FARRIER';
   vaccineName: string;
   date: string;
   nextDueDate: string | null;
@@ -158,6 +164,8 @@ export interface TrainingSession {
   recoveryHeartRate?: number | null;
   muscleResponse?: 'NORMAL' | 'TIGHT' | 'SORE' | null;
   notes: string | null;
+  resultRecordedBy?: { id: string; name: string; role: Role } | null;
+  resultConfirmed?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -284,6 +292,61 @@ export interface OtpRequiredResponse {
 
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
+}
+
+export interface TrialVideo {
+  id: string;
+  horseId: string;
+  title: string;
+  videoUrl: string;
+  recordedAt: string;
+  notes: string | null;
+  duration: string | null;
+  createdAt: string;
+}
+
+export interface FinanceTransaction {
+  id: string;
+  date: string;
+  horseId: string;
+  horseName: string;
+  category: 'PRIZE' | 'FEEDING' | 'FARRIER' | 'VACCINATION' | 'DEWORMING' | 'MEDICAL' | 'BOARDING';
+  type: 'INCOME' | 'EXPENSE';
+  description: string;
+  amount: number;
+}
+
+export interface HorseFinanceSummary {
+  horseId: string;
+  horseName: string;
+  ownerId: string;
+  ownerName: string;
+  prizeMoney: number;
+  totalCost: number;
+  netBalance: number;
+  entryCount: number;
+  costs: {
+    feeding: number;
+    farrier: number;
+    preventive: number;
+    medical: number;
+    boarding: number;
+  };
+}
+
+export interface FinanceReportResult {
+  summary: {
+    totalPrizeMoney: number;
+    totalCost: number;
+    netBalance: number;
+    feedingCost: number;
+    farrierCost: number;
+    preventiveCost: number;
+    medicalCost: number;
+    boardingCost: number;
+  };
+  horses: HorseFinanceSummary[];
+  transactions: FinanceTransaction[];
 }
 
 export interface HorseLockEvent {

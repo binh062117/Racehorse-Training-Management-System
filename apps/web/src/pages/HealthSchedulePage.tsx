@@ -4,32 +4,36 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { ErrorText } from '../components/ErrorText';
+import { fetchAll } from '../lib/pagination';
 import { api } from '../lib/api';
 import { useCachedResource } from '../lib/useCachedResource';
 import { formatDate } from '../lib/format';
 import type { Horse, Paginated, Vaccination } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Chip, EmptyState, Field, Icon, Input, NativeSelect, PageHeader, Seg } from '../ds/ui';
+import { Badge, Btn, Card, Chip, EmptyState, Field, Icon, Input, NativeSelect, PageHeader, Pagination, Seg } from '../ds/ui';
 
 export function HealthSchedulePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [page, setPage] = useState(1);
   const [upcomingOnly, setUpcomingOnly] = useState(true);
-  const [careType, setCareType] = useState<'ALL' | 'VACCINATION' | 'DEWORMING'>('ALL');
+  const [careType, setCareType] = useState<'ALL' | 'VACCINATION' | 'DEWORMING' | 'FARRIER'>('ALL');
 
   usePageChrome({ crumbs: [t('nav.healthSection', 'Sức khỏe'), t('healthSchedule.title')] });
 
   const horseFilter = useHorseFilter();
   const vaccinationParams = {
-    limit: 100,
+    page,
+    limit: 20,
     ...(horseFilter.horseId ? { horseId: horseFilter.horseId } : {}),
     ...(upcomingOnly ? { upcoming: true } : {}),
     ...(careType !== 'ALL' ? { careType } : {}),
   };
-  const { data: records, error, reload: load } = useCachedResource(`vaccinations:${JSON.stringify(vaccinationParams)}`, () =>
-    api.get<Paginated<Vaccination>>('/vaccinations', { params: vaccinationParams }).then((r) => r.data.data),
+  const { data: result, error, reload: load } = useCachedResource(`vaccinations:${JSON.stringify(vaccinationParams)}`, () =>
+    api.get<Paginated<Vaccination>>('/vaccinations', { params: vaccinationParams }).then((r) => r.data),
   );
 
+  const records = result?.data ?? null;
   const isVet = user?.role === 'VET';
   const [formOpen, setFormOpen] = useState(false);
 
@@ -60,18 +64,18 @@ export function HealthSchedulePage() {
 
       <HorseFilterChip horseId={horseFilter.horseId} horseName={horseFilter.horseName} onClear={horseFilter.clear} />
       <div className="flex flex-wrap items-center gap-2">
-        <Seg value={upcomingOnly ? 'up' : 'all'} onChange={(k) => setUpcomingOnly(k === 'up')}
+        <Seg value={upcomingOnly ? 'up' : 'all'} onChange={(k) => { setUpcomingOnly(k === 'up'); setPage(1); }}
           options={[['up', t('healthSchedule.upcoming')], ['all', t('healthSchedule.all')]]} />
         <span className="w-px h-5 bg-line-strong mx-1 hidden sm:block" aria-hidden />
-        {(['ALL', 'VACCINATION', 'DEWORMING'] as const).map((type) => (
-          <Chip key={type} on={careType === type} onClick={() => setCareType(type)}>{t(`healthSchedule.kindOptions.${type}`)}</Chip>
+        {(['ALL', 'VACCINATION', 'DEWORMING', 'FARRIER'] as const).map((type) => (
+          <Chip key={type} on={careType === type} onClick={() => { setCareType(type); setPage(1); }}>{t(`healthSchedule.kindOptions.${type}`)}</Chip>
         ))}
       </div>
 
       {error ? (
         <ErrorText err={error} />
       ) : records === null ? (
-        <p className="text-muted">Đang tải lịch…</p>
+        <p className="text-muted">{t('healthSchedule.subLoading')}</p>
       ) : records.length === 0 ? (
         <EmptyState>{t(upcomingOnly ? 'healthSchedule.emptyUpcoming' : 'healthSchedule.emptyAll')}</EmptyState>
       ) : (
@@ -91,7 +95,7 @@ export function HealthSchedulePage() {
               <tbody>
                 {records.map((record) => (
                   <tr key={record.id} className="border-b border-line-soft last:border-0 hover:bg-subtle">
-                    <td className="pl-5 pr-4 py-3">{record.horse ? <Link to={`/horses/${record.horse.id}`} className="font-medium text-ink hover:text-info no-underline">{record.horse.name}</Link> : <span className="text-muted">Không rõ</span>}</td>
+                    <td className="pl-5 pr-4 py-3">{record.horse ? <Link to={`/horses/${record.horse.id}`} className="font-medium text-ink hover:text-info no-underline">{record.horse.name}</Link> : <span className="text-muted">{t('common.unknown')}</span>}</td>
                     <td className="px-4 py-3">{record.vaccineName}</td>
                     <td className="px-4 py-3 text-muted">{t(`healthSchedule.kindOptions.${record.careType ?? 'VACCINATION'}`)}</td>
                     <td className="px-4 py-3 num text-right text-muted whitespace-nowrap">{formatDate(record.date)}</td>
@@ -104,6 +108,7 @@ export function HealthSchedulePage() {
           </div>
         </Card>
       )}
+      <Pagination page={page} totalItems={result?.meta.total ?? 0} totalPages={Math.max(1, Math.ceil((result?.meta.total ?? 0) / 20))} pageSize={20} onPageChange={setPage} />
     </>
   );
 }
@@ -120,8 +125,8 @@ function DueStatus({ date }: { date: string | null }) {
   const { t } = useTranslation();
   const d = daysUntil(date);
   if (d == null) return <Badge tone="neu">{t('healthSchedule.noDueDate')}</Badge>;
-  if (d < 0) return <Badge tone="bad">{t('healthSchedule.overdue')} {-d} ngày</Badge>;
-  if (d <= 14) return <Badge tone="warn">{d === 0 ? 'Đến hạn hôm nay' : `Còn ${d} ngày`}</Badge>;
+  if (d < 0) return <Badge tone="bad">{t('healthSchedule.overdueDays', { count: -d })}</Badge>;
+  if (d <= 14) return <Badge tone="warn">{d === 0 ? t('healthSchedule.dueToday') : t('healthSchedule.dueInDays', { count: d })}</Badge>;
   return <Badge tone="ok">{t('healthSchedule.scheduled')}</Badge>;
 }
 
@@ -129,7 +134,7 @@ function CreateVaccinationForm({ onCreated, onClose }: { onCreated: () => Promis
   const { t } = useTranslation();
   const [horses, setHorses] = useState<Horse[]>([]);
   const [horseId, setHorseId] = useState('');
-  const [careType, setCareType] = useState<'VACCINATION' | 'DEWORMING'>('VACCINATION');
+  const [careType, setCareType] = useState<'VACCINATION' | 'DEWORMING' | 'FARRIER'>('VACCINATION');
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [nextDueDate, setNextDueDate] = useState('');
@@ -137,8 +142,8 @@ function CreateVaccinationForm({ onCreated, onClose }: { onCreated: () => Promis
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } })
-      .then((response) => setHorses(response.data.data))
+    fetchAll<Horse>('/horses')
+      .then((response) => setHorses(response))
       .catch(setError);
   }, []);
 
@@ -176,9 +181,10 @@ function CreateVaccinationForm({ onCreated, onClose }: { onCreated: () => Promis
             </NativeSelect>
           </Field>
           <Field label={t('healthSchedule.kind')}>
-            <NativeSelect value={careType} onChange={(e) => setCareType(e.target.value as 'VACCINATION' | 'DEWORMING')}>
+            <NativeSelect value={careType} onChange={(e) => setCareType(e.target.value as 'VACCINATION' | 'DEWORMING' | 'FARRIER')}>
               <option value="VACCINATION">{t('healthSchedule.kindOptions.VACCINATION')}</option>
               <option value="DEWORMING">{t('healthSchedule.kindOptions.DEWORMING')}</option>
+              <option value="FARRIER">{t('healthSchedule.kindOptions.FARRIER')}</option>
             </NativeSelect>
           </Field>
           <Field label={t('healthSchedule.item')}>
@@ -196,7 +202,7 @@ function CreateVaccinationForm({ onCreated, onClose }: { onCreated: () => Promis
           <Btn v="p" type="submit" disabled={saving || horses.length === 0}>
             {saving ? t('healthSchedule.saving') : t('common.create')}
           </Btn>
-          <Btn v="g" onClick={onClose}>Đóng</Btn>
+          <Btn v="g" onClick={onClose}>{t('common.close')}</Btn>
         </div>
       </Card>
     </form>

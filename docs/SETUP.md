@@ -50,6 +50,9 @@ npm install
 
 Mạng hay `ECONNRESET` khi cài? Cứ chạy lại `npm install` — repo đã cấu hình
 `maxsockets=3` + retry cao trong `.npmrc` để đỡ đứt giữa chừng.
+Prisma Client được tự generate sau khi cài dependencies, trước khi build và
+khi chạy `npm run start:dev`. Nếu chạy TypeScript trực tiếp bằng công cụ khác,
+hãy chạy `npm run prisma:generate` sau khi schema thay đổi.
 
 ## 3. Bật PostgreSQL — chọn 1 trong 2 cách
 
@@ -97,7 +100,6 @@ log email ra console thay vì gửi thật**, không chặn việc chạy local.
 
 ```powershell
 cd apps/api
-npm run prisma:generate
 npm run prisma:migrate        # tạo toàn bộ bảng theo migration đã có
 npm run db:seed               # tạo tài khoản + dữ liệu demo
 ```

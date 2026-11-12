@@ -1,5 +1,4 @@
-import i18n from '../i18n';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
@@ -10,42 +9,14 @@ import { useCachedResource } from '../lib/useCachedResource';
 import type { Paginated, Race, RaceDetail, RaceEntry, RaceReadiness } from '../lib/types';
 import { OwnerResultsPanel, ReadinessPanel } from '../components/races/ReadinessPanel';
 import { usePageChrome } from '../ds/AppShell';
-import { Badge, Btn, Card, Chip, ChipCount, EmptyState, Field, Icon, Input, NativeSelect, PageHeader } from '../ds/ui';
+import { Badge, Btn, Card, Chip, EmptyState, Field, Icon, Input, NativeSelect, PageHeader, Pagination } from '../ds/ui';
 
 type RaceFilter = 'ALL' | 'UPCOMING' | 'PAST';
 const EMPTY_RACES: Race[] = [];
 const EMPTY_READINESS: RaceReadiness[] = [];
 
-function isUpcomingRace(race: Pick<Race, 'date'>, today: string): boolean {
-  return toDateInput(race.date) >= today;
-}
-
-function summarizeRaces(races: Race[], today: string) {
-  return races.reduce(
-    (summary, race) => {
-      if (isUpcomingRace(race, today)) summary.upcoming += 1;
-      else summary.past += 1;
-      if (race.venue) summary.withVenue += 1;
-      return summary;
-    },
-    { upcoming: 0, past: 0, withVenue: 0 },
-  );
-}
-
-function getVisibleRaces(races: Race[], filter: RaceFilter, search: string, today: string): Race[] {
-  const query = search.trim().toLocaleLowerCase();
-  return races
-    .filter((race) => {
-      const isUpcoming = isUpcomingRace(race, today);
-      if (filter === 'UPCOMING' && !isUpcoming) return false;
-      if (filter === 'PAST' && isUpcoming) return false;
-      return !query || `${race.name} ${race.venue ?? ''}`.toLocaleLowerCase().includes(query);
-    })
-    .sort((left, right) => (
-      filter === 'PAST'
-        ? new Date(right.date).getTime() - new Date(left.date).getTime()
-        : new Date(left.date).getTime() - new Date(right.date).getTime()
-    ));
+function isUpcomingRace(race: Pick<Race, 'date'>): boolean {
+  return new Date(race.date).getTime() > new Date().getTime();
 }
 
 export function RacesPage() {
@@ -56,7 +27,8 @@ export function RacesPage() {
   const canEnter = canManage || user?.role === 'TRAINER';
   const seesReadiness = canEnter || user?.role === 'OWNER';
   const [selectedRace, setSelectedRace] = useState<RaceDetail | null>(null);
-  const [chosenFilter, setFilter] = useState<RaceFilter | null>(null);
+  const [chosenFilter, setFilter] = useState<RaceFilter>('ALL');
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<unknown>(null);
@@ -66,23 +38,37 @@ export function RacesPage() {
   usePageChrome({ crumbs: [t('races.title')] });
 
   const { data: raceData, loading, error, reload: loadRaces } = useCachedResource(
-    `race-management-${user?.id ?? 'anonymous'}-${user?.role}`,
+    `race-management-${user?.id ?? 'anonymous'}-${user?.role}-${page}-${chosenFilter}-${search}`,
     async () => {
       const [raceResponse, readinessResponse] = await Promise.all([
-        api.get<Paginated<Race>>('/races', { params: { limit: 100 } }),
-        seesReadiness ? api.get<RaceReadiness[]>('/races/readiness') : Promise.resolve(null),
+        api.get<Paginated<Race>>('/races', {
+          params: {
+            page,
+            limit: 20,
+            search,
+            ...(chosenFilter === 'UPCOMING'
+              ? { from: new Date().toISOString() }
+              : chosenFilter === 'PAST'
+                ? { to: new Date().toISOString() }
+                : {}),
+          },
+        }),
+        seesReadiness
+          ? api.get<RaceReadiness[]>('/races/readiness')
+          : Promise.resolve(null),
       ]);
-      return { races: raceResponse.data.data, readiness: readinessResponse?.data ?? [] };
+      return {
+        races: raceResponse.data.data,
+        total: raceResponse.data.meta.total,
+        readiness: readinessResponse?.data ?? [],
+      };
     },
   );
   const races = raceData?.races ?? EMPTY_RACES;
   const readiness = raceData?.readiness ?? EMPTY_READINESS;
 
-  const today = toDateInput(new Date().toISOString());
-  const summary = useMemo(() => summarizeRaces(races, today), [races, today]);
-  // Until the user picks one, open on upcoming races — or on all of them when none are coming up.
-  const filter: RaceFilter = chosenFilter ?? (summary.upcoming > 0 || races.length === 0 ? 'UPCOMING' : 'ALL');
-  const visibleRaces = useMemo(() => getVisibleRaces(races, filter, search, today), [filter, races, search, today]);
+  const filter = chosenFilter;
+  const visibleRaces = races;
 
   const openRace = async (race: Race) => {
     setSelectedRace(null);
@@ -116,28 +102,14 @@ export function RacesPage() {
     await loadRaces();
   };
 
-  const nextRace = useMemo(
-    () => races.filter((r) => isUpcomingRace(r, today)).sort((a, b) => a.date.localeCompare(b.date))[0],
-    [races, today],
-  );
-  const sub = loading && races.length === 0
-    ? t('races.loading')
-    : nextRace
-      ? t('races.subUpcoming', {
-          name: nextRace.name,
-          date: formatDate(nextRace.date),
-          venue: nextRace.venue ? t('races.atVenue', { venue: nextRace.venue }) : '',
-          count: summary.upcoming,
-        })
-      : t('races.subNoUpcoming', { count: summary.past });
-  const countFor = (value: RaceFilter) => (value === 'ALL' ? races.length : value === 'UPCOMING' ? summary.upcoming : summary.past);
+  const sub = loading ? t('races.loading') : `${raceData?.total ?? 0} ${t('races.title')}`;
 
   return (
     <>
       <PageHeader
         title={t('races.title')}
         sub={sub}
-        search={{ placeholder: t('races.search'), value: search, onChange: setSearch }}
+        search={{ placeholder: t('races.search'), value: search, onChange: (value) => { setSearch(value); setPage(1); } }}
         actions={canManage ? (
           <Btn v="p" onClick={() => { setEditingRace(null); setFormOpen((open) => !open); }}>
             <Icon name={formOpen && !editingRace ? 'x' : 'plus'} />{formOpen && !editingRace ? t('races.closeForm') : t('races.createRace')}
@@ -162,7 +134,7 @@ export function RacesPage() {
             <h2 className="text-[15px] font-semibold">{t('races.schedule')}</h2>
             <div className="flex gap-1.5" role="group" aria-label={t('races.filter')}>
               {(['UPCOMING', 'ALL', 'PAST'] as const).map((value) => (
-                <Chip key={value} on={filter === value} onClick={() => setFilter(value)}>{t(`races.filters.${value}`)} <ChipCount n={countFor(value)} /></Chip>
+                <Chip key={value} on={filter === value} onClick={() => { setFilter(value); setPage(1); }}>{t(`races.filters.${value}`)}</Chip>
               ))}
             </div>
           </div>
@@ -185,7 +157,7 @@ export function RacesPage() {
                 </thead>
                 <tbody>
                   {visibleRaces.map((race) => {
-                    const isUpcoming = isUpcomingRace(race, today);
+                    const isUpcoming = isUpcomingRace(race);
                     const isSelected = selectedRace?.id === race.id;
                     return (
                       <tr key={race.id} onClick={() => void openRace(race)} className={`border-b border-line-soft last:border-0 cursor-pointer ${isSelected ? 'bg-cream' : 'hover:bg-subtle'}`}>
@@ -195,7 +167,7 @@ export function RacesPage() {
                         </td>
                         <td className="px-3 py-3 num whitespace-nowrap">{formatDate(race.date)}</td>
                         <td className="px-3 py-3">{race.venue || <span className="text-muted">—</span>}</td>
-                        <td className="px-3 py-3 num text-right whitespace-nowrap">{race.distance ? <>{race.distance.toLocaleString('vi-VN')}<span className="text-muted"> {i18n.t("races.meters")}</span></> : <span className="text-muted">—</span>}</td>
+                        <td className="px-3 py-3 num text-right whitespace-nowrap">{race.distance ? <>{race.distance.toLocaleString('vi-VN')}<span className="text-muted"> m</span></> : <span className="text-muted">—</span>}</td>
                         <td className="px-5 py-3"><Badge tone={isUpcoming ? 'ok' : 'neu'}>{isUpcoming ? t('races.filters.UPCOMING') : t('races.filters.PAST')}</Badge></td>
                       </tr>
                     );
@@ -204,6 +176,7 @@ export function RacesPage() {
               </table>
             </div>
           )}
+          <Pagination page={page} pageSize={20} totalItems={raceData?.total ?? 0} totalPages={Math.max(1, Math.ceil((raceData?.total ?? 0) / 20))} onPageChange={setPage} className="p-4" />
         </Card>
 
         <Card className="min-w-0 p-5" aria-live="polite">
@@ -225,10 +198,11 @@ export function RacesPage() {
                 <dt className="text-muted">{t('races.prizePool')}</dt><dd className="m-0 num">{selectedRace.prizePool == null ? <span className="text-muted">—</span> : `${selectedRace.prizePool.toLocaleString('vi-VN')} ₫`}</dd>
               </dl>
 
-              {canEnter && isUpcomingRace(selectedRace, today) && (
+              {canEnter && new Date(selectedRace.date).getTime() - Date.now() >= 3 * 86400000 && (
                 <AddEntryForm readiness={readiness} enteredHorseIds={selectedRace.entries.map((entry) => entry.horseId)} onAdded={onEntrySaved} raceId={selectedRace.id} />
               )}
 
+              {canManage && <p className="cap mt-3">{t('raceFeatures.deadline')}</p>}
               <div className="flex items-center gap-2 mt-5 mb-2">
                 <h3 className="text-[14px] font-semibold">{t('races.entries')}</h3>
                 <span className="cap num">{selectedRace.entries.length}</span>
@@ -278,7 +252,7 @@ function RaceForm({ race, onCancel, onSaved }: { race: Race | null; onCancel: ()
     setSaving(true);
     const body = {
       name: name.trim(),
-      date: new Date(`${date}T00:00:00.000Z`).toISOString(),
+      date: new Date(`${date}T00:00:00+07:00`).toISOString(),
       venue: venue.trim() || null,
       distance: distance ? Number(distance) : null,
       surface: surface.trim() || null,
@@ -372,6 +346,8 @@ function EntryResult({ entry, canManage, canViewHorse, onSaved }: {
   entry: RaceDetail['entries'][number]; canManage: boolean; canViewHorse: boolean; onSaved: () => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const [status, setStatus] = useState<RaceDetail['entries'][number]['status']>(entry.status);
+  const [prizeWon, setPrizeWon] = useState(entry.prizeWon?.toString() ?? '');
   const [position, setPosition] = useState(entry.position?.toString() ?? '');
   const [time, setTime] = useState(entry.time ?? '');
   const [error, setError] = useState<unknown>(null);
@@ -382,7 +358,7 @@ function EntryResult({ entry, canManage, canViewHorse, onSaved }: {
     setError(null);
     setSaving(true);
     try {
-      await api.patch(`/race-entries/${entry.id}`, { position: position ? Number(position) : null, time: time.trim() || null });
+      await api.patch(`/race-entries/${entry.id}`, { status, position: status === 'COMPLETED' && position ? Number(position) : null, time: status === 'COMPLETED' ? time.trim() || null : null, prizeWon: status === 'COMPLETED' && prizeWon ? Number(prizeWon) : null });
       await onSaved();
     } catch (reason) {
       setError(reason);
@@ -401,13 +377,15 @@ function EntryResult({ entry, canManage, canViewHorse, onSaved }: {
           ) : (
             <span className="font-semibold">{entry.horse.name}</span>
           )}
-          <div className="cap">{entry.time || t('races.resultPending')}</div>
+          <div className="cap">{t(`raceFeatures.status.${entry.status}`)}{entry.time ? ` \u00b7 ${entry.time}` : ''}</div>
         </div>
       </div>
       {canManage && (
         <form onSubmit={save} className="flex flex-wrap items-end gap-2 mt-2.5">
-          <Field label={t('races.position')} className="w-20"><Input type="number" min="1" step="1" value={position} onChange={(event) => setPosition(event.target.value)} /></Field>
-          <Field label={t('races.time')} className="w-28"><Input value={time} onChange={(event) => setTime(event.target.value)} maxLength={40} placeholder="mm:ss" /></Field>
+          <Field label={t('races.statusLabel')}><NativeSelect value={status} onChange={(e) => setStatus(e.target.value as RaceDetail['entries'][number]['status'])}>{(['PENDING', 'COMPLETED', 'WITHDRAWN', 'DID_NOT_START'] as const).map((value) => <option key={value} value={value}>{t(`raceFeatures.status.${value}`)}</option>)}</NativeSelect></Field>
+          <Field label={t('raceFeatures.prize')}><Input type="number" min="0" step="0.01" disabled={status !== 'COMPLETED'} value={prizeWon} onChange={(e) => setPrizeWon(e.target.value)} /></Field>
+          <Field label={t('races.position')} className="w-20"><Input type="number" min="1" step="1" disabled={status !== 'COMPLETED'} value={position} onChange={(event) => setPosition(event.target.value)} /></Field>
+          <Field label={t('races.time')} className="w-28"><Input disabled={status !== 'COMPLETED'} value={time} onChange={(event) => setTime(event.target.value)} maxLength={40} placeholder="mm:ss" /></Field>
           <Btn sm type="submit" disabled={saving}>{saving ? '…' : t('common.save')}</Btn>
           <ErrorText err={error} />
         </form>

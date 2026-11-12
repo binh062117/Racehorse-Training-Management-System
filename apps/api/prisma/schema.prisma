@@ -54,6 +54,7 @@ enum HealthStatus {
 enum PreventiveCareType {
   VACCINATION
   DEWORMING
+  FARRIER
 }
 
 enum TreatmentPlanStatus {
@@ -158,6 +159,7 @@ model User {
   refreshTokens      RefreshToken[]
   authTokens         AuthToken[]
   otpCodes           OtpCode[]
+  recordedSessions   TrainingSession[]   @relation("SessionResultRecorder")
 
   @@index([status])
 }
@@ -244,6 +246,8 @@ model Horse {
   fitnessAssessments FitnessAssessment[]
   siredFoals         Horse[]             @relation("HorsePedigree_Sire")
   damFoals           Horse[]             @relation("HorsePedigree_Dam")
+  expenses           HorseExpense[]
+  trialVideos        TrialVideo[]
 
   @@index([ownerId])
   @@index([status])
@@ -253,31 +257,33 @@ model Horse {
 }
 
 model TrainingSession {
-  id                String        @id @default(uuid())
-  horseId           String
-  horse             Horse         @relation(fields: [horseId], references: [id])
-  trainerId         String
-  trainer           User          @relation("SessionTrainer", fields: [trainerId], references: [id])
-  groomId           String?
-  groom             User?         @relation("SessionGroom", fields: [groomId], references: [id], onDelete: SetNull)
-  planId            String?
-  plan              TrainingPlan? @relation(fields: [planId], references: [id])
-  scheduledAt       DateTime
-  type              String
-  distanceM         Int? // Cự ly bài tập (mét), vd: 1200, 1600
-  surface           String? // Mặt sân: TURF (cỏ), DIRT (cát), SYNTHETIC (nhân tạo)
-  status            SessionStatus @default(PLANNED)
-  resultMetric      String?
-  resultValue       Float?
+  id                 String        @id @default(uuid())
+  horseId            String
+  horse              Horse         @relation(fields: [horseId], references: [id])
+  trainerId          String
+  trainer            User          @relation("SessionTrainer", fields: [trainerId], references: [id])
+  groomId            String?
+  groom              User?         @relation("SessionGroom", fields: [groomId], references: [id], onDelete: SetNull)
+  planId             String?
+  plan               TrainingPlan? @relation(fields: [planId], references: [id])
+  scheduledAt        DateTime
+  type               String
+  distanceM          Int? // Cự ly bài tập (mét), vd: 1200, 1600
+  surface            String? // Mặt sân: TURF (cỏ), DIRT (cát), SYNTHETIC (nhân tạo)
+  status             SessionStatus @default(PLANNED)
+  resultMetric       String?
+  resultValue        Float?
   // Kết quả có cấu trúc sau buổi tập (chỉ HLV ghi)
-  finishTimeSec     Float? // thời gian hoàn thành (giây)
-  recoveryHeartRate Int? // nhịp tim sau 10 phút hồi phục (bpm)
-  muscleResponse    String? // NORMAL | TIGHT | SORE
-  notes             String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  media TrainingMedia[]
+  finishTimeSec      Float? // thời gian hoàn thành (giây)
+  recoveryHeartRate  Int? // nhịp tim sau 10 phút hồi phục (bpm)
+  muscleResponse     String? // NORMAL | TIGHT | SORE
+  notes              String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  resultRecordedById String?
+  resultRecordedBy   User?         @relation("SessionResultRecorder", fields: [resultRecordedById], references: [id])
+  resultConfirmed    Boolean       @default(false)
+  media              TrainingMedia[]
 
   @@index([horseId, scheduledAt])
   @@index([status])
@@ -347,15 +353,17 @@ model Race {
 }
 
 model RaceEntry {
-  id        String   @id @default(uuid())
+  id        String          @id @default(uuid())
   raceId    String
-  race      Race     @relation(fields: [raceId], references: [id])
+  race      Race            @relation(fields: [raceId], references: [id])
   horseId   String
-  horse     Horse    @relation(fields: [horseId], references: [id])
+  horse     Horse           @relation(fields: [horseId], references: [id])
   position  Int? // null = no result yet
   time      String? // free text, e.g. "1:38.20"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  status    RaceEntryStatus @default(PENDING)
+  prizeWon  Float?
 
   @@unique([raceId, horseId])
   @@index([horseId])
@@ -594,6 +602,40 @@ model FitnessAssessment {
 
   @@index([horseId, createdAt])
   @@index([assessedById])
+}
+
+enum RaceEntryStatus {
+  PENDING
+  COMPLETED
+  WITHDRAWN
+  DID_NOT_START
+}
+
+model TrialVideo {
+  id         String   @id @default(uuid())
+  horseId    String
+  horse      Horse    @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  title      String
+  videoUrl   String
+  recordedAt DateTime
+  notes      String?
+  duration   String?
+  createdAt  DateTime @default(now())
+
+  @@index([horseId])
+}
+
+model HorseExpense {
+  id          String   @id @default(uuid())
+  horseId     String
+  horse       Horse    @relation(fields: [horseId], references: [id])
+  date        DateTime
+  category    String
+  description String
+  amount      Float
+  createdAt   DateTime @default(now())
+
+  @@index([horseId, date])
 }
 
 // Ảnh / video buổi tập — để chủ ngựa thấy ngựa mình được tập thế nào.

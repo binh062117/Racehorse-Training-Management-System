@@ -93,8 +93,8 @@ export function DashboardPage() {
     role === 'MANAGER' ? 'dashboard:pending-users' : 'dashboard:pending-users:skip',
     async () => {
       if (role !== 'MANAGER') return 0;
-      const res = await api.get<User[]>('/users');
-      return res.data.filter((u) => u.status === 'PENDING').length;
+      const res = await api.get<Paginated<User>>('/users', { params: { status: 'PENDING', limit: 1 } });
+      return res.data.meta.total;
     },
   );
   const pendingUsers = pendingUsersData ?? 0;

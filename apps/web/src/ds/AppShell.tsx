@@ -7,7 +7,7 @@ import { useAuth } from '../auth/useAuth';
 import { api } from '../lib/api';
 import type { Notification, Paginated, Role } from '../lib/types';
 import { HORSE_LOGO, Icon } from './ui';
-import { setLanguage } from '../i18n';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 interface NavItem {
   to: string;
@@ -18,6 +18,7 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { to: '/reports/finances', labelKey: 'raceFeatures.finances', defaultLabel: 'Costs & prize money', icon: 'flag', roles: ['MANAGER', 'OWNER'] },
   { to: '/training/progress', labelKey: 'hai.clubProgress', defaultLabel: 'Club training progress', icon: 'plans', roles: ['MANAGER', 'TRAINER'] },
   { to: '/dashboard', labelKey: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: 'dashboard' },
   { to: '/horses', labelKey: 'nav.horses', defaultLabel: 'Ngựa đua', icon: 'horse' },
@@ -120,17 +121,11 @@ function initials(name?: string) {
 /** Navigation shared by the desktop sidebar and the phone sheet. */
 function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }) {
   const fade = rail ? RAIL_FADE : '';
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const role = user?.role ?? null;
   const visible = (item: NavItem) => !item.roles || (role !== null && item.roles.includes(role));
-
-  const isVi = (i18n.resolvedLanguage || i18n.language || 'vi').toLowerCase().startsWith('vi');
-  const toggleLang = () => {
-    const next = isVi ? 'en' : 'vi';
-    setLanguage(next);
-  };
 
   const handleLogout = async () => {
     if (!window.confirm(t('nav.logoutConfirm', 'Bạn chắc chắn muốn đăng xuất?'))) return;
@@ -141,7 +136,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
   return (
     <div className="flex flex-col h-full">
       <div className="px-0.5 pb-4"><Brand rail={rail} /></div>
-      <nav aria-label={i18n.t("dashboard.navigation")} className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+      <nav aria-label={t("dashboard.navigation")} className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex flex-col gap-0.5">
           {NAV.filter(visible).map(({ to, labelKey, defaultLabel, icon }) => {
             const label = t(labelKey, defaultLabel);
@@ -170,17 +165,7 @@ function NavContent({ unread, rail = false }: { unread: number; rail?: boolean }
           <span className="block text-[13.5px] font-medium leading-[18px] truncate text-white">{user?.name}</span>
           <span className="block text-[12px] leading-4 text-[#b7c0cc] truncate">{user?.role ? t(`role.${user.role}`) : ''}</span>
         </span>
-        <button
-          type="button"
-          onClick={toggleLang}
-          className={`h-8 px-2 rounded-btn text-[12px] font-medium border border-white/15 text-[#b7c0cc] hover:bg-white/[.08] hover:text-white transition-colors inline-flex items-center gap-1 ${fade}`}
-          aria-label={isVi ? 'Chuyển sang tiếng Anh' : 'Switch to Vietnamese'}
-          title={isVi ? 'Switch to English' : 'Chuyển sang tiếng Việt'}
-        >
-          <span className={isVi ? 'text-white font-bold' : 'opacity-60'}>VI</span>
-          <span className="opacity-30">/</span>
-          <span className={!isVi ? 'text-white font-bold' : 'opacity-60'}>EN</span>
-        </button>
+        <LanguageSwitcher className={`border border-white/15 text-[#b7c0cc] hover:bg-white/[.08] hover:text-white transition-colors ${fade}`} />
         <button
           type="button"
           onClick={() => void handleLogout()}
