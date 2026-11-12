@@ -56,7 +56,7 @@ export function AiInsightCard({ horseId }: { horseId: string }) {
         </Btn>
       </div>
 
-      {err && <div className="mt-3"><ErrorText err={err} /></div>}
+      {!!err && <div className="mt-3"><ErrorText err={err} /></div>}
 
       {insight && !loading && (
         <div className="mt-3.5 pt-3.5 border-t border-line-soft">

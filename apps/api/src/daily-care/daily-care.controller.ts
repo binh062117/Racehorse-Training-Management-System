@@ -29,20 +29,14 @@ export class DailyCareController {
 
   @ApiOperation({ summary: 'Lấy danh sách công việc chăm sóc hàng ngày' })
   @Get()
-  list(
-    @Query() q: ListDailyCareQueryDto,
-    @CurrentUser() user: AuthUser,
-  ) {
+  list(@Query() q: ListDailyCareQueryDto, @CurrentUser() user: AuthUser) {
     return this.dailyCare.list(q, user);
   }
 
   @ApiOperation({ summary: 'Tạo công việc chăm sóc thủ công' })
   @Post()
   @Roles(Role.GROOM, Role.MANAGER)
-  create(
-    @Body() dto: CreateDailyCareDto,
-    @CurrentUser() user: AuthUser,
-  ) {
+  create(@Body() dto: CreateDailyCareDto, @CurrentUser() user: AuthUser) {
     return this.dailyCare.create(dto, user.id);
   }
 

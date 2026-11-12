@@ -44,8 +44,9 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto, @Req() req: Request) {
     const ipAddress =
-      ((req.headers['x-forwarded-for'] as string) || req.ip)?.split(',')[0].trim() ||
-      null;
+      ((req.headers['x-forwarded-for'] as string) || req.ip)
+        ?.split(',')[0]
+        .trim() || null;
     const userAgent = (req.headers['user-agent'] as string) || null;
     return this.auth.login(dto, { ipAddress, userAgent });
   }

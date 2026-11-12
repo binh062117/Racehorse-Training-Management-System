@@ -55,7 +55,7 @@ export function FeedingSuggestionCard({
         </Btn>
       </div>
 
-      {err && <div className="mt-3"><ErrorText err={err} /></div>}
+      {!!err && <div className="mt-3"><ErrorText err={err} /></div>}
 
       {suggestion && !loading && (
         <div className="mt-3.5 pt-3.5 border-t border-line-soft">
