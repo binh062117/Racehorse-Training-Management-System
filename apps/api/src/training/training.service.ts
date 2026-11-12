@@ -221,7 +221,8 @@ export class TrainingService {
       this.prisma.trainingSession.findMany({
         where,
         include: SESSION_INCLUDE,
-        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+        // Newest first: the latest-scheduled sessions sit on page 1.
+        orderBy: [{ scheduledAt: 'desc' }, { id: 'desc' }],
         skip: (q.page - 1) * q.limit,
         take: q.limit,
       }),

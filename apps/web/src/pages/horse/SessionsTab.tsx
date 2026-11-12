@@ -89,7 +89,7 @@ function SessionsContent({ horseId, isLocked }: Props) {
     '/horses/' + horseId + '/sessions', page, filter ? { status: filter } : {},
   );
 
-  // Group display dates only; API ordering and stored timestamps are unchanged.
+  // Group by display date; the API returns newest first, so the latest day is on top.
   const days = new Map<string, typeof sessions>();
   for (const session of sessions) {
     const date = formatDate(session.scheduledAt);
