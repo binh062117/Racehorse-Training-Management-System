@@ -1,0 +1,1694 @@
+{
+  "info": {
+    "_postman_id": "8f9a0b1c-racehorse-business-api-testing",
+    "name": "Racehorse Management System — Business Logic API Testing Suite",
+    "description": "Bộ kiểm thử API Nghiệp vụ chuyên sâu (Business Logic & End-to-End Workflows) cho môn Software Testing.\nBao quát các quy trình nghiệp vụ: Quản lý vòng đời ngựa, Đánh giá thể lực & Quy tắc tính điểm, Quy trình huấn luyện & An toàn, Chăm sóc & Dinh dưỡng, Y tế thú y & Tiêm chủng, Xử lý sự cố chuồng trại, Tổ chức giải đua và Phân quyền RBAC.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01. Authentication & Multi-Role Sessions (Auth Flow)",
+      "item": [
+        {
+          "name": "AUTH-01: Manager Đăng nhập & Cấp phát Phiên làm việc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{managerEmail}}\",\n  \"password\": \"{{managerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 201 Success\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Token JWT và thông tin Manager được cấp phát\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"accessToken\");",
+                  "    pm.expect(json.user.role).to.eql(\"MANAGER\");",
+                  "    pm.expect(json.user.status).to.eql(\"ACTIVE\");",
+                  "    pm.environment.set(\"accessToken\", json.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUTH-02: Trainer (Huấn luyện viên) Đăng nhập",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{trainerEmail}}\",\n  \"password\": \"{{trainerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 201 Success\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Token cấp cho đúng vai trò TRAINER\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"accessToken\");",
+                  "    pm.expect(json.user.role).to.eql(\"TRAINER\");",
+                  "    pm.environment.set(\"trainerToken\", json.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUTH-03: Groom (Nhân viên chăm sóc) Đăng nhập",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{groomEmail}}\",\n  \"password\": \"{{groomPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 201 Success\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Token cấp cho đúng vai trò GROOM\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"accessToken\");",
+                  "    pm.expect(json.user.role).to.eql(\"GROOM\");",
+                  "    pm.environment.set(\"groomToken\", json.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUTH-04: Vet (Bác sĩ thú y) Đăng nhập",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{vetEmail}}\",\n  \"password\": \"{{vetPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 201 Success\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Token cấp cho đúng vai trò VET\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"accessToken\");",
+                  "    pm.expect(json.user.role).to.eql(\"VET\");",
+                  "    pm.environment.set(\"vetToken\", json.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUTH-05: Kiểm tra Hồ sơ người dùng hiện tại (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[Business Rule] Thông tin định danh khớp chính xác tài khoản Manager\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql(pm.environment.get(\"managerEmail\"));",
+                  "    pm.expect(json.role).to.eql(\"MANAGER\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Quy trình Quản lý Vòng đời Ngựa & Đánh giá Thể lực",
+      "item": [
+        {
+          "name": "HORSE-01: [Nghiệp vụ] Manager Tạo hồ sơ Ngựa đua mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Chiến Mã Ánh Sáng\",\n  \"ownerId\": \"{{ownerId}}\",\n  \"gender\": \"MALE\",\n  \"breed\": \"Thoroughbred Thuần Chủng\",\n  \"stallNumber\": \"STALL-B01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Ngựa mới có trạng thái ban đầu ACTIVE và chưa bị khóa tập luyện\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"id\");",
+                  "    pm.expect(json.name).to.eql(\"Chiến Mã Ánh Sáng\");",
+                  "    pm.expect(json.gender).to.eql(\"MALE\");",
+                  "    pm.expect(json.status).to.eql(\"ACTIVE\");",
+                  "    pm.expect(json.locked).to.be.false;",
+                  "    pm.expect(json.healthStatus).to.eql(\"FIT\");",
+                  "    pm.expect(json.ownerId).to.eql(pm.environment.get(\"ownerId\"));",
+                  "",
+                  "    // Lưu ID ngựa mới để dùng xuyên suốt cho các bước nghiệp vụ sau",
+                  "    pm.environment.set(\"createdHorseId\", json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "HORSE-02: [Nghiệp vụ] Cập nhật số chuồng và đặc điểm nhận dạng",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{createdHorseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{createdHorseId}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stallNumber\": \"STALL-VIP-09\",\n  \"saddleNumber\": 28\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[Business Rule] Thông tin vị trí chuồng trại được cập nhật chính xác\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.stallNumber).to.eql(\"STALL-VIP-09\");",
+                  "    pm.expect(json.saddleNumber).to.eql(28);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "HORSE-03: [Nghiệp vụ - Quy tắc tính điểm] Bác sĩ thú y Đánh giá Thể lực 5 Tiêu chí",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vetToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{createdHorseId}}/fitness-assessment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{createdHorseId}}",
+                "fitness-assessment"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speedScore\": 18,\n  \"staminaScore\": 17,\n  \"conditionScore\": 19,\n  \"recoveryScore\": 16,\n  \"moraleScore\": 18,\n  \"notes\": \"Thể lực xuất sắc, cơ bắp đàn hồi tốt, sẵn sàng cho giải đua\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Calculation Rule] Tổng điểm totalScore bằng đúng tổng 5 tiêu chí thành phần\", function () {",
+                  "    const json = pm.response.json();",
+                  "    const a = json.assessment;",
+                  "    const expectedTotal = a.speedScore + a.staminaScore + a.conditionScore + a.recoveryScore + a.moraleScore;",
+                  "    pm.expect(a.totalScore).to.eql(expectedTotal);",
+                  "    pm.expect(a.totalScore).to.eql(88);",
+                  "});",
+                  "pm.test(\"[Business Rule] Điểm thể lực của ngựa được tự động đồng bộ sang hồ sơ chính\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.horse.fitnessScore).to.eql(88);",
+                  "    pm.expect(json.assessment.assessedBy.role).to.eql(\"VET\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "HORSE-04: [Nghiệp vụ Biên - Negative] Đánh giá điểm vượt quá thang đo cho phép (>20)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vetToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{createdHorseId}}/fitness-assessment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{createdHorseId}}",
+                "fitness-assessment"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speedScore\": 25,\n  \"staminaScore\": 15,\n  \"conditionScore\": 15,\n  \"recoveryScore\": 15,\n  \"moraleScore\": 15\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"[Business Rule] Server chặn điểm số vượt ngưỡng biên nghiệp vụ\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "HORSE-05: [Nghiệp vụ] Lấy danh sách lịch sử đánh giá thể lực",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{createdHorseId}}/fitness-assessments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{createdHorseId}}",
+                "fitness-assessments"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[Business Rule] Lịch sử thể lực chứa bản ghi 88 điểm vừa đánh giá\", function () {",
+                  "    const json = pm.response.json();",
+                  "    const list = Array.isArray(json) ? json : json.data;",
+                  "    pm.expect(list.length).to.be.greaterThan(0);",
+                  "    pm.expect(list[0].totalScore).to.eql(88);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "HORSE-06: [Nghiệp vụ - Khóa Huấn Luyện] Bác sĩ thú y Kích hoạt Training Lock vì lý do y tế",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vetToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{createdHorseId}}/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{createdHorseId}}",
+                "lock"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locked\": true,\n  \"reason\": \"Dấu hiệu căng cơ nhẹ sau đợt kiểm tra thể lực, cần nghỉ ngơi 3 ngày\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[Business Rule] Trạng thái trainingLocked chuyển sang true kèm lý do cụ thể\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.locked).to.be.true;",
+                  "    pm.expect(json.lockReason).to.include(\"căng cơ nhẹ\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Quy trình Lên lịch & Thực hiện Huấn luyện (Training Flow)",
+      "item": [
+        {
+          "name": "TRAIN-01: [Nghiệp vụ An toàn - Negative] Huấn luyện viên cố tình tạo lịch tập cho Ngựa đang bị KHÓA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{createdHorseId}}/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{createdHorseId}}",
+                "sessions"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledAt\": \"2026-11-20T08:00:00.000Z\",\n  \"type\": \"GALLOP\",\n  \"distanceM\": 1400,\n  \"surface\": \"TURF\",\n  \"notes\": \"Bài tập chạy nước rút\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 or 409 Rejected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 403, 409]);",
+                  "});",
+                  "pm.test(\"[Safety Business Rule] Hệ thống từ chối tạo lịch tập khi ngựa có lệnh cấm tập của bác sĩ\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"error\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "TRAIN-02: [Nghiệp vụ] Huấn luyện viên Lên lịch buổi tập mới cho Ngựa khỏe mạnh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{existingHorseId}}/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{existingHorseId}}",
+                "sessions"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledAt\": \"{{trainingScheduledAt}}\",\n  \"type\": \"CANTER\",\n  \"distanceM\": 1200,\n  \"surface\": \"TURF\",\n  \"notes\": \"Bài tập rèn luyện nhịp thở và sức bền đường dài\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Tạo mốc thời gian huấn luyện tương lai động để tránh xung đột lịch tập (Conflict Rule)",
+                  "const offset = 86400000 * 30 + Math.floor(Math.random() * 100000000);",
+                  "pm.environment.set(\"trainingScheduledAt\", new Date(Date.now() + offset).toISOString());"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Buổi tập được khởi tạo ở trạng thái PLANNED kèm thông số cự ly\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set(\"createdSessionId\", json.id);",
+                  "    pm.expect(json).to.have.property(\"id\");",
+                  "    pm.expect(json.status).to.eql(\"PLANNED\");",
+                  "    pm.expect(json.type).to.eql(\"CANTER\");",
+                  "    pm.expect(json.distanceM).to.eql(1200);",
+                  "    pm.expect(json.surface).to.eql(\"TURF\");",
+                  "    pm.expect(json.trainer.email).to.include(\"trainer\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "TRAIN-03: [Nghiệp vụ Chuyển trạng thái] Huấn luyện viên Hoàn thành buổi tập & Ghi nhận kết quả",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{createdSessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{createdSessionId}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DONE\",\n  \"resultMetric\": \"seconds\",\n  \"resultValue\": 74.2,\n  \"notes\": \"Ngựa hoàn thành bài tập tốt, thời gian đạt chuẩn thi đấu\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[State Transition Rule] Trạng thái chuyển từ PLANNED sang DONE và lưu trữ chỉ số thành tích\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(\"DONE\");",
+                  "    pm.expect(json.resultValue).to.eql(74.2);",
+                  "    pm.expect(json.resultMetric).to.eql(\"seconds\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "TRAIN-04: [Nghiệp vụ] Dashboard Tổng quan Tiến độ Huấn luyện toàn chuồng",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/training/progress/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "training",
+                "progress",
+                "overview"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[Business Rule] Dashboard trả về dữ liệu tổng quan thống kê các buổi huấn luyện\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an(\"object\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Quy trình Chăm sóc Hàng ngày & Dinh dưỡng (Daily Care & Feeding)",
+      "item": [
+        {
+          "name": "CARE-01: [Nghiệp vụ] Giao việc Chăm sóc Hàng ngày (Vệ sinh chuồng)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{groomToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/daily-care",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "daily-care"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"horseId\": \"{{existingHorseId}}\",\n  \"taskType\": \"CLEANING\",\n  \"notes\": \"Dọn dẹp chuồng, phun thuốc khử trùng và thay rơm lót mới\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Công việc mới tạo có trạng thái ban đầu completed = false\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"id\");",
+                  "    pm.expect(json.taskType).to.eql(\"CLEANING\");",
+                  "    pm.expect(json.completed).to.be.false;",
+                  "    pm.expect(json.horseId).to.eql(pm.environment.get(\"existingHorseId\"));",
+                  "",
+                  "    pm.environment.set(\"createdCareId\", json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "CARE-02: [Nghiệp vụ Chuyển trạng thái] Nhân viên Groom Xác nhận Hoàn thành công việc",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{groomToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/daily-care/{{createdCareId}}/toggle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "daily-care",
+                "{{createdCareId}}",
+                "toggle"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[Business Rule] Trạng thái công việc chuyển đổi thành completed = true\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.completed).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "CARE-03: [Nghiệp vụ Dinh dưỡng] Ghi nhận Nhật ký Cho ăn & Khẩu phần dinh dưỡng",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{groomToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{existingHorseId}}/feeding-records",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{existingHorseId}}",
+                "feeding-records"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feedType\": \"Yến mạch & Cỏ khô Alfalfa\",\n  \"quantityKg\": 6.5,\n  \"date\": \"2026-11-01T07:00:00.000Z\",\n  \"notes\": \"Bổ sung khoáng vi lượng buổi sáng, ăn hết khẩu phần\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Nhật ký lưu đúng số kg và loại thức ăn cho đúng con ngựa\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.quantityKg).to.eql(6.5);",
+                  "    pm.expect(json.feedType).to.include(\"Yến mạch\");",
+                  "    pm.expect(json.recordedBy.email).to.include(\"groom\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "CARE-04: [Nghiệp vụ Biên - Negative] Ghi nhận khẩu phần dinh dưỡng với số lượng âm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{groomToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{existingHorseId}}/feeding-records",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{existingHorseId}}",
+                "feeding-records"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feedType\": \"Hay\",\n  \"quantityKg\": -5,\n  \"date\": \"2026-11-01T07:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"[Business Rule] Server từ chối khối lượng thức ăn âm hoặc bằng 0\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. Quy trình Y tế Thú y & Tiêm chủng (Veterinary Flow)",
+      "item": [
+        {
+          "name": "VET-01: [Nghiệp vụ Bệnh án] Bác sĩ thú y Tạo Hồ sơ Khám bệnh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vetToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{existingHorseId}}/health-records",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{existingHorseId}}",
+                "health-records"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examDate\": \"2026-11-01T08:00:00.000Z\",\n  \"diagnosis\": \"Khám định kỳ toàn diện, tim phổi và gân cơ bình thường\",\n  \"treatment\": \"Bổ sung vitamin tổng hợp và chất điện giải\",\n  \"healthStatus\": \"FIT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Bệnh án được lưu với kết luận sức khỏe FIT\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"id\");",
+                  "    pm.expect(json.healthStatus).to.eql(\"FIT\");",
+                  "    pm.expect(json.diagnosis).to.include(\"toàn diện\");",
+                  "",
+                  "    pm.environment.set(\"createdHealthRecordId\", json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "VET-02: [Nghiệp vụ Tiêm chủng] Bác sĩ thú y Lên Lịch Tiêm Vắc xin Phòng ngừa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vetToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{existingHorseId}}/vaccinations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{existingHorseId}}",
+                "vaccinations"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineName\": \"Equine Influenza Booster (Cúm ngựa)\",\n  \"date\": \"2026-11-01T09:00:00.000Z\",\n  \"nextDueDate\": \"2027-05-01T09:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Lịch tiêm phòng ghi nhận đúng loại vắc xin và ngày hẹn nhắc lại\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.vaccineName).to.include(\"Equine Influenza\");",
+                  "    pm.expect(json.nextDueDate).to.eql(\"2027-05-01T09:00:00.000Z\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "VET-03: [Nghiệp vụ Ràng buộc - Negative] Tạo bệnh án nhưng ngày khám là tương lai",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vetToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{existingHorseId}}/health-records",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{existingHorseId}}",
+                "health-records"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examDate\": \"2028-01-01T08:00:00.000Z\",\n  \"diagnosis\": \"Khám trước tương lai\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"[Business Rule] Server từ chối ngày khám bệnh trong tương lai\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06. Quy trình Báo cáo & Xử lý Sự cố Chuồng trại (Incident Flow)",
+      "item": [
+        {
+          "name": "INC-01: [Nghiệp vụ Báo cáo] Nhân viên Groom Lập Biên bản Sự cố khẩn cấp",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{groomToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses/{{existingHorseId}}/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses",
+                "{{existingHorseId}}",
+                "incidents"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Ngựa có biểu hiện biếng ăn và thân nhiệt hơi cao sau buổi tập chiều\",\n  \"severity\": \"MEDIUM\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Sự cố được ghi nhận ở trạng thái OPEN với mức độ MEDIUM\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set(\"createdIncidentId\", json.id);",
+                  "    pm.expect(json).to.have.property(\"id\");",
+                  "    pm.expect(json.status).to.eql(\"OPEN\");",
+                  "    pm.expect(json.severity).to.eql(\"MEDIUM\");",
+                  "    pm.expect(json.reportedBy.email).to.include(\"groom\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "INC-02: [Nghiệp vụ Chặt chẽ - Negative] Cố tình Đóng sự cố nhưng KHÔNG KÈM bệnh án của bác sĩ",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vetToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/incidents/{{createdIncidentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "{{createdIncidentId}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RESOLVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"[Strict Business Rule] Bắt buộc phải có hồ sơ khám bệnh để đóng sự cố\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "    pm.expect(json.error.message).to.include(\"hồ sơ khám\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "INC-03: [Nghiệp vụ Đóng sự cố] Bác sĩ thú y Đóng sự cố kèm Hồ sơ Y tế Chứng thực",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vetToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/incidents/{{createdIncidentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "{{createdIncidentId}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n            \"status\": \"RESOLVED\",\n            \"healthRecordId\": \"{{createdHealthRecordId}}\"\n          }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[Business Rule] Sự cố được giải quyết thành công (RESOLVED) gắn liền hồ sơ y bạ\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(\"RESOLVED\");",
+                  "    pm.expect(json.healthRecordId).to.eql(pm.environment.get(\"createdHealthRecordId\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07. Quy trình Tổ chức Giải đua & Đăng ký Thi đấu (Racing Flow)",
+      "item": [
+        {
+          "name": "RACE-01: [Nghiệp vụ] Manager Khởi tạo Giải Đua Mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/races",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "races"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Giải Đua Ngựa Mùa Thu Cúp Vô Địch 2026\",\n  \"date\": \"2026-12-15T14:00:00.000Z\",\n  \"venue\": \"Trường Đua Quốc Tế Bình Dương\",\n  \"distance\": 1600,\n  \"surface\": \"TURF\",\n  \"prizePool\": 50000000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Giải đua được tạo với đầy đủ thông số cự ly, địa điểm, giải thưởng\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"id\");",
+                  "    pm.expect(json.name).to.include(\"Mùa Thu\");",
+                  "    pm.expect(json.distance).to.eql(1600);",
+                  "    pm.expect(json.prizePool).to.eql(50000000);",
+                  "",
+                  "    pm.environment.set(\"createdRaceId\", json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "RACE-02: [Nghiệp vụ] Đăng ký Ngựa vào Danh sách Thi đấu của Giải",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/races/{{createdRaceId}}/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "races",
+                "{{createdRaceId}}",
+                "entries"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"horseId\": \"{{existingHorseId}}\",\n  \"position\": 1,\n  \"time\": \"1:38.45\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"[Business Rule] Ngựa được ghi danh thành công vào giải đấu\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.raceId).to.eql(pm.environment.get(\"createdRaceId\"));",
+                  "    pm.expect(json.horseId).to.eql(pm.environment.get(\"existingHorseId\"));",
+                  "    pm.expect(json.horse.name).to.eql(\"Thunderbolt\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08. Kiểm thử An ninh & Phân quyền Vai trò (RBAC Enforcement)",
+      "item": [
+        {
+          "name": "RBAC-01: [Phân quyền Hợp lệ] Manager truy cập danh sách quản trị người dùng",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"[RBAC Rule] Quản lý (Manager) có toàn quyền truy xuất danh sách nhân viên\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "    pm.expect(Array.isArray(json.data)).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "RBAC-02: [Vượt quyền Trái phép - Negative] Groom cố tình gọi API Quản trị Người dùng",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{groomToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"[RBAC Rule] Hệ thống từ chối nhân viên Groom truy cập khu vực của Manager\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "RBAC-03: [Không có Token - Negative] Gọi API bảo mật không có Authorization Header",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"[Security Rule] Chặn truy cập khi thiếu Bearer Token\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql(\"UNAUTHENTICATED\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "RBAC-04: [Vượt quyền Trái phép - Negative] Groom cố tình Tạo Ngựa mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{groomToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/horses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "horses"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ngựa Trái Phép\",\n  \"ownerId\": \"{{ownerId}}\",\n  \"gender\": \"MALE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"[RBAC Rule] Chỉ duy nhất Manager mới có thẩm quyền tạo hồ sơ ngựa\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
