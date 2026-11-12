@@ -91,6 +91,18 @@ enum NotificationType {
   SUPPLY_REVIEWED
   PLAN_OVERDUE
   PREVENTIVE_CARE_DUE
+  STALL_STATUS_REQUESTED
+  STALL_STATUS_APPROVED
+}
+
+enum StallStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+  OUT_OF_SERVICE
+  DISINFECTING
+  QUARANTINED
 }
 
 enum DailyCareTask {
@@ -599,4 +611,22 @@ model TrainingMedia {
   createdAt    DateTime         @default(now())
 
   @@index([horseId, createdAt])
+}
+
+// Quản lý cơ sở vật chất chuồng trại (Stall)
+model Stall {
+  id                   String       @id @default(uuid())
+  code                 String       @unique
+  barn                 String
+  status               StallStatus  @default(AVAILABLE)
+  pendingStatus        StallStatus?
+  pendingNotes         String?
+  pendingRequestedById String?
+  pendingRequestedAt   DateTime?
+  notes                String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([barn])
+  @@index([status])
 }

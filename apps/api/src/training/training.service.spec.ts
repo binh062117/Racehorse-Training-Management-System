@@ -35,6 +35,7 @@ describe('Hai training rules (mocked database only)', () => {
   let service: TrainingService;
   const notifications = {
     groomIds: jest.fn().mockResolvedValue(['groom']),
+    managerIds: jest.fn().mockResolvedValue(['manager']),
     notifyUsers: jest.fn(),
   };
   function makeDb() {
@@ -50,6 +51,7 @@ describe('Hai training rules (mocked database only)', () => {
         count: jest.fn().mockResolvedValue(0),
       },
       trainingPlan: {
+        findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn().mockResolvedValue({
           horseId: 'horse',
           startDate: new Date('2026-10-30'),
@@ -459,6 +461,7 @@ describe('Hai training rules (mocked database only)', () => {
     await Promise.resolve();
     await jest.advanceTimersByTimeAsync(120_000);
     expect(db.trainingSession.updateMany).toHaveBeenCalledTimes(3);
+    expect(db.trainingPlan.findMany).toHaveBeenCalledTimes(3);
     job.onModuleDestroy();
     await jest.advanceTimersByTimeAsync(60_000);
     expect(db.trainingSession.updateMany).toHaveBeenCalledTimes(3);

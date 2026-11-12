@@ -198,7 +198,7 @@ export function HorseFormPage() {
           </Card>
         )}
 
-        {saveError && <ErrorText err={saveError} />}
+        {!!saveError && <ErrorText err={saveError} />}
         <div className="flex gap-2">
           <Btn v="p" type="submit" disabled={saving || !user}>
             {saving ? t('horseFlow.saving') : id ? t('common.save') : t('horseFlow.createRecord')}

@@ -79,8 +79,12 @@ export class AuditService {
   }> {
     const where: Prisma.AuditLogWhereInput = {
       ...(q.actorId ? { actorId: q.actorId } : {}),
-      ...(q.entity ? { entity: { equals: q.entity, mode: 'insensitive' } } : {}),
-      ...(q.action ? { action: { equals: q.action, mode: 'insensitive' } } : {}),
+      ...(q.entity
+        ? { entity: { equals: q.entity, mode: 'insensitive' } }
+        : {}),
+      ...(q.action
+        ? { action: { equals: q.action, mode: 'insensitive' } }
+        : {}),
       ...(q.startDate || q.endDate
         ? {
             createdAt: {
@@ -162,32 +166,41 @@ export class AuditService {
 
   async getStats(): Promise<AuditStats> {
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
 
-    const [totalLogs, todayLogs, authEventsToday, distinctActors, actionsGroup] =
-      await Promise.all([
-        this.prisma.auditLog.count(),
-        this.prisma.auditLog.count({
-          where: { createdAt: { gte: startOfToday } },
-        }),
-        this.prisma.auditLog.count({
-          where: {
-            entity: 'AUTH',
-            createdAt: { gte: startOfToday },
-          },
-        }),
-        this.prisma.auditLog.findMany({
-          distinct: ['actorId'],
-          where: { actorId: { not: null } },
-          select: { actorId: true },
-        }),
-        this.prisma.auditLog.groupBy({
-          by: ['action'],
-          _count: { action: true },
-          orderBy: { _count: { action: 'desc' } },
-          take: 5,
-        }),
-      ]);
+    const [
+      totalLogs,
+      todayLogs,
+      authEventsToday,
+      distinctActors,
+      actionsGroup,
+    ] = await Promise.all([
+      this.prisma.auditLog.count(),
+      this.prisma.auditLog.count({
+        where: { createdAt: { gte: startOfToday } },
+      }),
+      this.prisma.auditLog.count({
+        where: {
+          entity: 'AUTH',
+          createdAt: { gte: startOfToday },
+        },
+      }),
+      this.prisma.auditLog.findMany({
+        distinct: ['actorId'],
+        where: { actorId: { not: null } },
+        select: { actorId: true },
+      }),
+      this.prisma.auditLog.groupBy({
+        by: ['action'],
+        _count: { action: true },
+        orderBy: { _count: { action: 'desc' } },
+        take: 5,
+      }),
+    ]);
 
     return {
       totalLogs,
