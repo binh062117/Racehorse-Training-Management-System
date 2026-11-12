@@ -446,7 +446,8 @@ function SessionItem({ session, planLabel, hasPlan, canUpdate, isTrainer, allSes
             <Field label={t('session.status')}>
               <NativeSelect value={status} onChange={(e) => setStatus(e.target.value as 'DONE' | 'CANCELLED' | '')}>
                 <option value="">{t('session.keepPlanned')}</option>
-                <option value="DONE">{t('session.displayStatus.DONE')}</option>
+                {/* Results only once the session has taken place */}
+                {!ahead && <option value="DONE">{t('session.displayStatus.DONE')}</option>}
                 <option value="CANCELLED">{t('session.displayStatus.CANCELLED')}</option>
               </NativeSelect>
             </Field>

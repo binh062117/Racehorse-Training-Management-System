@@ -164,6 +164,20 @@ describe('Training sessions (e2e)', () => {
     expect(res.body.notes).toBe('updated');
   });
 
+  it('rejects results before the session time (400), then the session passes', async () => {
+    const early = await api()
+      .patch(`/api/v1/sessions/${sessionIds[0]}`)
+      .set(auth('trainer'))
+      .send({ status: 'DONE', finishTimeSec: 74.2 });
+    expect(early.status).toBe(400);
+    expect(early.body.error.code).toBe('VALIDATION_ERROR');
+    // The session is now over: results may be recorded.
+    await prisma.trainingSession.update({
+      where: { id: sessionIds[0] },
+      data: { scheduledAt: new Date(Date.now() - 1 * 3600_000) },
+    });
+  });
+
   it('rejects DONE without a result (400)', async () => {
     const res = await api()
       .patch(`/api/v1/sessions/${sessionIds[0]}`)

@@ -295,6 +295,20 @@ export class TrainingService {
         'MISSED is assigned automatically',
       );
     }
+    // Results describe a session that happened — none before its time.
+    const recordsResult =
+      dto.status === SessionStatus.DONE ||
+      dto.finishTimeSec !== undefined ||
+      dto.recoveryHeartRate !== undefined ||
+      dto.muscleResponse !== undefined ||
+      dto.resultMetric !== undefined ||
+      dto.resultValue !== undefined;
+    if (recordsResult && session.scheduledAt.getTime() > Date.now()) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `Buổi tập chưa diễn ra (lịch ${formatVnDateTime(session.scheduledAt)}) — chỉ ghi kết quả sau giờ tập.`,
+      );
+    }
     const scheduledAt =
       dto.scheduledAt !== undefined
         ? new Date(dto.scheduledAt)

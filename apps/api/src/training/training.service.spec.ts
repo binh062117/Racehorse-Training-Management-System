@@ -351,6 +351,11 @@ describe('Hai training rules (mocked database only)', () => {
   it.each([195, 196])(
     'fitness threshold remains strictly >195: %s',
     async (value) => {
+      // Results are recorded once the session has taken place.
+      db.trainingSession.findUnique.mockResolvedValue({
+        ...session,
+        scheduledAt: new Date(Date.now() - 3600_000),
+      });
       db.trainingSession.findUniqueOrThrow.mockResolvedValue({
         ...session,
         status: SessionStatus.DONE,
