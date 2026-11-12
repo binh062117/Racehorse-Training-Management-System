@@ -179,22 +179,23 @@ export class AuthService {
       throw new AppException('ACCOUNT_DISABLED', 'Account is disabled');
     }
 
-    await this.audit.record({
-      actorId: user.id,
-      action: 'AUTH_LOGIN',
-      entity: 'AUTH',
-      entityId: user.id,
-      description: `Đăng nhập thành công tài khoản "${user.name}" (${user.email})`,
-      diff: { email: user.email, role: user.role },
-      ipAddress: meta?.ipAddress,
-      userAgent: meta?.userAgent,
-    });
+    // Independent writes — run them together to save a database round trip.
+    const [, accessToken, refreshToken] = await Promise.all([
+      this.audit.record({
+        actorId: user.id,
+        action: 'AUTH_LOGIN',
+        entity: 'AUTH',
+        entityId: user.id,
+        description: `Đăng nhập thành công tài khoản "${user.name}" (${user.email})`,
+        diff: { email: user.email, role: user.role },
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+      }),
+      this.tokens.signAccessToken(user.id),
+      this.tokens.issueRefreshToken(user.id),
+    ]);
 
-    return {
-      accessToken: await this.tokens.signAccessToken(user.id),
-      refreshToken: await this.tokens.issueRefreshToken(user.id),
-      user: toPublicUser(user),
-    };
+    return { accessToken, refreshToken, user: toPublicUser(user) };
   }
 
   async googleLogin(

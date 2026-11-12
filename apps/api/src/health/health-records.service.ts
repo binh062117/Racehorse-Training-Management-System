@@ -122,9 +122,9 @@ export class HealthRecordsService {
       });
     }
 
-    // Proactive AI risk check — never blocks/fails this response (see
-    // HorsesService.checkRiskAndNotify).
-    await this.horses.checkRiskAndNotify(horseId);
+    // Proactive AI risk check in the background — the AI call takes seconds
+    // and never throws (see HorsesService.checkRiskAndNotify).
+    void this.horses.checkRiskAndNotify(horseId);
 
     return this.toView(record);
   }
