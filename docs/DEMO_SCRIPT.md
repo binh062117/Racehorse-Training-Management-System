@@ -53,7 +53,6 @@ Tài khoản (mật khẩu `<Role>123!`): `manager@`, `trainer@`, `vet@`, `groom
   - Chọn giáo án "Phát triển sức bền cự ly 2000m", giờ = **giờ bắt đầu demo − 30 phút**, loại "Chạy bền", cự ly 2000 m.
   - Khi demo, buổi này đã qua giờ và đang chờ ghi kết quả.
 - [ ] Chuẩn bị sẵn **1 ảnh chân ngựa bị thương** (JPEG/PNG ≤ 5 MB) trên máy để đính kèm sự cố.
-- [ ] (Nên làm) Xếp lại ô chuồng: dữ liệu mẫu đang có **nhiều ngựa trùng một ô** (A-07 có 4 con, A-01 có 2 con), sơ đồ chỉ hiện 1 con mỗi ô. Đăng nhập manager → *Sơ đồ chuồng trại* → chuyển các ngựa trùng sang ô trống.
 
 ### 30 phút trước
 
