@@ -201,6 +201,16 @@ describe('Training safety rules (e2e)', () => {
         diagnosis: 'Cleared',
         healthStatus: 'FIT',
       });
+    await api()
+      .post(`/api/v1/horses/${horseBId}/fitness-assessment`)
+      .set(auth('vet'))
+      .send({
+        speedScore: 17,
+        staminaScore: 17,
+        conditionScore: 16,
+        recoveryScore: 16,
+        moraleScore: 16,
+      });
     const unlock = await api()
       .patch(`/api/v1/horses/${horseBId}/lock`)
       .set(auth('vet'))
@@ -209,9 +219,16 @@ describe('Training safety rules (e2e)', () => {
   });
 
   it('marking a session DONE with heart_rate_max > 195 notifies trainer + groom + owner', async () => {
+    // Results are recorded after the sessions took place.
+    for (const [i, id] of sessionIds.slice(0, 3).entries()) {
+      await prisma.trainingSession.update({
+        where: { id },
+        data: { scheduledAt: new Date(Date.now() - (i + 1) * 3600_000) },
+      });
+    }
     const res = await api()
       .patch(`/api/v1/sessions/${sessionIds[0]}`)
-      .set(auth('groom'))
+      .set(auth('trainer'))
       .send({
         status: 'DONE',
         resultMetric: 'heart_rate_max',
@@ -238,7 +255,7 @@ describe('Training safety rules (e2e)', () => {
     });
     const res = await api()
       .patch(`/api/v1/sessions/${sessionIds[1]}`)
-      .set(auth('groom'))
+      .set(auth('trainer'))
       .send({
         status: 'DONE',
         resultMetric: 'heart_rate_max',
@@ -257,7 +274,7 @@ describe('Training safety rules (e2e)', () => {
     });
     const res = await api()
       .patch(`/api/v1/sessions/${sessionIds[2]}`)
-      .set(auth('groom'))
+      .set(auth('trainer'))
       .send({ status: 'DONE', resultMetric: 'time_1200m_s', resultValue: 999 });
     expect(res.status).toBe(200);
     const after = await prisma.notification.count({

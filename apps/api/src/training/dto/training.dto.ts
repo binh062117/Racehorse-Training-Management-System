@@ -104,6 +104,27 @@ export class UpdateSessionDto {
   @IsOptional()
   @IsBoolean()
   resultConfirmed?: boolean;
+
+  /** Time to finish the session's distance, in seconds. */
+  @IsOptional()
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @Min(1)
+  @Max(36000)
+  finishTimeSec?: number;
+
+  /** Heart rate after the recovery period, in bpm. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(20)
+  @Max(250)
+  recoveryHeartRate?: number;
+
+  /** NORMAL | TIGHT | SORE */
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  muscleResponse?: string;
 }
 
 export class ListSessionsQueryDto {
@@ -146,6 +167,14 @@ export class CreateTrainingPlanDto {
   @IsOptional()
   @IsISO8601()
   endDate?: string;
+
+  /** Target distance (m) the horse should reach in this plan, e.g. 1600. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(10000)
+  targetDistanceM?: number;
 }
 
 export class UpdateTrainingPlanDto {
@@ -162,6 +191,13 @@ export class UpdateTrainingPlanDto {
   @IsOptional()
   @IsISO8601()
   endDate?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(10000)
+  targetDistanceM?: number | null;
 }
 
 export class ListTrainingPlansQueryDto {

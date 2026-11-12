@@ -1,3 +1,4 @@
+import { HorseFilterChip, useHorseFilter } from '../components/HorseFilterChip';
 import { useTranslation } from 'react-i18next';
 import { Pagination } from '../components/Pagination';
 import { usePagedResource } from '../lib/usePagedResource';
@@ -27,7 +28,9 @@ export function HealthRecordsPage() {
   const [recordPage, setRecordPage] = useState(1);
   const params = { ...(search ? { q: search } : {}), ...(statusFilter === 'ALL' ? {} : { healthStatus: statusFilter }) };
   const horseResult = usePagedResource<Horse>('/horses', horsePage, params);
-  const recordResult = usePagedResource<HealthRecord>('/health-records', recordPage, params);
+  const horseFilter = useHorseFilter();
+  const recordParams = horseFilter.horseId ? { ...params, horseId: horseFilter.horseId } : params;
+  const recordResult = usePagedResource<HealthRecord>('/health-records', recordPage, recordParams);
   const horses = horseResult.data, records = recordResult.data;
   const [summary, setSummary] = useState<{ counts: Record<HealthStatus, number>; locked: number; total: number } | null>(null);
   const [summaryErr, setSummaryErr] = useState<unknown>(null);
@@ -90,6 +93,7 @@ export function HealthRecordsPage() {
         { label: t('horsesPage.kpiLocked', 'Đang khóa tập'), value: lockedCount, tone: lockedCount > 0 ? 'bad' : undefined },
       ]} />
 
+      <HorseFilterChip horseId={horseFilter.horseId} horseName={horseFilter.horseName} onClear={horseFilter.clear} />
       <div className="flex flex-wrap gap-2 items-center">
         {filters.map(([k, label, n]) => (
           <Chip key={k} on={statusFilter === k} onClick={() => { setStatusFilter(k); setHorsePage(1); setRecordPage(1); }}>{label} <ChipCount n={n} /></Chip>

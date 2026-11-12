@@ -74,7 +74,8 @@
     "stalls": "Sơ đồ chuồng trại",
     "language": "Ngôn ngữ",
     "aiAlerts": "Cảnh báo AI",
-    "unreadCount": "{{count}} chưa đọc"
+    "unreadCount": "{{count}} chưa đọc",
+    "reports": "Báo cáo tháng"
   },
   "dashboard": {
     "title": "Tổng quan Hệ thống",
@@ -686,7 +687,9 @@
     "CONFLICT": "Dữ liệu bị xung đột với dữ liệu đã có",
     "TOKEN_EXPIRED": "Đã hết hạn, vui lòng thử lại",
     "TOKEN_INVALID": "Không hợp lệ hoặc đã hết hạn",
-    "INTERNAL": "Lỗi hệ thống"
+    "INTERNAL": "Lỗi hệ thống",
+    "NETWORK": "Không kết nối được máy chủ. Máy chủ miễn phí có thể đang khởi động (30–60 giây) — vui lòng thử lại sau ít phút.",
+    "SERVER": "Máy chủ gặp lỗi (mã {{status}}). Vui lòng thử lại; nếu vẫn lỗi, báo cho quản lý."
   },
   "healthView": {
     "currentStatus": "Trạng thái sức khỏe hiện tại",
@@ -1062,7 +1065,7 @@
   "errorDetails": {
     "emailRegistered": "Email này đã được đăng ký.",
     "planHorse": "Giáo án phải thuộc về ngựa này.",
-    "resultRequired": "Cần nhập chỉ số và giá trị kết quả để hoàn thành buổi tập.",
+    "resultRequired": "Cần nhập ít nhất một kết quả (thời gian về đích, nhịp tim hồi phục hoặc phản ứng cơ) để hoàn thành buổi tập.",
     "plannedOnly": "Chỉ có thể sửa buổi tập đang lên lịch",
     "noFields": "Chưa có nội dung cần cập nhật.",
     "groomFields": "Nhân viên chăm sóc chỉ được cập nhật trạng thái và kết quả.",
@@ -1277,7 +1280,22 @@
     "resting": "Nghỉ dưỡng",
     "light": "Tập nhẹ",
     "ready": "Sẵn sàng",
-    "monitoringReason": "Đang được thú y theo dõi"
+    "monitoringReason": "Đang được thú y theo dõi",
+    "title": "Ngựa sẵn sàng thi đấu",
+    "ownerTitle": "Ngựa của tôi — sẵn sàng thi đấu?",
+    "rule": "Điều kiện: giáo án gần nhất hoàn thành, điểm thể lực của bác sĩ ≥ 80, không bị khóa tập.",
+    "all": "Tất cả",
+    "notReady": "Chưa đủ điều kiện",
+    "empty": "Không có ngựa nào.",
+    "fitness": "Thể lực",
+    "plan": "Giáo án",
+    "more": "Xem thêm {{n}} ngựa",
+    "less": "Thu gọn",
+    "myEntries": "Ngựa của tôi đã thi đấu",
+    "noEntries": "Chưa tham gia giải nào.",
+    "horse": "Ngựa",
+    "result": "Kết quả",
+    "position": "Hạng {{n}}"
   },
   "feeding": {
     "title": "Khẩu phần ăn",
@@ -1298,7 +1316,8 @@
     "notFromStore": "Không lấy từ kho",
     "stockLeft": "còn {{n}} {{unit}}",
     "notEnough": "Kho chỉ còn {{n}} {{unit}} — không đủ cho bữa này.",
-    "goRequest": "Gửi yêu cầu mua thêm"
+    "goRequest": "Gửi yêu cầu mua thêm",
+    "thCost": "Chi phí"
   },
   "lock": {
     "lockTitle": "Khóa tập {{horse}}",
@@ -1318,7 +1337,11 @@
     "historyTitle": "Lịch sử khóa tập",
     "eventLocked": "Khóa tập",
     "eventUnlocked": "Mở khóa",
-    "basedOnExam": "Căn cứ lần khám {{date}}: {{diagnosis}}"
+    "basedOnExam": "Căn cứ lần khám {{date}}: {{diagnosis}}",
+    "fitnessNeeded": "Đánh giá thể lực sau khi khóa đạt từ {{min}}/100",
+    "latestScore": "Lần gần nhất: {{score}}/100 ngày {{date}}",
+    "noScoreSinceLock": "Chưa có đánh giá thể lực nào kể từ khi khóa.",
+    "assessNow": "Chấm điểm thể lực"
   },
   "recordPicker": {
     "label": "Chọn hồ sơ khám",
@@ -1396,7 +1419,10 @@
     "requestQtyHint": "Gợi ý sẵn đủ để tồn kho về gấp đôi mức tối thiểu.",
     "requestNote": "Ghi chú cho quản lý",
     "requestNotePlaceholder": "Ví dụ: Tuần sau có 3 ngựa tăng khẩu phần trước giải",
-    "sendRequest": "Gửi yêu cầu"
+    "sendRequest": "Gửi yêu cầu",
+    "pricePer": "{{price}} ₫ / {{unit}}",
+    "unitPrice": "Đơn giá (₫ / {{unit}})",
+    "unitPriceHint": "Dùng để tính chi phí khẩu phần ăn cho chủ ngựa."
   },
   "landing": {
     "login": "Đăng nhập",
@@ -1942,5 +1968,154 @@
       "ht": "Gân chân sau",
       "hh": "Móng sau"
     }
+  },
+  "fitnessFromVet": "Điểm thể lực do bác sĩ thú y chấm qua phiếu 5 tiêu chí — không sửa tay ở đây.",
+  "sessionResult": {
+    "needOne": "Hoàn thành buổi tập cần ít nhất một kết quả: thời gian về đích, nhịp tim hồi phục hoặc phản ứng cơ.",
+    "finishTime": "Thời gian về đích",
+    "finishTimeHint": "Giây, ví dụ 98.4",
+    "recoveryHr": "Nhịp tim hồi phục",
+    "recoveryHrHint": "Nhịp/phút, đo 10 phút sau buổi tập",
+    "muscle": "Phản ứng cơ",
+    "muscleValue": {
+      "NORMAL": "Bình thường",
+      "TIGHT": "Căng cơ",
+      "SORE": "Đau cơ"
+    },
+    "notRecorded": "Chưa ghi",
+    "otherMetric": "Chỉ số khác (tùy chọn)",
+    "lockedHold": "Ngựa đang bị khóa tập — buổi này sẽ không được tập cho đến khi bác sĩ mở khóa.",
+    "recordNow": "Buổi tập đã qua giờ — huấn luyện viên ghi kết quả trong vòng 24 giờ.",
+    "record": "Ghi kết quả"
+  },
+  "media": {
+    "add": "Thêm ảnh/video",
+    "uploading": "Đang tải lên…",
+    "tooBig": "Tệp quá lớn (tối đa 50 MB)."
+  },
+  "planProgress": {
+    "complete": "Hoàn thành",
+    "overdue": "Trễ hạn",
+    "active": "Đang tập",
+    "noSessions": "Chưa có buổi tập",
+    "sessions": "{{done}}/{{total}} buổi",
+    "missed": "{{n}} buổi bị lỡ",
+    "distanceShort": "Chưa đạt cự ly mục tiêu {{target}} m (xa nhất {{best}} m)",
+    "distanceReached": "Đã đạt cự ly mục tiêu {{target}} m",
+    "sub": "{{active}} giáo án đang tập cho {{horses}} ngựa · {{overdue}} trễ hạn · {{done}} hoàn thành",
+    "targetDistance": "Cự ly mục tiêu (m)",
+    "targetDistanceHint": "Không bắt buộc. Giáo án sẽ cảnh báo nếu chưa buổi nào đạt cự ly này."
+  },
+  "horseFilter": {
+    "only": "Chỉ hiện ngựa",
+    "clear": "Bỏ lọc theo ngựa"
+  },
+  "horseState": {
+    "retired": "Đã giải nghệ",
+    "locked": "Bị khóa tập",
+    "treatment": "Đang điều trị",
+    "ready": "Sẵn sàng thi đấu",
+    "readyReason": "giáo án hoàn thành, thể lực {{score}}/100",
+    "training": "Đang tập",
+    "linkIncidents": "Sự cố",
+    "linkExams": "Hồ sơ khám",
+    "linkVaccines": "Lịch tiêm",
+    "linkReport": "Báo cáo tháng"
+  },
+  "myTasks": {
+    "allClear": "Không có việc tồn đọng.",
+    "shortcuts": "Lối tắt",
+    "overdueCoaches": "Huấn luyện viên trễ giáo án",
+    "latePlans": "{{count}} giáo án trễ",
+    "openIncidents": {
+      "title": "{{count}} sự cố chưa xử lý",
+      "desc": "Groom đã báo, đang chờ khám"
+    },
+    "lockedHorses": {
+      "title": "{{count}} ngựa đang khóa tập",
+      "desc": "Cần khám lại và đánh giá thể lực để mở khóa"
+    },
+    "vaccinesDue": {
+      "title": "{{count}} mũi tiêm sắp/quá hạn",
+      "desc": "Trong 14 ngày tới"
+    },
+    "sessionsToday": {
+      "title": "{{count}} buổi tập hôm nay",
+      "desc": "Theo lịch của bạn"
+    },
+    "resultsToRecord": {
+      "title": "{{count}} buổi chờ ghi kết quả",
+      "desc": "Đã qua giờ tập, ghi trong 24 giờ"
+    },
+    "overduePlans": {
+      "title": "{{count}} giáo án trễ hạn",
+      "desc": "Đã qua ngày kết thúc mà chưa hoàn thành"
+    },
+    "careToday": {
+      "title": "{{count}} việc chăm sóc hôm nay",
+      "desc": "Chưa đánh dấu xong"
+    },
+    "myRequestsWaiting": {
+      "title": "{{count}} yêu cầu vật tư chờ duyệt",
+      "desc": "Bạn đã gửi"
+    },
+    "lowSupplies": {
+      "title": "{{count}} vật tư sắp hết",
+      "desc": "Dưới mức tối thiểu"
+    },
+    "pendingAccounts": {
+      "title": "{{count}} tài khoản chờ duyệt",
+      "desc": "Gán vai trò cho người mới"
+    },
+    "supplyRequests": {
+      "title": "{{count}} yêu cầu vật tư",
+      "desc": "Chờ quản lý duyệt"
+    },
+    "myLockedHorses": {
+      "title": "{{count}} ngựa của bạn đang khóa tập",
+      "desc": "Theo chỉ định của bác sĩ"
+    },
+    "myOpenIncidents": {
+      "title": "{{count}} sự cố của ngựa bạn",
+      "desc": "Đang được xử lý"
+    },
+    "myReports": {
+      "title": "Báo cáo tháng cho {{count}} ngựa",
+      "desc": "Y tế, chi phí ăn, huấn luyện, hình ảnh"
+    }
+  },
+  "report": {
+    "title": "Báo cáo tháng",
+    "sub": "{{horse}} · tháng {{month}}",
+    "pick": "Chọn ngựa và tháng để xem báo cáo.",
+    "print": "In / lưu PDF",
+    "horse": "Ngựa",
+    "month": "Tháng",
+    "noHorses": "Bạn chưa có ngựa nào.",
+    "kpiFeedCost": "Chi phí thức ăn",
+    "kpiExams": "Lần khám",
+    "kpiSessions": "Buổi tập hoàn thành",
+    "missed": "{{n}} buổi bị lỡ",
+    "kpiFitness": "Thể lực hiện tại",
+    "status": "Tình trạng hiện tại",
+    "openHorse": "Mở hồ sơ ngựa",
+    "owner": "Chủ sở hữu",
+    "trainer": "Huấn luyện viên",
+    "groom": "Người chăm sóc",
+    "vets": "Bác sĩ đã khám",
+    "health": "Y tế trong tháng",
+    "noHealth": "Không có lần khám hay sự cố nào trong tháng.",
+    "examinedBy": "Bác sĩ {{name}}",
+    "feeding": "Chi phí thức ăn",
+    "noFeeding": "Chưa có bữa ăn nào được ghi trong tháng.",
+    "meals": "Bữa",
+    "uncosted": "{{n}} bữa không lấy từ kho nên chưa có giá.",
+    "training": "Huấn luyện",
+    "avgFinish": "Về đích trung bình {{s}} s",
+    "noPlans": "Không có giáo án nào trong tháng.",
+    "assessments": "Đánh giá thể lực gần đây",
+    "races": "Thi đấu",
+    "media": "Hình ảnh & video buổi tập",
+    "noMedia": "Chưa có hình ảnh nào trong tháng."
   }
 }

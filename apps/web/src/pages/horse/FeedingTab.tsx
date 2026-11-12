@@ -87,6 +87,7 @@ export function FeedingTab({ horse }: { horse: Horse }) {
                   <th className={`${thCls} pl-5`}>{t('feeding.thDate', 'Ngày')}</th>
                   <th className={thCls}>{t('feeding.thFeedType', 'Loại thức ăn')}</th>
                   <th className={`${thCls} text-right`}>{t('feeding.thQuantity', 'Khối lượng')}</th>
+                  <th className={`${thCls} text-right`}>{t('feeding.thCost')}</th>
                   <th className={thCls}>{t('feeding.thNotes', 'Ghi chú')}</th>
                   <th className={`${thCls} pr-5`}>{t('feeding.thRecordedBy', 'Người ghi')}</th>
                 </tr>
@@ -97,6 +98,7 @@ export function FeedingTab({ horse }: { horse: Horse }) {
                     <td className="pl-5 pr-4 py-3 num whitespace-nowrap">{formatDate(r.date)}</td>
                     <td className="px-4 py-3">{r.feedType}</td>
                     <td className="px-4 py-3 num text-right whitespace-nowrap">{r.quantityKg} kg</td>
+                    <td className="px-4 py-3 num text-right whitespace-nowrap">{r.costVnd != null ? `${r.costVnd.toLocaleString('vi-VN')} ₫` : <span className="text-muted">—</span>}</td>
                     <td className="px-4 py-3 text-muted">{r.notes ?? ''}</td>
                     <td className="pl-4 pr-5 py-3 text-muted">{r.recordedBy.name}</td>
                   </tr>

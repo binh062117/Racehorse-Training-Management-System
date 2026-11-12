@@ -102,8 +102,6 @@ export class UpdateHorseDto {
   @IsInt()
   @Min(0)
   @Max(100)
-  fitnessScore?: number | null;
-
   @IsOptional()
   @IsInt()
   @Min(0)

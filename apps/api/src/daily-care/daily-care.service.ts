@@ -83,7 +83,10 @@ export class DailyCareService {
     };
   }
 
-  async create(dto: CreateDailyCareDto, groomId: string): Promise<DailyCareView> {
+  async create(
+    dto: CreateDailyCareDto,
+    groomId: string,
+  ): Promise<DailyCareView> {
     const horse = await this.prisma.horse.findFirst({
       where: { id: dto.horseId, deletedAt: null },
       select: { id: true, name: true },
@@ -210,7 +213,11 @@ export class DailyCareService {
     return updated;
   }
 
-  async update(id: string, dto: UpdateDailyCareDto, user: AuthUser): Promise<DailyCareView> {
+  async update(
+    id: string,
+    dto: UpdateDailyCareDto,
+    user: AuthUser,
+  ): Promise<DailyCareView> {
     const care = await this.prisma.dailyCareLog.findUnique({
       where: { id },
     });
@@ -219,7 +226,12 @@ export class DailyCareService {
     const updated = await this.prisma.dailyCareLog.update({
       where: { id },
       data: {
-        ...(dto.completed !== undefined ? { completed: dto.completed, completedAt: dto.completed ? new Date() : null } : {}),
+        ...(dto.completed !== undefined
+          ? {
+              completed: dto.completed,
+              completedAt: dto.completed ? new Date() : null,
+            }
+          : {}),
         ...(dto.notes !== undefined ? { notes: dto.notes.trim() } : {}),
         groomId: user.id,
       },

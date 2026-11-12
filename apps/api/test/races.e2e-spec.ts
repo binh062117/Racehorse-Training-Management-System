@@ -17,6 +17,7 @@ describe('Races (e2e)', () => {
   const tokens: Record<string, string> = {};
   let owner1Id: string;
   let horseId: string;
+  let unreadyId: string;
   let raceId: string;
   let entryId: string;
 
@@ -51,6 +52,7 @@ describe('Races (e2e)', () => {
 
     tokens.manager = await login('manager@racehorse.local', 'Manager123!');
     tokens.trainer = await login('trainer@racehorse.local', 'Trainer123!');
+    tokens.vet = await login('vet@racehorse.local', 'Vet123!');
     tokens.owner1 = await login('owner1@racehorse.local', 'Owner123!');
     tokens.owner2 = await login('owner2@racehorse.local', 'Owner123!');
 
@@ -65,10 +67,71 @@ describe('Races (e2e)', () => {
       .set(auth('manager'))
       .send({ name: 'E2E Racer', ownerId: owner1Id });
     horseId = horse.body.id;
+
+    const unready = await api()
+      .post('/api/v1/horses')
+      .set(auth('manager'))
+      .send({ name: 'E2E Unready Racer', ownerId: owner1Id });
+    unreadyId = unready.body.id;
+
+    // Make 'E2E Racer' race-ready: a complete plan + a passing vet score.
+    const start = new Date();
+    const plan = await api()
+      .post(`/api/v1/horses/${horseId}/training-plans`)
+      .set(auth('trainer'))
+      .send({
+        goal: 'E2E race prep',
+        startDate: start.toISOString(),
+        endDate: new Date(start.getTime() + 7 * 86_400_000).toISOString(),
+        targetDistanceM: 1600,
+      });
+    expect(plan.status).toBe(201);
+    const session = await api()
+      .post(`/api/v1/horses/${horseId}/sessions`)
+      .set(auth('trainer'))
+      .send({
+        scheduledAt: new Date(start.getTime() + 3_600_000).toISOString(),
+        type: 'gallop',
+        distanceM: 1600,
+        planId: plan.body.id,
+      });
+    expect(session.status).toBe(201);
+    await prisma.trainingSession.update({
+      where: { id: session.body.id },
+      data: { scheduledAt: new Date(Date.now() - 1 * 3600_000) },
+    });
+    const done = await api()
+      .patch(`/api/v1/sessions/${session.body.id}`)
+      .set(auth('trainer'))
+      .send({ status: 'DONE', finishTimeSec: 98.4 });
+    expect(done.status).toBe(200);
+    const score = await api()
+      .post(`/api/v1/horses/${horseId}/fitness-assessment`)
+      .set(auth('vet'))
+      .send({
+        speedScore: 18,
+        staminaScore: 17,
+        conditionScore: 17,
+        recoveryScore: 17,
+        moraleScore: 16,
+      });
+    expect(score.body.assessment.totalScore).toBe(85);
   });
 
   afterAll(async () => {
-    await prisma.raceEntry.deleteMany({ where: { horseId } });
+    await prisma.raceEntry.deleteMany({
+      where: { horseId: { in: [horseId, unreadyId] } },
+    });
+    await prisma.trainingSession.deleteMany({
+      where: { horseId: { in: [horseId, unreadyId] } },
+    });
+    await prisma.trainingPlan.deleteMany({
+      where: { horseId: { in: [horseId, unreadyId] } },
+    });
+    await prisma.fitnessAssessment.deleteMany({
+      where: { horseId: { in: [horseId, unreadyId] } },
+    });
+    await prisma.horse.deleteMany({ where: { id: unreadyId } });
     await prisma.horseLockEvent.deleteMany({ where: { horseId: horseId } });
     await prisma.horse.deleteMany({ where: { id: horseId } });
     if (raceId) await prisma.race.deleteMany({ where: { id: raceId } });
@@ -122,6 +185,30 @@ describe('Races (e2e)', () => {
       .send({ venue: 'New Track' });
     expect(res.status).toBe(200);
     expect(res.body.venue).toBe('New Track');
+  });
+
+  it('a horse without a complete plan and a passing score cannot be entered (400)', async () => {
+    const res = await api()
+      .post(`/api/v1/races/${raceId}/entries`)
+      .set(auth('manager'))
+      .send({ horseId: unreadyId });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain('giáo án');
+    expect(res.body.error.message).toContain('thể lực');
+  });
+
+  it('GET /races/readiness explains who can race and why not', async () => {
+    const res = await api().get('/api/v1/races/readiness').set(auth('manager'));
+    expect(res.status).toBe(200);
+    const ready = res.body.find(
+      (r: { horseId: string }) => r.horseId === horseId,
+    );
+    const unready = res.body.find(
+      (r: { horseId: string }) => r.horseId === unreadyId,
+    );
+    expect(ready.ready).toBe(true);
+    expect(unready.ready).toBe(false);
+    expect(unready.reasons.length).toBeGreaterThan(0);
   });
 
   it('MANAGER adds an entry for the horse (201)', async () => {

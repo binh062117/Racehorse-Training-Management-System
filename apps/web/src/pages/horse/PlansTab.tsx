@@ -6,7 +6,8 @@ import { useAuth } from '../../auth/useAuth';
 import { ErrorText } from '../../components/ErrorText';
 import { formatDate } from '../../lib/format';
 import { CreateTrainingPlanModal } from '../../components/training/CreateTrainingPlanModal';
-import { Alert, Badge, Btn, Card, EmptyState, Icon } from '../../ds/ui';
+import { Alert, Btn, Card, EmptyState, Icon } from '../../ds/ui';
+import { PlanProgressCell, PlanStateBadge } from '../../components/training/PlanProgress';
 
 interface Props {
   horse: Horse;
@@ -40,7 +41,6 @@ export function PlansTab({ horse }: Props) {
 
   useEffect(() => { void loadPlans(); }, [loadPlans]);
 
-  const now = new Date();
 
   return (
     <div className="flex flex-col gap-4">
@@ -96,7 +96,6 @@ export function PlansTab({ horse }: Props) {
         <Card>
           <ul className="list-none m-0 p-0">
             {plans.map((p) => {
-              const isOngoing = !p.endDate || new Date(p.endDate).getTime() >= now.getTime();
               return (
                 <li key={p.id} className="px-5 py-4 border-b border-line-soft last:border-0">
                   <div className="flex justify-between items-start flex-wrap gap-2">
@@ -107,12 +106,9 @@ export function PlansTab({ horse }: Props) {
                         {t('plansPage.colTrainer', 'Huấn luyện viên')} {p.trainer?.name ?? '—'}
                       </p>
                     </div>
-                    {isOngoing ? (
-                      <Badge tone="ok">{t('plansPage.active', 'Đang áp dụng')}</Badge>
-                    ) : (
-                      <Badge tone="neu">{t('plansPage.completed', 'Đã kết thúc')}</Badge>
-                    )}
+                    <PlanStateBadge plan={p} />
                   </div>
+                  <div className="mt-2.5 max-w-[420px]"><PlanProgressCell plan={p} /></div>
                   <p className="num text-[13px] mt-2">
                     {formatDate(p.startDate)} <span className="text-muted">{t('common.to', 'đến')}</span> {p.endDate ? formatDate(p.endDate) : <span className="text-muted">{t('plansPage.openEnded', 'không giới hạn')}</span>}
                   </p>

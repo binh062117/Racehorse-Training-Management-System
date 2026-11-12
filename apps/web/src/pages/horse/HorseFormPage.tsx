@@ -20,7 +20,6 @@ type HorseFormState = {
   status: HorseStatus;
   sireId: string;
   damId: string;
-  fitnessScore: string;
 };
 
 const EMPTY_FORM: HorseFormState = {
@@ -32,7 +31,6 @@ const EMPTY_FORM: HorseFormState = {
   status: 'ACTIVE',
   sireId: '',
   damId: '',
-  fitnessScore: '',
 };
 
 export function HorseFormPage() {
@@ -72,7 +70,6 @@ export function HorseFormPage() {
             status: horse.status,
             sireId: horse.sireId ?? '',
             damId: horse.damId ?? '',
-            fitnessScore: horse.fitnessScore?.toString() ?? '',
           });
         }
       } catch (error) {
@@ -108,7 +105,6 @@ export function HorseFormPage() {
             status: form.status,
             sireId: form.sireId || null,
             damId: form.damId || null,
-            fitnessScore: form.fitnessScore === '' ? null : Number(form.fitnessScore),
           }
         : {
             name: form.name.trim(),
@@ -198,14 +194,11 @@ export function HorseFormPage() {
                   {horses.filter((horse) => horse.id !== id && horse.id !== form.sireId).map((horse) => <option key={horse.id} value={horse.id}>{horse.name}</option>)}
                 </NativeSelect>
               </Field>
-              <Field label={t('horseFlow.fitnessScore')}>
-                <Input type="number" min="0" max="100" value={form.fitnessScore} onChange={(event) => setValue('fitnessScore', event.target.value)} />
-              </Field>
             </div>
           </Card>
         )}
 
-        {saveError && <ErrorText err={saveError} />}
+        {!!saveError && <ErrorText err={saveError} />}
         <div className="flex gap-2">
           <Btn v="p" type="submit" disabled={saving || !user}>
             {saving ? t('horseFlow.saving') : id ? t('common.save') : t('horseFlow.createRecord')}

@@ -283,6 +283,13 @@ describe('Training plans & lock (e2e)', () => {
     expect(res.body.lockReason).toBe('Suspected tendon strain');
   });
 
+  it('locking turns a fit horse INJURED', async () => {
+    const horse = await api()
+      .get(`/api/v1/horses/${horseBId}`)
+      .set(auth('manager'));
+    expect(horse.body.healthStatus).toBe('INJURED');
+  });
+
   it('MANAGER cannot lock a horse (403)', async () => {
     const res = await api()
       .patch(`/api/v1/horses/${horseBId}/lock`)
@@ -372,7 +379,61 @@ describe('Training plans & lock (e2e)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('VET unlocks horseB with a FIT exam written after the lock (200)', async () => {
+  it('a FIT exam alone is not enough — the vet 5-criteria score must reach 80 (400)', async () => {
+    const low = await api()
+      .post(`/api/v1/horses/${horseBId}/fitness-assessment`)
+      .set(auth('vet'))
+      .send({
+        speedScore: 14,
+        staminaScore: 14,
+        conditionScore: 14,
+        recoveryScore: 14,
+        moraleScore: 14,
+      });
+    expect(low.status).toBe(201);
+    expect(low.body.assessment.totalScore).toBe(70);
+    const exam = await api()
+      .post(`/api/v1/horses/${horseBId}/health-records`)
+      .set(auth('vet'))
+      .send({
+        examDate: new Date().toISOString(),
+        diagnosis: 'Better',
+        healthStatus: 'FIT',
+      });
+    const res = await api()
+      .patch(`/api/v1/horses/${horseBId}/lock`)
+      .set(auth('vet'))
+      .send({ locked: false, healthRecordId: exam.body.id });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain('80');
+  });
+
+  it('only the vet scores fitness (TRAINER 403)', async () => {
+    const res = await api()
+      .post(`/api/v1/horses/${horseBId}/fitness-assessment`)
+      .set(auth('trainer'))
+      .send({
+        speedScore: 20,
+        staminaScore: 20,
+        conditionScore: 20,
+        recoveryScore: 20,
+        moraleScore: 20,
+      });
+    expect(res.status).toBe(403);
+  });
+
+  it('VET unlocks horseB with a FIT exam and a passing score written after the lock (200)', async () => {
+    const pass = await api()
+      .post(`/api/v1/horses/${horseBId}/fitness-assessment`)
+      .set(auth('vet'))
+      .send({
+        speedScore: 17,
+        staminaScore: 17,
+        conditionScore: 16,
+        recoveryScore: 16,
+        moraleScore: 16,
+      });
+    expect(pass.body.assessment.totalScore).toBe(82);
     const exam = await api()
       .post(`/api/v1/horses/${horseBId}/health-records`)
       .set(auth('vet'))
@@ -397,6 +458,7 @@ describe('Training plans & lock (e2e)', () => {
       .get(`/api/v1/horses/${horseBId}/lock-events`)
       .set(auth('manager'));
     expect(res.status).toBe(200);
+    // lock + unlock (the refused unlock wrote nothing)
     expect(res.body).toHaveLength(2);
     const [unlock, lock] = res.body;
     expect(unlock.locked).toBe(false);

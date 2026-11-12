@@ -34,6 +34,11 @@ export class UpdateIncidentDto {
 }
 
 export class ListIncidentsQueryDto {
+  /** Only this horse — pages opened from a horse's record keep it selected. */
+  @IsOptional()
+  @IsUUID()
+  horseId?: string;
+
   @IsOptional()
   @IsEnum(IncidentStatus)
   status?: IncidentStatus;

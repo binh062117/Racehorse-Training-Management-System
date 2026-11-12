@@ -164,6 +164,20 @@ describe('Training sessions (e2e)', () => {
     expect(res.body.notes).toBe('updated');
   });
 
+  it('rejects results before the session time (400), then the session passes', async () => {
+    const early = await api()
+      .patch(`/api/v1/sessions/${sessionIds[0]}`)
+      .set(auth('trainer'))
+      .send({ status: 'DONE', finishTimeSec: 74.2 });
+    expect(early.status).toBe(400);
+    expect(early.body.error.code).toBe('VALIDATION_ERROR');
+    // The session is now over: results may be recorded.
+    await prisma.trainingSession.update({
+      where: { id: sessionIds[0] },
+      data: { scheduledAt: new Date(Date.now() - 1 * 3600_000) },
+    });
+  });
+
   it('rejects DONE without a result (400)', async () => {
     const res = await api()
       .patch(`/api/v1/sessions/${sessionIds[0]}`)
@@ -173,7 +187,7 @@ describe('Training sessions (e2e)', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('GROOM marks DONE with a result (200)', async () => {
+  it('GROOM can no longer record results (403)', async () => {
     const res = await api()
       .patch(`/api/v1/sessions/${sessionIds[0]}`)
       .set(auth('groom'))
@@ -182,6 +196,39 @@ describe('Training sessions (e2e)', () => {
         resultMetric: 'time_1000m_s',
         resultValue: 63.5,
       });
+    expect(res.status).toBe(403);
+  });
+
+  it('DONE needs at least one result (400)', async () => {
+    const res = await api()
+      .patch(`/api/v1/sessions/${sessionIds[0]}`)
+      .set(auth('trainer'))
+      .send({ status: 'DONE' });
+    expect(res.status).toBe(400);
+  });
+
+  it('TRAINER records the structured results (200)', async () => {
+    const res = await api()
+      .patch(`/api/v1/sessions/${sessionIds[0]}`)
+      .set(auth('trainer'))
+      .send({
+        status: 'DONE',
+        finishTimeSec: 74.2,
+        recoveryHeartRate: 96,
+        muscleResponse: 'TIGHT',
+        resultMetric: 'time_1000m_s',
+        resultValue: 63.5,
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.finishTimeSec).toBe(74.2);
+    expect(res.body.recoveryHeartRate).toBe(96);
+    expect(res.body.muscleResponse).toBe('TIGHT');
+  });
+
+  it('(legacy) the result fields are kept on the session', async () => {
+    const res = await api()
+      .get(`/api/v1/sessions/${sessionIds[0]}`)
+      .set(auth('trainer'));
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('DONE');
     expect(res.body.resultValue).toBe(63.5);

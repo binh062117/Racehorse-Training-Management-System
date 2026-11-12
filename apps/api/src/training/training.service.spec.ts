@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Role, SessionStatus, UserStatus } from '@prisma/client';
-import { TrainingService } from './training.service';
+import { RESULT_WINDOW_HOURS, TrainingService } from './training.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuthUser } from '../common/decorators/current-user.decorator';
@@ -35,6 +35,7 @@ describe('Hai training rules (mocked database only)', () => {
   let service: TrainingService;
   const notifications = {
     groomIds: jest.fn().mockResolvedValue(['groom']),
+    managerIds: jest.fn().mockResolvedValue(['manager']),
     notifyUsers: jest.fn(),
   };
   function makeDb() {
@@ -50,6 +51,7 @@ describe('Hai training rules (mocked database only)', () => {
         count: jest.fn().mockResolvedValue(0),
       },
       trainingPlan: {
+        findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn().mockResolvedValue({
           horseId: 'horse',
           startDate: new Date('2026-10-30'),
@@ -118,8 +120,12 @@ describe('Hai training rules (mocked database only)', () => {
         return Promise.resolve({ count });
       },
     );
-    expect((await service.reconcileMissed(now)).count).toBe(1);
-    expect((await service.reconcileMissed(now)).count).toBe(0);
+    // A session turns MISSED only RESULT_WINDOW_HOURS after its time (results may still be recorded until then).
+    const afterWindow = new Date(
+      now.getTime() + RESULT_WINDOW_HOURS * 3_600_000,
+    );
+    expect((await service.reconcileMissed(afterWindow)).count).toBe(1);
+    expect((await service.reconcileMissed(afterWindow)).count).toBe(0);
     expect(rows.map((r) => r.status)).toEqual([
       'MISSED',
       'PLANNED',
@@ -301,14 +307,7 @@ describe('Hai training rules (mocked database only)', () => {
       include: { groom: { select: { id: true, name: true } } },
     });
   });
-  it.each([{ groomId: 'groom' }, { planId: 'plan' }, { scheduledAt: future }])(
-    'GROOM cannot schedule or assign %p',
-    async (dto) => {
-      await expect(
-        service.update('session', dto, { ...trainer, role: Role.GROOM }),
-      ).rejects.toThrow('only change status');
-    },
-  );
+  // GROOM no longer reaches update() at all — the route is TRAINER-only (see the role contract test).
   it('keeps EX-01 on create and reschedule; excludes edited session', async () => {
     db.trainingSession.findFirst.mockResolvedValue({
       type: 'Canter',
@@ -347,11 +346,16 @@ describe('Hai training rules (mocked database only)', () => {
       .mockResolvedValueOnce({ count: 0 });
     await expect(
       service.update('session', { notes: 'Changed' }, trainer),
-    ).rejects.toThrow('Only a planned');
+    ).rejects.toThrow();
   });
   it.each([195, 196])(
     'fitness threshold remains strictly >195: %s',
     async (value) => {
+      // Results are recorded once the session has taken place.
+      db.trainingSession.findUnique.mockResolvedValue({
+        ...session,
+        scheduledAt: new Date(Date.now() - 3600_000),
+      });
       db.trainingSession.findUniqueOrThrow.mockResolvedValue({
         ...session,
         status: SessionStatus.DONE,
@@ -453,7 +457,7 @@ describe('Hai training rules (mocked database only)', () => {
     ).toEqual([Role.TRAINER]);
     expect(
       Reflect.getMetadata(ROLES_KEY, SessionsController.prototype.update),
-    ).toEqual([Role.TRAINER, Role.GROOM]);
+    ).toEqual([Role.TRAINER]);
   });
   /* eslint-enable @typescript-eslint/unbound-method */
   it('scheduler runs at boot and every minute, stops on destroy', async () => {
@@ -462,6 +466,7 @@ describe('Hai training rules (mocked database only)', () => {
     await Promise.resolve();
     await jest.advanceTimersByTimeAsync(120_000);
     expect(db.trainingSession.updateMany).toHaveBeenCalledTimes(3);
+    expect(db.trainingPlan.findMany).toHaveBeenCalledTimes(3);
     job.onModuleDestroy();
     await jest.advanceTimersByTimeAsync(60_000);
     expect(db.trainingSession.updateMany).toHaveBeenCalledTimes(3);

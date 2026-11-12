@@ -209,8 +209,18 @@ describe('Incidents (e2e)', () => {
     expect(res.status).toBe(400);
   });
 
-  const fitExam = async (diagnosis = 'Cleared after incident') =>
-    (
+  const fitExam = async (diagnosis = 'Cleared after incident') => {
+    await api()
+      .post(`/api/v1/horses/${horseId}/fitness-assessment`)
+      .set(auth('vet'))
+      .send({
+        speedScore: 17,
+        staminaScore: 17,
+        conditionScore: 16,
+        recoveryScore: 16,
+        moraleScore: 16,
+      });
+    return (
       await api()
         .post(`/api/v1/horses/${horseId}/health-records`)
         .set(auth('vet'))
@@ -220,6 +230,7 @@ describe('Incidents (e2e)', () => {
           healthStatus: 'FIT',
         })
     ).body.id as string;
+  };
 
   it('closing an incident without a vet exam is refused (400)', async () => {
     const res = await api()

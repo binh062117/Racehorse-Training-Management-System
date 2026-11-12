@@ -90,7 +90,20 @@ enum NotificationType {
   AI_RISK_ALERT
   SUPPLY_REQUESTED
   SUPPLY_REVIEWED
+  PLAN_OVERDUE
   PREVENTIVE_CARE_DUE
+  STALL_STATUS_REQUESTED
+  STALL_STATUS_APPROVED
+}
+
+enum StallStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+  OUT_OF_SERVICE
+  DISINFECTING
+  QUARANTINED
 }
 
 enum DailyCareTask {
@@ -137,6 +150,7 @@ model User {
   reportedIncidents  IncidentReport[]    @relation("IncidentReporter")
   feedingRecords     FeedingRecord[]     @relation("FeedingRecorder")
   lockEvents         HorseLockEvent[]    @relation("LockActor")
+  uploadedMedia      TrainingMedia[]     @relation("MediaUploader")
   supplyRequests     SupplyRequest[]     @relation("SupplyRequester")
   supplyReviews      SupplyRequest[]     @relation("SupplyReviewer")
   groomCareLogs      DailyCareLog[]      @relation("GroomCareLogs")
@@ -227,6 +241,7 @@ model Horse {
   vaccinations       Vaccination[]
   feedingRecords     FeedingRecord[]
   lockEvents         HorseLockEvent[]
+  media              TrainingMedia[]
   careLogs           DailyCareLog[]
   fitnessAssessments FitnessAssessment[]
   siredFoals         Horse[]             @relation("HorsePedigree_Sire")
@@ -258,12 +273,17 @@ model TrainingSession {
   status             SessionStatus @default(PLANNED)
   resultMetric       String?
   resultValue        Float?
+  // Kết quả có cấu trúc sau buổi tập (chỉ HLV ghi)
+  finishTimeSec      Float? // thời gian hoàn thành (giây)
+  recoveryHeartRate  Int? // nhịp tim sau 10 phút hồi phục (bpm)
+  muscleResponse     String? // NORMAL | TIGHT | SORE
   notes              String?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   resultRecordedById String?
   resultRecordedBy   User?         @relation("SessionResultRecorder", fields: [resultRecordedById], references: [id])
   resultConfirmed    Boolean       @default(false)
+  media              TrainingMedia[]
 
   @@index([horseId, scheduledAt])
   @@index([status])
@@ -273,16 +293,20 @@ model TrainingSession {
 }
 
 model TrainingPlan {
-  id        String    @id @default(uuid())
-  horseId   String
-  horse     Horse     @relation(fields: [horseId], references: [id])
-  trainerId String
-  trainer   User      @relation("PlanTrainer", fields: [trainerId], references: [id])
-  goal      String
-  startDate DateTime
-  endDate   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  horseId           String
+  horse             Horse     @relation(fields: [horseId], references: [id])
+  trainerId         String
+  trainer           User      @relation("PlanTrainer", fields: [trainerId], references: [id])
+  goal              String
+  startDate         DateTime
+  endDate           DateTime?
+  // Cự ly mục tiêu (m) — giáo án cảnh báo khi các buổi đã tập chưa chạm mốc này.
+  targetDistanceM   Int?
+  // Đã báo trễ hạn (qua endDate mà còn buổi chưa hoàn thành) — chỉ báo một lần.
+  overdueNotifiedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   sessions TrainingSession[]
 
@@ -457,6 +481,8 @@ model FeedingRecord {
   // Thức ăn lấy từ kho vật tư — khi có, khối lượng được trừ khỏi tồn kho.
   supplyItemId String?
   supplyItem   SupplyItem? @relation(fields: [supplyItemId], references: [id])
+  // Chi phí bữa ăn (VND) = khối lượng × đơn giá kho lúc ghi — giữ nguyên nếu giá đổi sau.
+  costVnd      Int?
   createdAt    DateTime    @default(now())
 
   @@index([horseId, date])
@@ -487,6 +513,7 @@ model SupplyItem {
   unit        String // kg, hộp, lọ, cái…
   quantity    Float          @default(0)
   minQuantity Float          @default(0) // dưới mức này là "sắp hết"
+  unitPrice   Int? // giá mỗi đơn vị (VND) — dùng tính chi phí khẩu phần
   notes       String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -609,4 +636,39 @@ model HorseExpense {
   createdAt   DateTime @default(now())
 
   @@index([horseId, date])
+}
+
+// Ảnh / video buổi tập — để chủ ngựa thấy ngựa mình được tập thế nào.
+model TrainingMedia {
+  id           String           @id @default(uuid())
+  horseId      String
+  horse        Horse            @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  sessionId    String?
+  session      TrainingSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  kind         String // IMAGE | VIDEO
+  url          String
+  caption      String?
+  uploadedById String?
+  uploadedBy   User?            @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+
+  @@index([horseId, createdAt])
+}
+
+// Quản lý cơ sở vật chất chuồng trại (Stall)
+model Stall {
+  id                   String       @id @default(uuid())
+  code                 String       @unique
+  barn                 String
+  status               StallStatus  @default(AVAILABLE)
+  pendingStatus        StallStatus?
+  pendingNotes         String?
+  pendingRequestedById String?
+  pendingRequestedAt   DateTime?
+  notes                String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([barn])
+  @@index([status])
 }

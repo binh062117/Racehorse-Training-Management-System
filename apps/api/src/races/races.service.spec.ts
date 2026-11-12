@@ -16,6 +16,26 @@ describe('Race registration deadline', () => {
         status: 'ACTIVE',
         healthStatus: 'FIT',
       }),
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'horse',
+          name: 'Racer',
+          locked: false,
+          lockReason: null,
+          status: 'ACTIVE',
+          healthStatus: 'FIT',
+          fitnessScore: 80,
+          trainingPlans: [
+            {
+              id: 'plan',
+              goal: 'Race preparation',
+              endDate: null,
+              targetDistanceM: null,
+              sessions: [{ status: 'DONE', distanceM: null }],
+            },
+          ],
+        },
+      ]),
     },
     raceEntry: { findUnique: jest.fn().mockResolvedValue(null), create },
   } as unknown as PrismaService);

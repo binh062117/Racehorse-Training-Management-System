@@ -119,7 +119,7 @@ export function HorseRaceHistoryPage() {
           ) : (
             <p className="text-[13px] text-muted mt-3">{t('horseFlow.noAvailableRaces')}</p>
           )}
-          {registrationError && <div className="mt-2"><ErrorText err={registrationError} /></div>}
+          {!!registrationError && <div className="mt-2"><ErrorText err={registrationError} /></div>}
         </Card>
       )}
 

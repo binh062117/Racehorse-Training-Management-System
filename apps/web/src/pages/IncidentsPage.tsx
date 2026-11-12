@@ -1,3 +1,5 @@
+import { HorseFilterChip, useHorseFilter } from '../components/HorseFilterChip';
+import { Link } from 'react-router-dom';
 import i18n from '../i18n';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +51,7 @@ export function IncidentsPage() {
   const [page, setPage] = useState(1);
 
   usePageChrome({ crumbs: [t('incidents.title')] });
+  const horseFilter = useHorseFilter();
 
   // Search waits for a pause in typing, then starts again from page 1.
   useEffect(() => {
@@ -63,6 +66,7 @@ export function IncidentsPage() {
     ...(status !== 'ALL' ? { status } : {}),
     ...(severity !== 'ALL' ? { severity } : {}),
     ...(query ? { q: query } : {}),
+    ...(horseFilter.horseId ? { horseId: horseFilter.horseId } : {}),
   };
   const { data, loading, error, reload } = useCachedResource(
     `incidents:${user?.id ?? 'anonymous'}:${JSON.stringify(params)}`,
@@ -94,6 +98,7 @@ export function IncidentsPage() {
         search={{ placeholder: t('incidents.search'), value: search, onChange: setSearch }}
       />
 
+      <HorseFilterChip horseId={horseFilter.horseId} horseName={horseFilter.horseName} onClear={horseFilter.clear} />
       {isGroom && <CreateIncidentForm horses={horses ?? []} onCreated={reload} />}
 
       <div className="flex flex-col gap-2.5">
@@ -376,7 +381,7 @@ function IncidentRow({ incident, canAdvance, isVet, isGroom, onChanged }: { inci
           <div className="text-[12.5px] text-muted">{formatTime(incident.createdAt)}</div>
         </td>
         <td className="px-4 py-3">
-          <span className="font-medium whitespace-nowrap">{incident.horse.name}</span>
+          <Link to={`/horses/${incident.horseId}`} className="font-medium whitespace-nowrap text-ink hover:text-info no-underline">{incident.horse.name}</Link>
           <div className="text-[12.5px] text-muted whitespace-nowrap">{t('incidents.reportedBy', { name: incident.reportedBy.name })}</div>
         </td>
         <td className="px-4 py-3 min-w-[220px] max-w-[320px]">{incident.description}</td>

@@ -15,6 +15,13 @@ import {
 import { SupplyCategory, SupplyRequestStatus } from '@prisma/client';
 
 export class CreateSupplyItemDto {
+  /** Price per unit in VND — feeding costs are worked out from it. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000_000)
+  unitPrice?: number;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)
@@ -47,6 +54,13 @@ export class CreateSupplyItemDto {
 }
 
 export class UpdateSupplyItemDto {
+  /** Price per unit in VND — feeding costs are worked out from it. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000_000)
+  unitPrice?: number;
+
   @IsOptional()
   @IsString()
   @IsNotEmpty()

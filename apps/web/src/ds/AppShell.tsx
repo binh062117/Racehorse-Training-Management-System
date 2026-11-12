@@ -25,6 +25,7 @@ const NAV: NavItem[] = [
   { to: '/stalls', labelKey: 'nav.stalls', defaultLabel: 'Sơ đồ chuồng trại', icon: 'reports' },
   { to: '/plans', labelKey: 'nav.plansTrainer', defaultLabel: 'Giáo án huấn luyện', icon: 'plans' },
   { to: '/races', labelKey: 'nav.races', defaultLabel: 'Giải đua', icon: 'flag', roles: ['MANAGER', 'TRAINER', 'OWNER'] },
+  { to: '/reports', labelKey: 'nav.reports', defaultLabel: 'Báo cáo tháng', icon: 'file', roles: ['OWNER', 'MANAGER'] },
   { to: '/supplies', labelKey: 'nav.supplies', defaultLabel: 'Vật tư', icon: 'box', roles: ['MANAGER', 'GROOM', 'VET', 'TRAINER'] },
 ];
 const HEALTH_NAV: NavItem[] = [

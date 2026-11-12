@@ -74,7 +74,8 @@
     "stalls": "Stable map",
     "language": "Language",
     "aiAlerts": "AI alerts",
-    "unreadCount": "{{count}} unread"
+    "unreadCount": "{{count}} unread",
+    "reports": "Monthly report"
   },
   "dashboard": {
     "title": "System Overview Dashboard",
@@ -686,7 +687,9 @@
     "CONFLICT": "Conflicts with existing data",
     "TOKEN_EXPIRED": "Expired, please try again",
     "TOKEN_INVALID": "Invalid or expired",
-    "INTERNAL": "System error"
+    "INTERNAL": "System error",
+    "NETWORK": "Can't reach the server. The free-tier server may be waking up (30–60 seconds) — please try again shortly.",
+    "SERVER": "The server hit an error (code {{status}}). Please try again; if it persists, tell the manager."
   },
   "healthView": {
     "currentStatus": "Current health status",
@@ -1062,7 +1065,7 @@
   "errorDetails": {
     "emailRegistered": "This email is already registered.",
     "planHorse": "Select a training plan that belongs to this horse.",
-    "resultRequired": "Enter a result metric and value to complete the session.",
+    "resultRequired": "Record at least one result (finish time, recovery heart rate or muscle response) to complete the session.",
     "plannedOnly": "Only a planned session can be edited",
     "noFields": "No fields to update",
     "groomFields": "A groom may only change status and result fields",
@@ -1277,7 +1280,22 @@
     "resting": "Resting",
     "light": "Light work",
     "ready": "Ready",
-    "monitoringReason": "Under veterinary monitoring"
+    "monitoringReason": "Under veterinary monitoring",
+    "title": "Race readiness",
+    "ownerTitle": "My horses — ready to race?",
+    "rule": "Requires: latest plan complete, vet fitness score ≥ 80, training not locked.",
+    "all": "All",
+    "notReady": "Not ready",
+    "empty": "No horses.",
+    "fitness": "Fitness",
+    "plan": "Plan",
+    "more": "Show {{n}} more",
+    "less": "Show less",
+    "myEntries": "My horses' races",
+    "noEntries": "No races entered yet.",
+    "horse": "Horse",
+    "result": "Result",
+    "position": "Place {{n}}"
   },
   "feeding": {
     "title": "Feeding & Diet",
@@ -1298,7 +1316,8 @@
     "notFromStore": "Not from the store",
     "stockLeft": "{{n}} {{unit}} left",
     "notEnough": "Only {{n}} {{unit}} left in the store — not enough for this meal.",
-    "goRequest": "Request more"
+    "goRequest": "Request more",
+    "thCost": "Cost"
   },
   "lock": {
     "lockTitle": "Lock training for {{horse}}",
@@ -1318,7 +1337,11 @@
     "historyTitle": "Lock history",
     "eventLocked": "Locked",
     "eventUnlocked": "Unlocked",
-    "basedOnExam": "Based on the exam of {{date}}: {{diagnosis}}"
+    "basedOnExam": "Based on the exam of {{date}}: {{diagnosis}}",
+    "fitnessNeeded": "A fitness assessment after the lock scoring {{min}}/100 or more",
+    "latestScore": "Latest: {{score}}/100 on {{date}}",
+    "noScoreSinceLock": "No fitness assessment since the lock.",
+    "assessNow": "Assess fitness"
   },
   "recordPicker": {
     "label": "Choose an exam",
@@ -1396,7 +1419,10 @@
     "requestQtyHint": "Pre-filled to bring stock back to twice the minimum.",
     "requestNote": "Note for the manager",
     "requestNotePlaceholder": "e.g. Three horses on extra rations before the race",
-    "sendRequest": "Send request"
+    "sendRequest": "Send request",
+    "pricePer": "{{price}} ₫ / {{unit}}",
+    "unitPrice": "Unit price (₫ / {{unit}})",
+    "unitPriceHint": "Used to cost the horse's feeding for the owner."
   },
   "landing": {
     "login": "Sign in",
@@ -1942,5 +1968,154 @@
       "ht": "Hindleg tendon",
       "hh": "Hind hoof"
     }
+  },
+  "fitnessFromVet": "The fitness score comes from the vet's 5-criteria assessment — it can't be edited here.",
+  "sessionResult": {
+    "needOne": "Completing a session needs at least one result: finish time, recovery heart rate or muscle response.",
+    "finishTime": "Finish time",
+    "finishTimeHint": "Seconds, e.g. 98.4",
+    "recoveryHr": "Recovery heart rate",
+    "recoveryHrHint": "Beats/min, 10 minutes after the session",
+    "muscle": "Muscle response",
+    "muscleValue": {
+      "NORMAL": "Normal",
+      "TIGHT": "Tight",
+      "SORE": "Sore"
+    },
+    "notRecorded": "Not recorded",
+    "otherMetric": "Other metric (optional)",
+    "lockedHold": "The horse's training is locked — this session won't run until the vet unlocks it.",
+    "recordNow": "This session has passed — the trainer records results within 24 hours.",
+    "record": "Record results"
+  },
+  "media": {
+    "add": "Add photo/video",
+    "uploading": "Uploading…",
+    "tooBig": "File too large (max 50 MB)."
+  },
+  "planProgress": {
+    "complete": "Complete",
+    "overdue": "Overdue",
+    "active": "In training",
+    "noSessions": "No sessions yet",
+    "sessions": "{{done}}/{{total}} sessions",
+    "missed": "{{n}} missed",
+    "distanceShort": "Target distance {{target}} m not reached yet (best {{best}} m)",
+    "distanceReached": "Target distance {{target}} m reached",
+    "sub": "{{active}} plans in training for {{horses}} horses · {{overdue}} overdue · {{done}} complete",
+    "targetDistance": "Target distance (m)",
+    "targetDistanceHint": "Optional. The plan warns until a session reaches this distance."
+  },
+  "horseFilter": {
+    "only": "Only horse",
+    "clear": "Clear horse filter"
+  },
+  "horseState": {
+    "retired": "Retired",
+    "locked": "Training locked",
+    "treatment": "Under treatment",
+    "ready": "Ready to race",
+    "readyReason": "plan complete, fitness {{score}}/100",
+    "training": "In training",
+    "linkIncidents": "Incidents",
+    "linkExams": "Exams",
+    "linkVaccines": "Vaccinations",
+    "linkReport": "Monthly report"
+  },
+  "myTasks": {
+    "allClear": "Nothing waiting.",
+    "shortcuts": "Shortcuts",
+    "overdueCoaches": "Trainers behind on plans",
+    "latePlans": "{{count}} late plans",
+    "openIncidents": {
+      "title": "{{count}} open incidents",
+      "desc": "Reported by grooms, waiting for a vet"
+    },
+    "lockedHorses": {
+      "title": "{{count}} horses locked",
+      "desc": "Re-examine and assess fitness to unlock"
+    },
+    "vaccinesDue": {
+      "title": "{{count}} vaccinations due",
+      "desc": "In the next 14 days"
+    },
+    "sessionsToday": {
+      "title": "{{count}} sessions today",
+      "desc": "On your schedule"
+    },
+    "resultsToRecord": {
+      "title": "{{count}} sessions need results",
+      "desc": "Past their time, record within 24 hours"
+    },
+    "overduePlans": {
+      "title": "{{count}} overdue plans",
+      "desc": "Past the end date and not complete"
+    },
+    "careToday": {
+      "title": "{{count}} care tasks today",
+      "desc": "Not yet marked done"
+    },
+    "myRequestsWaiting": {
+      "title": "{{count}} supply requests waiting",
+      "desc": "Sent by you"
+    },
+    "lowSupplies": {
+      "title": "{{count}} supplies running low",
+      "desc": "Below the minimum"
+    },
+    "pendingAccounts": {
+      "title": "{{count}} accounts to approve",
+      "desc": "Assign roles to new users"
+    },
+    "supplyRequests": {
+      "title": "{{count}} supply requests",
+      "desc": "Waiting for the manager"
+    },
+    "myLockedHorses": {
+      "title": "{{count}} of your horses locked",
+      "desc": "On the vet's orders"
+    },
+    "myOpenIncidents": {
+      "title": "{{count}} incidents on your horses",
+      "desc": "Being handled"
+    },
+    "myReports": {
+      "title": "Monthly report for {{count}} horses",
+      "desc": "Health, feed cost, training, pictures"
+    }
+  },
+  "report": {
+    "title": "Monthly report",
+    "sub": "{{horse}} · {{month}}",
+    "pick": "Pick a horse and month to see the report.",
+    "print": "Print / save PDF",
+    "horse": "Horse",
+    "month": "Month",
+    "noHorses": "You have no horses yet.",
+    "kpiFeedCost": "Feed cost",
+    "kpiExams": "Exams",
+    "kpiSessions": "Sessions done",
+    "missed": "{{n}} missed",
+    "kpiFitness": "Current fitness",
+    "status": "Current status",
+    "openHorse": "Open horse profile",
+    "owner": "Owner",
+    "trainer": "Trainer",
+    "groom": "Groom",
+    "vets": "Examined by",
+    "health": "Health this month",
+    "noHealth": "No exams or incidents this month.",
+    "examinedBy": "Dr. {{name}}",
+    "feeding": "Feed cost",
+    "noFeeding": "No meals recorded this month.",
+    "meals": "Meals",
+    "uncosted": "{{n}} meals weren't taken from the store, so they have no price.",
+    "training": "Training",
+    "avgFinish": "Average finish {{s}} s",
+    "noPlans": "No plans this month.",
+    "assessments": "Recent fitness assessments",
+    "races": "Races",
+    "media": "Training photos & videos",
+    "noMedia": "No pictures this month."
   }
 }

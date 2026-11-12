@@ -8,7 +8,7 @@ import {
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { HorsesService } from '../horses/horses.service';
+import { FITNESS_PASS, HorsesService } from '../horses/horses.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FileStorageService } from '../files/file-storage.service';
 import { CloudinaryService } from '../files/cloudinary.service';
@@ -124,8 +124,10 @@ export class IncidentsService {
     }
 
     const managerIds = await this.notifications.managerIds();
+    // The vets must hear about it first — they decide what happens next.
+    const vetIds = await this.notifications.vetIds();
     await this.notifications.notifyUsers(
-      [horse.ownerId, ...managerIds],
+      [horse.ownerId, ...managerIds, ...vetIds],
       NotificationType.INCIDENT_REPORTED,
       `Sự cố mới (${dto.severity}) cho ${incident.horse.name}: ${incident.description}`,
     );
@@ -191,6 +193,8 @@ export class IncidentsService {
       ...(q.status ? { status: q.status } : {}),
       ...(q.severity ? { severity: q.severity } : {}),
     };
+    if (q.horseId) scope.horseId = q.horseId;
+    if (q.horseId) where.horseId = q.horseId;
     // Enum columns sort in declaration order (LOW < MEDIUM < HIGH), so desc puts HIGH first.
     const orderBy: Prisma.IncidentReportOrderByWithRelationInput[] =
       q.sort === 'severity'
@@ -309,10 +313,22 @@ export class IncidentsService {
         where: { id: existing.horseId },
         select: { locked: true, lockIncidentId: true },
       });
+      const lockEvent = await this.prisma.horseLockEvent.findFirst({
+        where: { horseId: existing.horseId, locked: true },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      });
+      const score = await this.horses.passingAssessmentScore(
+        existing.horseId,
+        lockEvent?.createdAt,
+      );
+      // Back to training only with a FIT exam and a passing 5-criteria score.
       if (
         horse?.locked &&
         horse.lockIncidentId === id &&
-        record?.healthStatus === 'FIT'
+        record?.healthStatus === 'FIT' &&
+        score != null &&
+        score >= FITNESS_PASS
       ) {
         await this.horses.unlockForIncident(
           existing.horseId,

@@ -12,6 +12,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { HorseOwnershipGuard } from '../common/guards/horse-ownership.guard';
 import { RacesService } from './races.service';
 import {
@@ -38,6 +40,13 @@ export class RacesController {
   @Get()
   list(@Query() q: ListRacesQueryDto) {
     return this.races.list(q);
+  }
+
+  /** Which horses may race now, and why not for the others. */
+  @Get('readiness')
+  @Roles(Role.MANAGER, Role.TRAINER, Role.OWNER)
+  readiness(@CurrentUser() user: AuthUser) {
+    return this.races.readiness(user);
   }
 
   @Get(':id')
