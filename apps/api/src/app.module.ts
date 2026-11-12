@@ -19,6 +19,7 @@ import { FeedingModule } from './feeding/feeding.module';
 import { SuppliesModule } from './supplies/supplies.module';
 import { ReportsModule } from './reports/reports.module';
 import { DailyCareModule } from './daily-care/daily-care.module';
+import { StallsModule } from './stalls/stalls.module';
 import { AuditModule } from './audit/audit.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -48,6 +49,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     SuppliesModule,
     ReportsModule,
     DailyCareModule,
+    StallsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
