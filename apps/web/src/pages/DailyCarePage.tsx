@@ -5,7 +5,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../auth/useAuth';
 import type { DailyCareLog, DailyCareTask, Horse, Paginated } from '../lib/types';
 import { usePageChrome } from '../ds/AppShell';
-import { Bar, Btn, Card, Chip, ChipCount, Cloth, EmptyState, Field, HorseAvatar, Icon, Input, KpiStrip, NativeSelect, PageHeader } from '../ds/ui';
+import { Alert, Bar, Btn, Card, Chip, ChipCount, Cloth, EmptyState, Field, HorseAvatar, Icon, Input, KpiStrip, NativeSelect, PageHeader } from '../ds/ui';
 import { getFileUrl } from '../lib/api';
 import { ErrorText } from '../components/ErrorText';
 
@@ -17,12 +17,15 @@ const timeFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh',
  * Daily stable checklist (Tân): five standard tasks per horse per day.
  * Grooms tick tasks off; the manager or a groom creates the day's checklist.
  */
+/** Today in Vietnam time — a checklist belongs to one Vietnam day. */
+const vnToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+
 export function DailyCarePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   usePageChrome({ crumbs: [t('dailyCare.title')] });
 
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(vnToday);
   const [tasks, setTasks] = useState<DailyCareLog[]>([]);
   const [horses, setHorses] = useState<Horse[]>([]);
   const [horseId, setHorseId] = useState('');
@@ -31,6 +34,8 @@ export function DailyCarePage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [err, setErr] = useState<unknown>(null);
+  // Result of the last "generate" click: how many tasks it added (0 = already made today).
+  const [created, setCreated] = useState<number | null>(null);
 
   // API rules: generate = GROOM / MANAGER; tick = GROOM only; everyone else views.
   const canGenerate = user?.role === 'GROOM' || user?.role === 'MANAGER';
@@ -63,8 +68,10 @@ export function DailyCarePage() {
   const generate = async () => {
     setGenerating(true);
     setErr(null);
+    setCreated(null);
     try {
-      await api.post('/daily-care/generate', { date, ...(horseId ? { horseId } : {}) });
+      const res = await api.post<{ createdCount: number }>('/daily-care/generate', { date, ...(horseId ? { horseId } : {}) });
+      setCreated(res.data.createdCount);
       await loadTasks();
     } catch (e) {
       setErr(e);
@@ -94,14 +101,15 @@ export function DailyCarePage() {
     return acc;
   }, {}));
   const horseOf = (id: string) => horses.find((h) => h.id === id);
-  const isToday = date === new Date().toISOString().slice(0, 10);
+  const today = vnToday();
+  const isToday = date === today;
 
   return (
     <>
       <PageHeader
         title={t('dailyCare.title')}
         sub={loading && total === 0 ? t('dailyCare.loading') : total === 0 ? t('dailyCare.subEmpty') : t('dailyCare.sub', { done, total, horses: grouped.length })}
-        actions={canGenerate ? (
+        actions={canGenerate && isToday ? (
           <Btn v="p" disabled={generating} onClick={() => void generate()}>
             <Icon name="plus" />{generating ? t('dailyCare.generating') : t('dailyCare.generate')}
           </Btn>
@@ -117,7 +125,7 @@ export function DailyCarePage() {
 
       <div className="flex flex-wrap items-end gap-3">
         <Field label={t('dailyCare.date')} className="w-[170px]">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value || today)} />
         </Field>
         <Field label={t('dailyCare.horse')} className="w-[220px]">
           <NativeSelect value={horseId} onChange={(e) => setHorseId(e.target.value)}>
@@ -142,12 +150,17 @@ export function DailyCarePage() {
       </div>
 
       <ErrorText err={err} />
+      {created != null && (
+        <Alert tone={created > 0 ? 'ok' : 'info'} icon={created > 0 ? 'check' : 'info'} action={<Btn sm v="g" onClick={() => setCreated(null)}><Icon name="x" className="w-3.5 h-3.5" /></Btn>}>
+          {created > 0 ? t('dailyCare.createdN', { count: created }) : t('dailyCare.alreadyCreated')}
+        </Alert>
+      )}
 
       {loading && total === 0 ? (
         <p className="text-muted">{t('dailyCare.loading')}</p>
       ) : total === 0 ? (
-        <EmptyState action={canGenerate ? <Btn sm v="p" disabled={generating} onClick={() => void generate()}>{t('dailyCare.generate')}</Btn> : undefined}>
-          {isToday ? t('dailyCare.emptyToday') : t('dailyCare.emptyDay', { date })}
+        <EmptyState action={canGenerate && isToday ? <Btn sm v="p" disabled={generating} onClick={() => void generate()}>{t('dailyCare.generate')}</Btn> : undefined}>
+          {isToday ? t('dailyCare.emptyToday') : date < today ? t('dailyCare.closedDay', { date: date.split('-').reverse().join('/') }) : t('dailyCare.emptyDay', { date })}
         </EmptyState>
       ) : (
         <div className="grid gap-5 lg:grid-cols-2 items-start">

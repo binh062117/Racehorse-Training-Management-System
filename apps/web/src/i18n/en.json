@@ -1378,7 +1378,7 @@
     "loading": "Loading checklist…",
     "sub": "{{done}}/{{total}} tasks done across {{horses}} horses.",
     "subEmpty": "No care checklist for this day yet.",
-    "generate": "Create checklist for this day",
+    "generate": "Generate today's checklist",
     "generating": "Creating…",
     "kpiTotal": "Tasks",
     "kpiDone": "Done",
@@ -1417,7 +1417,10 @@
         "label": "Health check",
         "desc": "Temperature, eyes, gait"
       }
-    }
+    },
+    "closedDay": "The {{date}} checklist was closed at the end of the day: managers were told what was left undone and it was cleared. A groom generates a fresh checklist each day.",
+    "createdN": "Created {{count}} care tasks for today.",
+    "alreadyCreated": "Today's care checklist already exists — nothing added."
   },
   "audit": {
     "title": "Audit log",
@@ -1469,7 +1472,8 @@
       "HORSE_UNLOCK": "Training unlocked",
       "DAILY_CARE_GENERATE": "Checklist created",
       "DAILY_CARE_COMPLETE": "Care done",
-      "DAILY_CARE_UNCOMPLETE": "Care undone"
+      "DAILY_CARE_UNCOMPLETE": "Care undone",
+      "DAILY_CARE_CLOSE": "Close daily checklist"
     },
     "entities": {
       "AUTH": "Sign-in",

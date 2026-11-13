@@ -1,9 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { DailyCareTask, HorseStatus, Prisma, Role } from '@prisma/client';
+import {
+  DailyCareTask,
+  HorseStatus,
+  NotificationType,
+  Prisma,
+  Role,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppException } from '../common/app-exception';
 import { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  careDay,
+  careDayFromString,
+  formatCareDay,
+  nextCareDay,
+} from './care-day';
 import {
   CreateDailyCareDto,
   GenerateDailyChecklistDto,
@@ -41,7 +54,74 @@ export class DailyCareService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
   ) {}
+
+  /**
+   * Closes every checklist from before today (Vietnam time): managers hear
+   * about the tasks left undone, then the old rows are deleted so a new day
+   * starts empty until a groom generates its checklist. Idempotent — a run
+   * that finds nothing (or loses the race to delete) sends nothing.
+   */
+  async closePastDays(now: Date = new Date()): Promise<number> {
+    const today = careDay(now);
+    const old = await this.prisma.dailyCareLog.findMany({
+      where: { date: { lt: today } },
+      select: {
+        id: true,
+        date: true,
+        completed: true,
+        horse: { select: { name: true } },
+      },
+    });
+    if (old.length === 0) return 0;
+    const { count } = await this.prisma.dailyCareLog.deleteMany({
+      where: { id: { in: old.map((o) => o.id) } },
+    });
+    if (count === 0) return 0;
+
+    // Only recent days are worth a notification; older leftovers go quietly.
+    const notifyFrom = today.getTime() - 2 * 24 * 3600_000;
+    const days = new Map<
+      number,
+      { total: number; pending: Map<string, number> }
+    >();
+    for (const o of old) {
+      const day = careDay(o.date).getTime();
+      const entry = days.get(day) ?? { total: 0, pending: new Map() };
+      entry.total += 1;
+      if (!o.completed) {
+        entry.pending.set(
+          o.horse.name,
+          (entry.pending.get(o.horse.name) ?? 0) + 1,
+        );
+      }
+      days.set(day, entry);
+    }
+    const managerIds = await this.notifications.managerIds();
+    for (const [day, { total, pending }] of [...days].sort(
+      (a, b) => a[0] - b[0],
+    )) {
+      const undone = [...pending.values()].reduce((a, b) => a + b, 0);
+      if (undone === 0 || day < notifyFrom) continue;
+      const horses = [...pending]
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, n]) => `${name} (${n})`)
+        .join(', ');
+      await this.notifications.notifyUsers(
+        managerIds,
+        NotificationType.DAILY_CARE_INCOMPLETE,
+        `Checklist chăm sóc ngày ${formatCareDay(new Date(day))} chưa hoàn thành: còn ${undone}/${total} việc — ${horses}`,
+      );
+    }
+    await this.audit.record({
+      action: 'DAILY_CARE_CLOSE',
+      entity: 'DAILY_CARE',
+      description: `Đóng checklist chăm sóc các ngày trước ${formatCareDay(today)}: xóa ${count} việc`,
+      diff: { deleted: count, before: today.toISOString() },
+    });
+    return count;
+  }
 
   async list(
     q: ListDailyCareQueryDto,
@@ -54,11 +134,10 @@ export class DailyCareService {
       ...(q.completed !== undefined ? { completed: q.completed } : {}),
     };
 
+    await this.closePastDays();
     if (q.date) {
-      const d = new Date(q.date);
-      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
-      where.date = { gte: start, lt: end };
+      const start = careDayFromString(q.date);
+      where.date = { gte: start, lt: nextCareDay(start) };
     }
 
     // Owner can only see care logs for their horses
@@ -92,12 +171,19 @@ export class DailyCareService {
       select: { id: true, name: true },
     });
     if (!horse) throw new AppException('NOT_FOUND', 'Horse not found');
+    const day = dto.date ? careDayFromString(dto.date) : careDay();
+    if (day.getTime() !== careDay().getTime()) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Chỉ thêm việc chăm sóc cho hôm nay.',
+      );
+    }
 
     const care = await this.prisma.dailyCareLog.create({
       data: {
         horseId: dto.horseId,
         groomId,
-        date: dto.date ? new Date(dto.date) : new Date(),
+        date: day,
         taskType: dto.taskType,
         notes: dto.notes?.trim() ?? null,
       },
@@ -120,17 +206,20 @@ export class DailyCareService {
     dto: GenerateDailyChecklistDto,
     groomId: string,
   ): Promise<{ createdCount: number }> {
-    const targetDate = dto.date ? new Date(dto.date) : new Date();
-    const startOfDay = new Date(
-      targetDate.getFullYear(),
-      targetDate.getMonth(),
-      targetDate.getDate(),
-    );
-    const endOfDay = new Date(
-      targetDate.getFullYear(),
-      targetDate.getMonth(),
-      targetDate.getDate() + 1,
-    );
+    // A checklist is only ever made for today; yesterday's is closed first.
+    const targetDate = careDay();
+    if (
+      dto.date &&
+      careDayFromString(dto.date).getTime() !== targetDate.getTime()
+    ) {
+      throw new AppException(
+        'VALIDATION_ERROR',
+        `Chỉ tạo checklist cho hôm nay (${formatCareDay(targetDate)}).`,
+      );
+    }
+    await this.closePastDays();
+    const startOfDay = targetDate;
+    const endOfDay = nextCareDay(targetDate);
 
     const horseFilter: Prisma.HorseWhereInput = {
       deletedAt: null,
