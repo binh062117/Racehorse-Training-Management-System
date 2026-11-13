@@ -8,6 +8,7 @@ import { AppException } from '../common/app-exception';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { planProgress } from '../training/plan-progress';
 import { raceReadiness } from '../races/race-readiness';
+import { careDay, nextCareDay } from '../daily-care/care-day';
 
 export const TRAINING_MEDIA_KIND = 'training-media';
 export const MEDIA_MIME: Record<
@@ -439,7 +440,10 @@ export class ReportsService {
         add(
           'careToday',
           await this.prisma.dailyCareLog.count({
-            where: { date: { gte: dayStart, lt: dayEnd }, completed: false },
+            where: {
+              date: { gte: careDay(now), lt: nextCareDay(careDay(now)) },
+              completed: false,
+            },
           }),
           '/daily-care',
           'info',

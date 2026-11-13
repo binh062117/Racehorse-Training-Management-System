@@ -1378,7 +1378,7 @@
     "loading": "Đang tải checklist…",
     "sub": "Đã xong {{done}}/{{total}} việc cho {{horses}} ngựa.",
     "subEmpty": "Chưa có checklist chăm sóc cho ngày này.",
-    "generate": "Tạo checklist ngày này",
+    "generate": "Tạo checklist hôm nay",
     "generating": "Đang tạo…",
     "kpiTotal": "Tổng việc",
     "kpiDone": "Đã xong",
@@ -1417,7 +1417,10 @@
         "label": "Kiểm tra thể trạng",
         "desc": "Thân nhiệt, niêm mạc mắt, dáng đi"
       }
-    }
+    },
+    "closedDay": "Checklist ngày {{date}} đã đóng lúc hết ngày: việc chưa xong đã được báo cho quản lý và checklist được xóa. Mỗi ngày groom bấm tạo checklist mới.",
+    "createdN": "Đã tạo {{count}} việc chăm sóc cho hôm nay.",
+    "alreadyCreated": "Checklist chăm sóc hôm nay đã được tạo rồi — không tạo thêm."
   },
   "audit": {
     "title": "Nhật ký hệ thống",
@@ -1469,7 +1472,8 @@
       "HORSE_UNLOCK": "Mở khóa tập",
       "DAILY_CARE_GENERATE": "Tạo checklist",
       "DAILY_CARE_COMPLETE": "Hoàn thành chăm sóc",
-      "DAILY_CARE_UNCOMPLETE": "Bỏ hoàn thành"
+      "DAILY_CARE_UNCOMPLETE": "Bỏ hoàn thành",
+      "DAILY_CARE_CLOSE": "Đóng checklist cuối ngày"
     },
     "entities": {
       "AUTH": "Đăng nhập",
