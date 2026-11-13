@@ -5,6 +5,7 @@ profiles, training, medical records, and related activities.
 
 - **Team rules**: [TEAM_RULES.md](TEAM_RULES.md)
 - **Documents**: https://docs.google.com/spreadsheets/d/1Lvt5olaitrGitI21ocxcncGpBv1YzI1S/edit?gid=1322017341#gid=1322017341
+- **Task Management**: https://docs.google.com/spreadsheets/d/1S5tOJ0vErWeYvc5K3pkXOHmyE57Ab1nU7RSLhxpTjFU/edit?gid=0#gid=0
 
 ---
 
