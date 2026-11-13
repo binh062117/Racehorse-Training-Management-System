@@ -123,9 +123,11 @@ export class IncidentsService {
       );
     }
 
-    const managerIds = await this.notifications.managerIds();
     // The vets must hear about it first — they decide what happens next.
-    const vetIds = await this.notifications.vetIds();
+    const [managerIds, vetIds] = await Promise.all([
+      this.notifications.managerIds(),
+      this.notifications.vetIds(),
+    ]);
     await this.notifications.notifyUsers(
       [horse.ownerId, ...managerIds, ...vetIds],
       NotificationType.INCIDENT_REPORTED,
@@ -133,9 +135,10 @@ export class IncidentsService {
     );
 
     // Proactive AI risk check — skip LOW severity to save API calls on
-    // routine entries. Never blocks/fails this response (see HorsesService).
+    // routine entries. Runs in the background: the AI call takes seconds and
+    // must not hold up the reporter (it never throws, see HorsesService).
     if (dto.severity !== IncidentSeverity.LOW) {
-      await this.horses.checkRiskAndNotify(horseId);
+      void this.horses.checkRiskAndNotify(horseId);
     }
 
     return this.toView(incident);
