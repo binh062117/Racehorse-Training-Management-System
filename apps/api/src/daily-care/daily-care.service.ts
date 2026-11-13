@@ -143,34 +143,31 @@ export class DailyCareService {
       select: { id: true, name: true },
     });
 
-    let createdCount = 0;
-
+    // One read and one bulk insert instead of a round trip per horse and task.
+    const existing = await this.prisma.dailyCareLog.findMany({
+      where: {
+        horseId: { in: horses.map((h) => h.id) },
+        date: { gte: startOfDay, lt: endOfDay },
+      },
+      select: { horseId: true, taskType: true },
+    });
+    const have = new Set(existing.map((e) => `${e.horseId}:${e.taskType}`));
+    const rows: Prisma.DailyCareLogCreateManyInput[] = [];
     for (const h of horses) {
-      // Find existing tasks today
-      const existing = await this.prisma.dailyCareLog.findMany({
-        where: {
-          horseId: h.id,
-          date: { gte: startOfDay, lt: endOfDay },
-        },
-        select: { taskType: true },
-      });
-      const existingTypes = new Set(existing.map((e) => e.taskType));
-
       for (const t of DEFAULT_TASKS) {
-        if (!existingTypes.has(t)) {
-          await this.prisma.dailyCareLog.create({
-            data: {
-              horseId: h.id,
-              groomId,
-              date: targetDate,
-              taskType: t,
-              completed: false,
-            },
+        if (!have.has(`${h.id}:${t}`)) {
+          rows.push({
+            horseId: h.id,
+            groomId,
+            date: targetDate,
+            taskType: t,
+            completed: false,
           });
-          createdCount++;
         }
       }
     }
+    if (rows.length) await this.prisma.dailyCareLog.createMany({ data: rows });
+    const createdCount = rows.length;
 
     await this.audit.record({
       actorId: groomId,

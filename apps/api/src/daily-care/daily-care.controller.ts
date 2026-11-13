@@ -52,7 +52,8 @@ export class DailyCareController {
 
   @ApiOperation({ summary: 'Bật/tắt trạng thái hoàn thành công việc' })
   @Patch(':id/toggle')
-  @Roles(Role.GROOM, Role.MANAGER, Role.TRAINER)
+  // Only the groom doing the care ticks it off; every other role just watches.
+  @Roles(Role.GROOM)
   toggle(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
@@ -62,7 +63,7 @@ export class DailyCareController {
 
   @ApiOperation({ summary: 'Cập nhật ghi chú hoặc trạng thái công việc' })
   @Patch(':id')
-  @Roles(Role.GROOM, Role.MANAGER)
+  @Roles(Role.GROOM)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateDailyCareDto,

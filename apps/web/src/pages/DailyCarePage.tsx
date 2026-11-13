@@ -32,9 +32,9 @@ export function DailyCarePage() {
   const [generating, setGenerating] = useState(false);
   const [err, setErr] = useState<unknown>(null);
 
-  // API rules: generate = GROOM / MANAGER; tick = GROOM / MANAGER / TRAINER.
+  // API rules: generate = GROOM / MANAGER; tick = GROOM only; everyone else views.
   const canGenerate = user?.role === 'GROOM' || user?.role === 'MANAGER';
-  const canTick = canGenerate || user?.role === 'TRAINER';
+  const canTick = user?.role === 'GROOM';
 
   useEffect(() => {
     api.get<Paginated<Horse>>('/horses', { params: { limit: 100 } }).then((r) => setHorses(r.data.data)).catch(() => {});
