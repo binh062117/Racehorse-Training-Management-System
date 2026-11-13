@@ -1,6 +1,6 @@
 # Kịch bản demo — Racehorse Training & Management System
 
-> Dành cho nhóm 2 chuẩn bị và trình bày demo. Cập nhật 12/11/2026.
+> Dành cho nhóm 2 chuẩn bị và trình bày demo. Cập nhật 13/11/2026.
 > Hiểu code để trả lời câu hỏi: xem [SOURCE_GUIDE.md](SOURCE_GUIDE.md).
 
 ## Nguyên tắc chọn tính năng
@@ -53,7 +53,6 @@ Tài khoản (mật khẩu `<Role>123!`): `manager@`, `trainer@`, `vet@`, `groom
   - Chọn giáo án "Phát triển sức bền cự ly 2000m", giờ = **giờ bắt đầu demo − 30 phút**, loại "Chạy bền", cự ly 2000 m.
   - Khi demo, buổi này đã qua giờ và đang chờ ghi kết quả.
 - [ ] Chuẩn bị sẵn **1 ảnh chân ngựa bị thương** (JPEG/PNG ≤ 5 MB) trên máy để đính kèm sự cố.
-- [ ] (Nên làm) Xếp lại ô chuồng: dữ liệu mẫu đang có **nhiều ngựa trùng một ô** (A-07 có 4 con, A-01 có 2 con), sơ đồ chỉ hiện 1 con mỗi ô. Đăng nhập manager → *Sơ đồ chuồng trại* → chuyển các ngựa trùng sang ô trống.
 
 ### 30 phút trước
 
@@ -148,7 +147,89 @@ Chọn **một** trong hai:
 
 ---
 
-## 4. Câu hỏi dễ gặp ngay sau demo
+## 4. Kịch bản riêng cho vai trò Quản lý (khoảng 8 phút)
+
+Dùng khi cần trình bày riêng phần của Quản lý, hoặc khi người trình bày phụ trách vai trò này.
+
+**Ý chính:** Quản lý là người **điều hành và duyệt**, không làm thay chuyên môn. Quản lý thấy ngay việc tồn đọng, duyệt người và duyệt tiền vật tư, chốt kết quả thi đấu, truy vết mọi thao tác. Còn quyết định y tế (khóa hay mở khóa tập, chấm thể lực) thì **chỉ bác sĩ** làm được.
+
+### 4.1 Chuẩn bị riêng
+
+- [ ] **Hôm trước: tạo sẵn 1 tài khoản chờ duyệt.** Vào trang **Đăng ký**, dùng **email thật** của một thành viên (vì phải nhận mã OTP), đặt tên dễ nhận ra, vd. "Nguyễn Văn Demo". Nhập OTP xong thì **không duyệt**. Production hiện không có tài khoản nào chờ duyệt.
+- [ ] Kiểm tra giải **Đà Lạt Cup 2026** (đã diễn ra 04/11) **vẫn chưa có kết quả** cho 7 ngựa. Khi đi thử thì chỉ mở form, **không bấm Lưu**.
+- [ ] Ghi lại tồn kho **Cà rốt** trước khi demo (hiện là 24 kg, mức tối thiểu 20 kg) để nói số trước và sau khi duyệt.
+- [ ] Cửa sổ trình duyệt: **Quản lý** mở *Tổng quan*, **Groom** mở *Vật tư*, **Owner One** mở *Báo cáo tháng*. Nếu muốn diễn cảnh tài khoản chờ duyệt bị chặn, mở thêm một cửa sổ ẩn danh ở trang đăng nhập.
+
+### 4.2 Các cảnh
+
+**M1. Tổng quan: thấy ngay việc tồn đọng (1 phút)**
+
+| # | Vai trò | Thao tác | Kết quả cần thấy | Nói |
+|---|---|---|---|---|
+| 1 | Quản lý | *Tổng quan* → ô **Việc cần làm** | "1 tài khoản chờ duyệt", "7 giáo án trễ hạn", "3 sự cố chưa xử lý" (số có thể khác) | "Các con số được đếm trực tiếp từ dữ liệu, không ai phải nhập tay. Mỗi vai trò có danh sách việc khác nhau." |
+| 2 | Quản lý | Thẻ **Huấn luyện viên trễ giáo án** | Tên HLV, số giáo án trễ, tiến độ từng ngựa | "Giáo án quá ngày kết thúc mà chưa xong mọi buổi thì tính là trễ, để quản lý nhắc HLV." |
+| 3 | Quản lý | Bấm **chuông thông báo** | Các thông báo "Giáo án … đã quá hạn" do hệ thống tự gửi | "Không cần ai báo cáo, hệ thống tự quét và gửi thông báo." |
+| 4 | Quản lý | Bấm dòng **giáo án trễ hạn** trong Việc cần làm | Trang *Giáo án huấn luyện* đã lọc sẵn *Trễ hạn*, có cột tiến độ "x/y buổi" | |
+
+**M2. Duyệt tài khoản và gán vai trò (1,5 phút)**
+
+| # | Vai trò | Thao tác | Kết quả cần thấy | Nói |
+|---|---|---|---|---|
+| 1 | (Ẩn danh) | Đăng nhập bằng tài khoản "Nguyễn Văn Demo" | Báo **"Tài khoản đang chờ duyệt"** | "Người mới tự đăng ký và xác thực email bằng OTP, nhưng chưa dùng được hệ thống." |
+| 2 | Quản lý | *Việc cần làm* → **1 tài khoản chờ duyệt** → trang *Phân quyền tài khoản* | Dòng "Nguyễn Văn Demo" trạng thái **Chờ duyệt** | "Người đăng ký không tự chọn quyền. Quản lý quyết định họ là HLV, bác sĩ, groom hay chủ ngựa." |
+| 3 | Quản lý | Chọn vai trò **Groom** → bấm **Duyệt** | Trạng thái **Hoạt động**, vai trò Groom | "Hệ thống gửi email báo cho người đó và ghi vào nhật ký. Nhiều người thì chọn hàng loạt rồi duyệt một lần." |
+| 4 | (Ẩn danh) | Đăng nhập lại | Vào được, menu đúng của Groom | |
+
+**M3. Duyệt yêu cầu mua vật tư (2 phút)**
+
+| # | Vai trò | Thao tác | Kết quả cần thấy | Nói |
+|---|---|---|---|---|
+| 1 | Groom | *Vật tư* → dòng **Cà rốt** → **Yêu cầu mua** → số lượng **20**, ghi chú "Tuần sau tăng khẩu phần trước giải" → **Gửi yêu cầu** | Cà rốt hiện "Đang chờ mua 20 kg" | "Groom là người dùng kho hằng ngày nên được đề nghị mua, nhưng không tự cộng kho được." |
+| 2 | Quản lý | Bấm **chuông thông báo** | "Groom One đề nghị mua thêm 20 kg Cà rốt (còn 24 kg)" | |
+| 3 | Quản lý | *Vật tư* → mục **Yêu cầu mua thêm** → bấm **Duyệt** | Yêu cầu chuyển **Đã duyệt**, tồn kho Cà rốt **24 → 44 kg** | "Duyệt xong thì kho tự cộng ngay, trong cùng một giao dịch. Từ chối thì ghi lý do." |
+| 4 | Groom | Bấm **chuông thông báo** | "Yêu cầu mua 20 kg Cà rốt đã được duyệt — đã cộng vào kho" | |
+| 5 | Quản lý | Chỉ vào dòng đơn giá dưới tên Cà rốt | "15.000 ₫ / kg" | "Đơn giá trong kho dùng để tính tiền từng bữa ăn trong báo cáo cho chủ ngựa." |
+
+**M4. Chốt kết quả giải đua, chủ ngựa thấy ngay (1,5 phút)**
+
+| # | Vai trò | Thao tác | Kết quả cần thấy | Nói |
+|---|---|---|---|---|
+| 1 | Quản lý | *Giải đua* → lọc **Đã diễn ra** → **Đà Lạt Cup 2026** | Danh sách thi đấu 7 ngựa, đều "Chưa có kết quả" | "Chỉ quản lý nhập kết quả chính thức. HLV ghi danh được nhưng không sửa kết quả." |
+| 2 | Quản lý | Dòng **Golden Arrow**: Thứ hạng **1**, Thành tích **2:01.85** → **Lưu**. Thêm Thunderbolt hạng 2 (2:02.40) | Kết quả hiện ngay trên danh sách | |
+| 3 | Owner One | *Báo cáo tháng* → **Golden Arrow**, tháng hiện tại → mục **Thi đấu** | Có dòng **Đà Lạt Cup 2026, hạng 1** | "Kết quả vừa chốt hiện luôn trong báo cáo của chủ ngựa." |
+
+**M5. Phân quyền tách bạch: quản lý không làm thay bác sĩ (1 phút)**
+
+| # | Vai trò | Thao tác | Kết quả cần thấy | Nói |
+|---|---|---|---|---|
+| 1 | Quản lý | Mở ngựa đang khóa **Black Pearl** | Dòng **Bị khóa tập** kèm lý do, **không có nút Mở khóa tập**; nút thể lực là **Lịch sử thể lực** (chỉ xem) | "Quản lý quyền cao nhất về điều hành, nhưng khóa/mở khóa tập và chấm thể lực là quyết định chuyên môn của bác sĩ." |
+| 2 | Quản lý | (Nói, không thao tác) | | "Không chỉ ẩn nút: gọi thẳng API mở khóa bằng tài khoản quản lý sẽ bị server trả 403." |
+
+**M6. Nhật ký hệ thống: truy vết mọi thao tác (1 phút)**
+
+| # | Vai trò | Thao tác | Kết quả cần thấy | Nói |
+|---|---|---|---|---|
+| 1 | Quản lý | *Nhật ký hệ thống* | Bản ghi mới nhất là **Duyệt tài khoản** "Nguyễn Văn Demo" vừa làm ở M2 | "Mỗi thao tác quan trọng đều được ghi: ai, lúc nào, từ IP và thiết bị nào." |
+| 2 | Quản lý | Lọc Thao tác **Khóa tập** hoặc **Mở khóa tập** → mở một bản ghi | Mô tả "Khóa tập luyện ngựa … : Sự cố: …", bảng **Trước / Sau** | "Khóa tự động do sự cố cũng được ghi, kèm người báo sự cố." |
+| 3 | Quản lý | Lọc Thao tác **Đăng nhập thất bại** | Các lần sai mật khẩu, kèm lý do | "Dùng để phát hiện đăng nhập bất thường." |
+
+**Dự phòng nếu còn thời gian:** *Tiến độ huấn luyện toàn CLB* (tỷ lệ hoàn thành khoảng 87%, biểu đồ buổi tập theo tuần) hoặc *Báo cáo tháng* của bất kỳ ngựa nào (quản lý xem được mọi ngựa, chủ ngựa chỉ xem ngựa của mình).
+
+**Câu chốt:** "Quản lý không phải nhập liệu thay ai. Hệ thống đưa việc cần duyệt đến tay quản lý, quản lý duyệt bằng một cú bấm, và mọi thứ đều truy vết được."
+
+### 4.3 Câu hỏi dễ gặp về vai trò Quản lý
+
+| Câu hỏi | Trả lời ngắn |
+|---|---|
+| Sao quản lý không mở khóa được ngựa? | Tách quyền: quyết định y tế cần căn cứ khám và thể lực, chỉ bác sĩ có. API `PATCH /horses/:id/lock` chỉ cho vai trò VET. |
+| Duyệt vật tư có thể duyệt 2 lần không? | Không. Yêu cầu đã xử lý thì server báo "Yêu cầu này đã được xử lý." Duyệt và cộng kho nằm chung một transaction. |
+| Từ chối đăng ký thì sao? | Tài khoản bị xóa hẳn, người đó phải đăng ký lại. Khóa tài khoản đang hoạt động thì dùng nút **Khóa**. |
+| Quản lý có tự thêm hàng vào kho được không? | Có, qua **Sửa / kiểm kho** (cập nhật số tồn sau khi kiểm). Luồng mua thêm thì đi qua yêu cầu của groom. |
+| Giáo án trễ hạn có bị phạt tự động không? | Không phạt tự động. Hệ thống báo trễ và hiện HLV trễ trên Tổng quan, quản lý quyết định nhắc nhở hay kỷ luật. |
+
+---
+
+## 5. Câu hỏi dễ gặp ngay sau demo
 
 | Câu hỏi | Trả lời ngắn |
 |---|---|
